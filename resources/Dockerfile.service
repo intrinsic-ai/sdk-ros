@@ -18,7 +18,7 @@ FROM base AS underlay
 ADD src/intrinsic_sdk_ros /opt/ros/underlay/src/intrinsic_sdk_ros
 
 RUN git clone https://github.com/eclipse-zenoh/zenoh-plugin-dds \
-    -b release-0.7.2-rc \
+    -b release-1.0.2 \
     --recurse-submodules \
     /opt/ros/underlay/src/zenoh-plugin-dds
 
