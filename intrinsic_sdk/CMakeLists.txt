@@ -80,6 +80,7 @@ set(intrinsic_services_SRCS
   sdk/intrinsic/frontend/cloud/api/orgdiscovery_api.proto
   sdk/intrinsic/frontend/cloud/api/solutiondiscovery_api.proto
   sdk/intrinsic/frontend/cloud_portal/api/projectdiscovery_api.proto
+  sdk/intrinsic/frontend/solution_service/proto/solution_service.proto
   sdk/intrinsic/geometry/service/geometry_service.proto
   sdk/intrinsic/hardware/gpio/gpio_service.proto
   sdk/intrinsic/hardware/opcua_equipment/opcua_equipment_service.proto
