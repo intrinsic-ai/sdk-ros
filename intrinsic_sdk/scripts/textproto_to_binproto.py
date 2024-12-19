@@ -81,7 +81,7 @@ def main(argv=sys.argv[1:]):
             with open(args.binproto_out, 'wb') as file:
                 file.write(message_string)
         except:
-            print(f"Error: Failed to open '{args.filename}' for write.", file=sys.stderr)
+            print(f"Error: Failed to open '{args.binproto_out}' for write.", file=sys.stderr)
             return -1
     else:
         sys.stdout.write(str(message_string))
