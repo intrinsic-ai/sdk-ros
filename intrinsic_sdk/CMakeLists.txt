@@ -59,6 +59,7 @@ set(grpc_gateway_SRCS
   ${grpc_gateway_SOURCE_DIR}/protoc-gen-openapiv2/options/openapiv2.proto
 )
 add_library(intrinsic_sdk_protos STATIC ${intrinsic_proto_SRCS} ${googleapis_SRCS} ${grpc_gateway_SRCS} ${grpc_SRCS})
+set_property(TARGET intrinsic_sdk_protos PROPERTY POSITION_INDEPENDENT_CODE ON)
 protobuf_generate(
   TARGET intrinsic_sdk_protos
   LANGUAGE cpp
@@ -121,6 +122,7 @@ target_include_directories(intrinsic_sdk_services
   "$<INSTALL_INTERFACE:include/${PROJECT_NAME}>"
 )
 target_link_libraries(intrinsic_sdk_services PUBLIC intrinsic_sdk_protos)
+set_property(TARGET intrinsic_sdk_services PROPERTY POSITION_INDEPENDENT_CODE ON)
 
 add_custom_command(
       OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/intrinsic_proto.desc
@@ -242,6 +244,8 @@ target_link_libraries(${PROJECT_NAME}
     absl::time gRPC::grpc++
     intrinsic_sdk_protos intrinsic_sdk_services
 )
+
+set_property(TARGET ${PROJECT_NAME} PROPERTY POSITION_INDEPENDENT_CODE ON)
 
 add_executable(skill_service_config_main
   sdk/intrinsic/skills/internal/skill_service_config_main.cc
