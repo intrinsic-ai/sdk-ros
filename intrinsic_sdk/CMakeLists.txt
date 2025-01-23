@@ -78,9 +78,7 @@ set(intrinsic_services_SRCS
   sdk/intrinsic/executive/proto/executive_service.proto
   sdk/intrinsic/frontend/cloud/api/clusterdeletion_api.proto
   sdk/intrinsic/frontend/cloud/api/clusterdiscovery_api.proto
-  sdk/intrinsic/frontend/cloud/api/orgdiscovery_api.proto
   sdk/intrinsic/frontend/cloud/api/solutiondiscovery_api.proto
-  sdk/intrinsic/frontend/cloud_portal/api/projectdiscovery_api.proto
   sdk/intrinsic/frontend/solution_service/proto/solution_service.proto
   sdk/intrinsic/geometry/service/geometry_service.proto
   sdk/intrinsic/hardware/gpio/gpio_service.proto
@@ -247,22 +245,22 @@ target_link_libraries(${PROJECT_NAME}
 
 set_property(TARGET ${PROJECT_NAME} PROPERTY POSITION_INDEPENDENT_CODE ON)
 
-add_executable(skill_service_config_main
-  sdk/intrinsic/skills/internal/skill_service_config_main.cc
-)
-target_link_libraries(skill_service_config_main
-  PUBLIC
-  ${PROJECT_NAME}
-  intrinsic_sdk_protos
-  absl::log absl::status absl::statusor absl::flags absl::flags_usage absl::flags_parse
-  re2::re2
-)
-target_include_directories(skill_service_config_main PUBLIC
-  "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/sdk>"
-  "$<INSTALL_INTERFACE:include/${PROJECT_NAME}>")
+# add_executable(skill_service_config_main
+#   sdk/intrinsic/skills/internal/skill_service_config_main.cc
+# )
+# target_link_libraries(skill_service_config_main
+#   PUBLIC
+#   ${PROJECT_NAME}
+#   intrinsic_sdk_protos
+#   absl::log absl::status absl::statusor absl::flags absl::flags_usage absl::flags_parse
+#   re2::re2
+# )
+# target_include_directories(skill_service_config_main PUBLIC
+#   "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/sdk>"
+#   "$<INSTALL_INTERFACE:include/${PROJECT_NAME}>")
 
 install(
-  TARGETS ${PROJECT_NAME} intrinsic_sdk_protos intrinsic_sdk_services skill_service_config_main EXPORT ${PROJECT_NAME}
+  TARGETS ${PROJECT_NAME} intrinsic_sdk_protos intrinsic_sdk_services EXPORT ${PROJECT_NAME}
   ARCHIVE DESTINATION lib
   LIBRARY DESTINATION lib
   RUNTIME DESTINATION bin
