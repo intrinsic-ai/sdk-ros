@@ -35,6 +35,11 @@ while [[ $# -gt 0 ]]; do
       shift # past argument
       shift # past value
       ;;
+    --dockerfile)
+      CUSTOM_DOCKERFILE="$2"
+      shift # past argument
+      shift # past value
+      ;;
     -*|--*)
       echo "Unknown option $1"
       exit 1
@@ -42,12 +47,16 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-
 SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
-
 
 if [[ -n "$SERVICE_NAME" && -n "$SERVICE_PACKAGE" ]]; then
   mkdir -p $IMAGES_DIR/$SERVICE_NAME
+
+  if [[ -n "$CUSTOM_DOCKERFILE" ]]; then
+    DOCKERFILE="$CUSTOM_DOCKERFILE"
+  else
+    DOCKERFILE="$SCRIPT_DIR/../resources/Dockerfile.service"
+  fi
 
   docker buildx build -t $SERVICE_PACKAGE:$SERVICE_NAME \
       --builder="$BUILDER_NAME" \
@@ -57,13 +66,19 @@ if [[ -n "$SERVICE_NAME" && -n "$SERVICE_PACKAGE" ]]; then
         compression=zstd,\
         push=false,\
         name=$SERVICE_PACKAGE:$SERVICE_NAME" \
-      --file $SCRIPT_DIR/../resources/Dockerfile.service \
+      --file $DOCKERFILE \
       --build-arg="SERVICE_PACKAGE=$SERVICE_PACKAGE" \
       --build-arg="SERVICE_NAME=$SERVICE_NAME" \
       --build-arg="SERVICE_EXECUTABLE_NAME=${SERVICE_NAME}_main"\
       .
 elif [[ -n "$SKILL_NAME" && -n "$SKILL_PACKAGE" ]]; then
   mkdir -p $IMAGES_DIR/$SKILL_NAME
+
+  if [[ -n "$CUSTOM_DOCKERFILE" ]]; then
+    DOCKERFILE="$CUSTOM_DOCKERFILE"
+  else
+    DOCKERFILE="$SCRIPT_DIR/../resources/Dockerfile.skill"
+  fi
 
   docker buildx build -t $SKILL_PACKAGE:$SKILL_NAME \
       --builder="$BUILDER_NAME" \
@@ -73,7 +88,7 @@ elif [[ -n "$SKILL_NAME" && -n "$SKILL_PACKAGE" ]]; then
         compression=zstd,\
         push=false,\
         name=$SKILL_PACKAGE:$SKILL_NAME" \
-      --file $SCRIPT_DIR/../resources/Dockerfile.skill \
+      --file $DOCKERFILE \
       --build-arg="SKILL_PACKAGE=$SKILL_PACKAGE" \
       --build-arg="SKILL_NAME=$SKILL_NAME" \
       .
