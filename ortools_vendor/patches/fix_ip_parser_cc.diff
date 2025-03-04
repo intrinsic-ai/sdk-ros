@@ -1,0 +1,49 @@
+diff --git a/ortools/lp_data/lp_parser.cc b/ortools/lp_data/lp_parser.cc
+index b0447ad..a8513ce 100644
+--- a/ortools/lp_data/lp_parser.cc
++++ b/ortools/lp_data/lp_parser.cc
+@@ -347,16 +347,14 @@ TokenType LPParser::ConsumeToken(StringPiece* sp) {
+ 
+ }  // namespace
+ 
+-StatusOr<ParsedConstraint> ParseConstraint(absl::string_view constraint) {
++StatusOr<ParsedConstraint> ParseConstraint_actual(StringPiece& constraint) {
+   ParsedConstraint parsed_constraint;
+   // Get the name, if present.
+-  StringPiece constraint_copy{constraint};
+   std::string consumed_name;
+   Fractional consumed_coeff;
+-  if (ConsumeToken(&constraint_copy, &consumed_name, &consumed_coeff) ==
++  if (ConsumeToken(&constraint, &consumed_name, &consumed_coeff) ==
+       TokenType::NAME) {
+     parsed_constraint.name = consumed_name;
+-    constraint = constraint_copy;
+   }
+ 
+   Fractional left_bound;
+@@ -417,8 +415,9 @@ StatusOr<ParsedConstraint> ParseConstraint(absl::string_view constraint) {
+     right_bound = consumed_coeff;
+     if (ConsumeToken(&constraint, &consumed_name, &consumed_coeff) !=
+         TokenType::END) {
++      absl::string_view sv = constraint;
+       return absl::InvalidArgumentError(
+-          absl::StrCat("End of input was expected, found: ", constraint));
++          absl::StrCat("End of input was expected, found: ", sv));
+     }
+   }
+ 
+@@ -447,6 +446,13 @@ StatusOr<ParsedConstraint> ParseConstraint(absl::string_view constraint) {
+   return parsed_constraint;
+ }
+ 
++StatusOr<ParsedConstraint> ParseConstraint(absl::string_view constraint) {
++  StringPiece constraint_copy{constraint};
++  auto out = ParseConstraint_actual(constraint_copy);
++  constraint = constraint_copy;
++  return out;
++}
++
+ bool ParseLp(absl::string_view model, LinearProgram* lp) {
+   LPParser parser;
+   return parser.Parse(model, lp);
+

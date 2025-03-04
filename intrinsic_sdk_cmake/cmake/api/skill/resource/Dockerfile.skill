@@ -1,0 +1,12 @@
+# base stage: ros:jazzy + configs
+FROM ros:jazzy AS base
+
+WORKDIR /opt/intrinsic
+
+ENV ROS_HOME=/tmp
+ENV RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
+
+# underlay stage: base + dependencies built
+FROM base AS underlay
+
+

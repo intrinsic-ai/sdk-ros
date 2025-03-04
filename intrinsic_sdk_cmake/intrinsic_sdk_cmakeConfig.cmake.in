@@ -1,0 +1,13 @@
+@PACKAGE_INIT@
+
+include("${intrinsic_sdk_cmake_DIR}/../../../share/intrinsic_sdk_cmake/cmake/intrinsic_sdk_cmakeTargets.cmake")
+
+set(intrinsic_sdk_cmake_DESCRIPTOR_SET_FILE
+  "${intrinsic_sdk_cmake_DIR}/../../../share/intrinsic_sdk_cmake/intrinsic_proto.desc"
+)
+
+message(FATAL_ERROR "intrinsic_sdk_cmake_DIR: ${intrinsic_sdk_cmake_DIR}")
+
+# TODO(wjwwood): handle imported executables like skill_service_generator
+
+check_required_components(intrinsic_sdk_cmake)

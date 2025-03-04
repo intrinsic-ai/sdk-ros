@@ -3,17 +3,18 @@
   href="http://download.ros.org/schema/package_format2.xsd"
   schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="2">
-  <name>grpc_vendor</name>
+  <name>flatbuffers_vendor</name>
   <version>0.1.0</version>
   <description>
-    Wrapper around grpc.
+    Wrapper around flatbuffers.
   </description>
 
-  <maintainer email="mjcarroll@intrinsc.ai">Michael Carroll</maintainer>
+  <maintainer email="wjwwood@intrinsc.ai">William Woodall</maintainer>
 
-  <license>Apache-2.0</license>  <!-- The contents of this package and the upstream gRPC library are both Apache-2.0 -->
+  <!-- The contents of this package and flatbuffers is Apache-2.0 -->
+  <license>Apache-2.0</license>
 
-  <author email="mjcarroll@intrinsic.ai">Michael Carroll</author>
+  <author email="wjwwood@intrinsc.ai">William Woodall</author>
 
   <buildtool_depend>ament_cmake</buildtool_depend>
   <buildtool_depend>ament_cmake_vendor_package</buildtool_depend>

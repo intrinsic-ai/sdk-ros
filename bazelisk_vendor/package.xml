@@ -1,0 +1,24 @@
+<?xml version="1.0"?>
+<?xml-model
+  href="http://download.ros.org/schema/package_format2.xsd"
+  schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="2">
+  <name>bazelisk_vendor</name>
+  <version>0.1.0</version>
+  <description>
+    Wrapper to provide the right bazelisk binary for the OS you're on.
+  </description>
+
+  <maintainer email="wjwwood@intrinsc.ai">William Woodall</maintainer>
+
+  <!-- The contents of this package and the upstream bazelisk project are both Apache-2.0 -->
+  <license>Apache License 2.0</license>
+
+  <author email="wjwwood@intrinsc.ai">William Woodall</author>
+
+  <buildtool_depend>cmake</buildtool_depend>
+
+  <export>
+    <build_type>cmake</build_type>
+  </export>
+</package>
