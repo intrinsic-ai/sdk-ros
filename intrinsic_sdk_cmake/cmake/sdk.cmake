@@ -4,8 +4,9 @@ set(strong_int_h_dir "${intrinsic_sdk_BAZEL_BIN_DIR}/${strong_int_h_prefix}")
 set(strong_int_h_path "${strong_int_h_dir}/strong_int.h")
 set(final_strong_int_h_INCLUDE_DIR "${CMAKE_CURRENT_BINARY_DIR}/strong_int_h_include_dir")
 set(final_strong_int_h_FILE "${final_strong_int_h_INCLUDE_DIR}/${strong_int_h_prefix}/strong_int.h")
-add_custom_command(
-  OUTPUT
+add_custom_target(
+  strong_int_h_target
+  BYPRODUCTS
     "${strong_int_h_path}"
     "${final_strong_int_h_FILE}"
   COMMAND
@@ -54,7 +55,7 @@ list(FILTER intrinsic_SRCS EXCLUDE REGEX "/intrinsic/util/proto/source_code_info
 list(FILTER intrinsic_SRCS EXCLUDE REGEX "/intrinsic/util/path_resolver/")
 list(FILTER intrinsic_SRCS EXCLUDE REGEX "/intrinsic/scene/product/")
 
-add_library(${PROJECT_NAME} SHARED ${intrinsic_SRCS} "${final_strong_int_h_FILE}")
+add_library(${PROJECT_NAME} SHARED ${intrinsic_SRCS})
 add_library(${PROJECT_NAME}::${PROJECT_NAME} ALIAS ${PROJECT_NAME})
 target_include_directories(${PROJECT_NAME} PUBLIC
   # Add the include directory for strong_int.h
@@ -83,7 +84,7 @@ target_link_libraries(${PROJECT_NAME}
     intrinsic_sdk_protos
     intrinsic_sdk_services
 )
-add_dependencies(${PROJECT_NAME} intrinsic_sdk_fbs)
+add_dependencies(${PROJECT_NAME} intrinsic_sdk_fbs strong_int_h_target)
 set_property(TARGET ${PROJECT_NAME} PROPERTY POSITION_INDEPENDENT_CODE ON)
 
 # Install the library.
