@@ -20,7 +20,9 @@ RUN . /opt/ros/jazzy/setup.sh \
 		--from-paths src \
 		--ignore-src \
 		--default-yes \
-		--dependency-types buildtool_export build_export exec \
+		--dependency-types buildtool_export \
+		--dependency-types build_export \
+		--dependency-types exec \
 	&& rm -rf /var/lib/apt/lists/*
 
 # Save installed packages for re-install without source in later stage.
@@ -56,8 +58,8 @@ RUN . /opt/ros/jazzy/setup.sh \
 		--merge-install \
 		--executor=sequential
 
-# result stage: base + re-installed build_export depends + copy install artifacts
-FROM base AS result
+# result stage: source + re-installed build_export depends + copy install artifacts
+FROM source AS result
 
 # Get the installed artifacts from the build stage.
 COPY --from=build \
@@ -65,7 +67,7 @@ COPY --from=build \
 	/opt/intrinsic/intrinsic_sdk_cmake/install
 
 # Get the list of package from the run_deps stage.
-COPY --from=dependencies \
+COPY --from=build_export \
 	/build_export_apt_packages.txt \
 	/build_export_apt_packages.txt
 
