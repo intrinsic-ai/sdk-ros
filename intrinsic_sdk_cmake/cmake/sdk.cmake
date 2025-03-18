@@ -2,9 +2,12 @@
 set(strong_int_h_prefix "intrinsic/production/external/intops")
 set(strong_int_h_dir "${intrinsic_sdk_BAZEL_BIN_DIR}/${strong_int_h_prefix}")
 set(strong_int_h_path "${strong_int_h_dir}/strong_int.h")
+set(final_strong_int_h_INCLUDE_DIR "${CMAKE_CURRENT_BINARY_DIR}/strong_int_h_include_dir")
+set(final_strong_int_h_FILE "${final_strong_int_h_INCLUDE_DIR}/${strong_int_h_prefix}/strong_int.h")
 add_custom_command(
   OUTPUT
     "${strong_int_h_path}"
+    "${final_strong_int_h_FILE}"
   COMMAND
     "${bazelisk_vendor_EXECUTABLE}"
     --nohome_rc
@@ -12,19 +15,16 @@ add_custom_command(
     build
       --experimental_convenience_symlinks=ignore
       //${strong_int_h_prefix}:strong_int_h
+  # Also copy the file to an isolated directory so that the other files that
+  # might end up in bazel-bin will not influence the rest of the build.
+  COMMAND
+    ${CMAKE_COMMAND} -E copy
+      "${strong_int_h_path}"
+      "${final_strong_int_h_FILE}"
   WORKING_DIRECTORY
     "${intrinsic_sdk_SOURCE_DIR}"
   COMMENT
     "Generate the intrinsic/production/external/intops/strong_int.h file using bazel"
-)
-# Copy the file to an isolated directory so that the other files that might end
-# up in bazel-bin will not influence the rest of the build.
-set(final_strong_int_h_INCLUDE_DIR "${CMAKE_CURRENT_BINARY_DIR}/strong_int_h_include_dir")
-set(final_strong_int_h_FILE "${final_strong_int_h_INCLUDE_DIR}/${strong_int_h_prefix}/strong_int.h")
-configure_file(
-  "${strong_int_h_path}"
-  "${final_strong_int_h_FILE}"
-  COPYONLY
 )
 
 # Glob the source files and then exclude files that don't make sense to be in the glob.

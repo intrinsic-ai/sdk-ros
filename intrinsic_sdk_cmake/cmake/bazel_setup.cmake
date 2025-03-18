@@ -14,7 +14,9 @@ execute_process(
   OUTPUT_STRIP_TRAILING_WHITESPACE
 )
 
-if(NOT EXISTS ${intrinsic_sdk_BAZEL_BIN_DIR})
-  message(FATAL_ERROR
-    "The detected bazel-bin directory does not exist: ${intrinsic_sdk_BAZEL_BIN_DIR}")
-endif()
+# TODO(wjwwood): this warning is not appropriate because it happens the first time
+#   you use bazel on a system, like in a docker build, so we need a better sanity check here.
+# if(NOT EXISTS ${intrinsic_sdk_BAZEL_BIN_DIR})
+#   message(WARNING
+#     "The detected bazel-bin directory does not exist: ${intrinsic_sdk_BAZEL_BIN_DIR}")
+# endif()

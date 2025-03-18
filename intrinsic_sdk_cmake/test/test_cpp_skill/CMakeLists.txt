@@ -40,8 +40,11 @@ target_link_libraries(test_cpp_skill_main
 
 # Create the skill container image.
 # intrinsic_sdk_generate_skill_container_image(
+#   TARGET test_cpp_skill_container_image
+#   # You could provide a custom dockerfile if the standard one is insufficient.
 #   # DOCKERFILE Dockerfile.my_custom_skill
-#
+#   # Do not build by default, instead manually invoke this as needed.
+#   EXCLUDE_FROM_ALL
 # )
 
 # # Create the skill bundle.

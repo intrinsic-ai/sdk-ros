@@ -43,9 +43,6 @@ target_include_directories(absl_casters INTERFACE
   "$<INSTALL_INTERFACE:include/${PROJECT_NAME}>"
 )
 
-# message(FATAL_ERROR "pybind11_INCLUDE_DIRS: ${pybind11_INCLUDE_DIRS}")
-# target_include_directories(absl_casters INTERFACE $<BUILD_INTERFACE:${pybind11_INCLUDE_DIRS}>)
-
 configure_package_config_file("${pybind11_abseil_vendor_NEW_FILES_DIR}/Config.cmake.in"
   "${CMAKE_CURRENT_BINARY_DIR}/pybind11_abseilConfig.cmake"
   INSTALL_DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/pybind11_abseil
@@ -67,8 +64,8 @@ install(
 )
 
 install(
-  DIRECTORY "${CMAKE_CURRENT_LIST_DIR}/"
-  DESTINATION "include/${PROJECT_NAME}"
+  DIRECTORY "${CMAKE_CURRENT_LIST_DIR}/pybind11_abseil/"
+  DESTINATION "include/${PROJECT_NAME}/pybind11_abseil"
   FILES_MATCHING
   PATTERN "*.h"
 )

@@ -13,19 +13,19 @@ find_package(ament_cmake_vendor_package REQUIRED)
 find_package(grpc_vendor REQUIRED)  # needed for abseilcpp
 find_package(pybind11_vendor REQUIRED)  # needed for abseilcpp
 
-execute_process(
-  COMMAND python3 generate_patches.py
-  WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/new_files"
-)
-set_property(
-  DIRECTORY
-  APPEND
-  PROPERTY CMAKE_CONFIGURE_DEPENDS
-  new_files/CMakeLists.txt
-  new_files/generate_patches.py
-  new_files/pybind11_abseilConfig.cmake
-  new_files/Config.cmake.in
-)
+# execute_process(
+#   COMMAND python3 generate_patches.py
+#   WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/new_files"
+# )
+# set_property(
+#   DIRECTORY
+#   APPEND
+#   PROPERTY CMAKE_CONFIGURE_DEPENDS
+#   new_files/CMakeLists.txt
+#   new_files/generate_patches.py
+#   new_files/pybind11_abseilConfig.cmake
+#   new_files/Config.cmake.in
+# )
 set(pybind11_abseil_vendor_NEW_FILES_DIR "${CMAKE_CURRENT_SOURCE_DIR}/new_files")
 
 ament_vendor(pybind11_abseil_vendor

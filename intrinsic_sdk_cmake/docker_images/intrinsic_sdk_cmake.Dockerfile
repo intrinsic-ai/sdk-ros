@@ -1,69 +1,63 @@
-# base stage: ros:jazzy + configs
-FROM ros:jazzy AS base
-# TODO(wjwwood): this is based on the ROS image because we still use
-#   ament_cmake, we should move away from that and either vendor ament_cmake or
-#   avoid it entirely.
+# This Dockerfile provides an image with intrinsic_sdk_cmake with its build dependencies.
+# Use the intrinsic_sdk_cmake_run image if you only want the runtime dependencies.
 
-WORKDIR /opt/intrinsic
+ARG TAG=latest
+FROM ghcr.io/intrinsic-dev/intrinsic_sdk_cmake_source:${TAG} AS source
 
-ENV ROS_HOME=/tmp
-ENV RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
+# build_export_depends stage: source + rosdep install build_export depends
+FROM source AS build_export
 
-# source stage: base + source added
-FROM base AS source
+# Install build_export-like dependencies for the packages in intrinsic_sdk_ros.
+# Exclude intrinsic_sdk_ros and intrinsic_sdk for now.
+RUN . /opt/ros/jazzy/setup.sh \
+	&& apt-get update \
+	&& rosdep init || true \
+	&& rosdep update \
+	&& cd /opt/intrinsic/intrinsic_sdk_cmake \
+	&& touch src/intrinsic_sdk_ros/intrinsic_sdk/COLCON_IGNORE \
+	&& touch src/intrinsic_sdk_ros/intrinsic_sdk_ros/COLCON_IGNORE \
+	&& rosdep install \
+		--from-paths src \
+		--ignore-src \
+		--default-yes \
+		--dependency-types buildtool_export build_export exec \
+	&& rm -rf /var/lib/apt/lists/*
 
-ADD ../.. /opt/intrinsic/intrinsic_sdk_cmake/src/intrinsic_sdk_ros
+# Save installed packages for re-install without source in later stage.
+# TODO(wjwwood): it would be nice to get the list of packages from rosdep
+#   without installing them, but I couldn't figure out how to do that easily.
+RUN dpkg --get-selections > /build_export_apt_packages.txt
 
-# build stage: source + rosdep install + dependencies built
+# build stage: source + rosdep install build depends + packages up to intrinsic_sdk_cmake built
 FROM source AS build
 
 # Install standard dependencies for the packages in intrinsic_sdk_ros.
 # Exclude intrinsic_sdk_ros and intrinsic_sdk for now.
 RUN . /opt/ros/jazzy/setup.sh \
 	&& apt-get update \
-	&& rosdep init \
+	&& rosdep init || true \
 	&& rosdep update \
 	&& cd /opt/intrinsic/intrinsic_sdk_cmake \
+	&& touch src/intrinsic_sdk_ros/intrinsic_sdk/COLCON_IGNORE \
+	&& touch src/intrinsic_sdk_ros/intrinsic_sdk_ros/COLCON_IGNORE \
 	&& rosdep install \
 		--from-paths src \
 		--ignore-src \
 		--default-yes \
-		--skip-keys "intrinsic_sdk_ros intrinsic_sdk"
+	&& rm -rf /var/lib/apt/lists/*
 
 RUN . /opt/ros/jazzy/setup.sh \
-	&& apt-get update \
-	&& apt install -y ros-jazzy-ament-cmake-vendor-package \
 	&& cd /opt/intrinsic/intrinsic_sdk_cmake \
+	&& touch src/intrinsic_sdk_ros/intrinsic_sdk/COLCON_IGNORE \
+	&& touch src/intrinsic_sdk_ros/intrinsic_sdk_ros/COLCON_IGNORE \
 	&& colcon build \
 		--cmake-args -DBUILD_TESTING=ON \
 		--event-handlers console_direct+ console_stderr- \
 		--merge-install \
-		--packages-up-to intrinsic_sdk_cmake
+		--executor=sequential
 
-# run_deps stage: source + rosdep install run dependencies only
-FROM source AS run_deps
-
-# Install exec dependencies for the packages in intrinsic_sdk_ros.
-# Exclude intrinsic_sdk_ros and intrinsic_sdk for now.
-RUN . /opt/ros/jazzy/setup.sh \
-	&& apt-get update \
-	&& rosdep init \
-	&& rosdep update \
-	&& cd /opt/intrinsic/intrinsic_sdk_cmake \
-	&& rosdep install \
-		--from-paths src \
-		--ignore-src \
-		--default-yes \
-		--dependency-types exec \
-		--skip-keys "intrinsic_sdk_ros intrinsic_sdk"
-
-# Save installed packages for re-install without source in the run stage.
-# TODO(wjwwood): it would be nice to get the list of packages from rosdep
-#   without installing them, but I couldn't figure out how to do that easily.
-RUN dpkg --get-selections > /apt_packages.txt
-
-# run stage: base + re-installed exec depends + copy install artifacts
-FROM base AS run
+# result stage: base + re-installed build_export depends + copy install artifacts
+FROM base AS result
 
 # Get the installed artifacts from the build stage.
 COPY --from=build \
@@ -71,13 +65,13 @@ COPY --from=build \
 	/opt/intrinsic/intrinsic_sdk_cmake/install
 
 # Get the list of package from the run_deps stage.
-COPY --from=run_deps \
-	/apt_packages.txt \
-	/apt_packages.txt
+COPY --from=dependencies \
+	/build_export_apt_packages.txt \
+	/build_export_apt_packages.txt
 
 # Re-install the packages from the run_deps stage.
 # This avoids having the source code in the final image.
-RUN dpkg --set-selections < /apt_packages.txt \
+RUN dpkg --set-selections < /build_export_apt_packages.txt \
 	&& apt-get dselect-upgrade
 
 CMD ["bash"]
