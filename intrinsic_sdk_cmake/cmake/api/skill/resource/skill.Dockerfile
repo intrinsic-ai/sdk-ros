@@ -10,6 +10,8 @@ ARG SKILL_PACKAGE
 ARG SKILL_EXECUTABLE
 # The relative path for the skill config.
 ARG SKILL_CONFIG
+# The reverse domain name for the organization in the asset-id label.
+ARG SKILL_ASSET_ID_ORG=com.example
 
 # Colcon workspace for building the user's packages.
 # Note use the _workspace suffix to prevent accidental collision with other
@@ -50,6 +52,7 @@ FROM source as run
 
 ARG SKILL_EXECUTABLE
 ARG SKILL_CONFIG
+ARG SKILL_ASSET_ID_ORG
 
 # Install run dependencies for user's packages.
 RUN . /opt/intrinsic/intrinsic_sdk_cmake/install/setup.sh \
@@ -75,5 +78,19 @@ ENV SKILL_CONFIG_ABS=$SKILL_WORKSPACE/install/$SKILL_CONFIG
 RUN ls $SKILL_CONFIG_ABS \
     || (echo "Skill executable does not exist '$SKILL_CONFIG_ABS'" \
         && false)
+
+RUN sed --in-place \
+        --expression '$isource "$SKILL_WORKSPACE/install/setup.bash"' \
+        /ros_entrypoint.sh \
+    && sed --in-place \
+        --expression \
+            '5 a/opt/intrinsic/intrinsic_sdk_cmake/install/lib/zenoh_bridge_dds/zenoh_bridge_dds \
+             -m client \
+             -e tcp/zenoh-router.app-intrinsic-base:7447 \
+             --no-multicast-scouting &' \
+        /ros_entrypoint.sh
+
+LABEL "ai.intrinsic.asset-id"="${SKILL_ASSET_ID_ORG}.${SKILL_NAME}"
+LABEL "ai.intrinsic.skill-image-name"="${SKILL_NAME}"
 
 CMD ["$SKILL_EXECUTABLE_ABS" ]

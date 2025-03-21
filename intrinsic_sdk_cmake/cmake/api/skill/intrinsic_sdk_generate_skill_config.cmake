@@ -70,7 +70,7 @@ function(intrinsic_sdk_generate_skill_config)
       --output_config_filename=${arg_SKILL_CONFIG_FILE_OUTPUT}
     COMMENT "Generating skill config for ${arg_SKILL_NAME}"
     DEPENDS
-      ${arg_SKILL_CONFIG_FILE_OUTPUT}
+      ${arg_MANIFEST_PBBIN}
       ${arg_PROTO_DESCRIPTOR_FILE}
   )
 
