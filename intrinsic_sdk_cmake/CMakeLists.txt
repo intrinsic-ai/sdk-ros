@@ -15,7 +15,7 @@ find_package(bazelisk_vendor REQUIRED)
 find_package(eigen_vendor REQUIRED)
 find_package(flatbuffers_vendor REQUIRED)
 find_package(grpc_vendor REQUIRED)  # Provides protobuf and abseilcpp
-find_package(pybind11_vendor REQUIRED)
+find_package(intrinsic_pybind11_vendor REQUIRED)
 find_package(pybind11_abseil_vendor REQUIRED)
 find_package(ortools_vendor REQUIRED)
 
@@ -75,6 +75,8 @@ install(
   DESTINATION
     share/${PROJECT_NAME}/cmake
 )
+
+# TODO(wjwwood): install the ament package.xml and ament_index marker files
 
 # Tests
 if(BUILD_TESTING)

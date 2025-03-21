@@ -11,7 +11,7 @@ find_package(ament_cmake REQUIRED)
 find_package(ament_cmake_vendor_package REQUIRED)
 
 find_package(grpc_vendor REQUIRED)  # needed for abseilcpp
-find_package(pybind11_vendor REQUIRED)  # needed for abseilcpp
+find_package(intrinsic_pybind11_vendor REQUIRED)  # needed for pybind11
 
 # execute_process(
 #   COMMAND python3 generate_patches.py

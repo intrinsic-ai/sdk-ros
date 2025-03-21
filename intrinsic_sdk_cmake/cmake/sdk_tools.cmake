@@ -31,6 +31,14 @@ install(
     "${sdk_bins_DIR}/skillbundlegen"
   DESTINATION bin
 )
+# Create an imported executable and namespace it to imitate find_package()
+add_executable(skillbundlegen_import IMPORTED)
+set_target_properties(skillbundlegen_import
+  PROPERTIES
+    IMPORTED_LOCATION "${sdk_bins_DIR}/skillbundlegen"
+)
+add_dependencies(skillbundlegen_import skillbundlegen)
+add_executable(${PROJECT_NAME}::skillbundlegen ALIAS skillbundlegen_import)
 
 # Build the static binary for generating service configs.
 add_custom_command(
@@ -57,6 +65,14 @@ install(
     "${sdk_bins_DIR}/skillserviceconfiggen_main"
   DESTINATION bin
 )
+# Create an imported executable and namespace it to imitate find_package()
+add_executable(skillserviceconfiggen_main_import IMPORTED)
+set_target_properties(skillserviceconfiggen_main_import
+  PROPERTIES
+    IMPORTED_LOCATION "${sdk_bins_DIR}/skillserviceconfiggen_main"
+)
+add_dependencies(skillserviceconfiggen_main_import skillserviceconfiggen_main)
+add_executable(${PROJECT_NAME}::skillserviceconfiggen_main ALIAS skillserviceconfiggen_main_import)
 
 # Build the static binary for generating service main files.
 add_custom_command(
@@ -89,4 +105,5 @@ set_target_properties(skill_service_generator_import
   PROPERTIES
     IMPORTED_LOCATION "${sdk_bins_DIR}/skill_service_generator"
 )
+add_dependencies(skill_service_generator_import skill_service_generator)
 add_executable(${PROJECT_NAME}::skill_service_generator ALIAS skill_service_generator_import)

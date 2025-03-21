@@ -22,7 +22,7 @@
   <buildtool_depend>ament_cmake_vendor_package</buildtool_depend>
 
   <depend>grpc_vendor</depend>
-  <depend>pybind11_vendor</depend>
+  <depend>intrinsic_pybind11_vendor</depend>
 
   <export>
     <build_type>ament_cmake</build_type>

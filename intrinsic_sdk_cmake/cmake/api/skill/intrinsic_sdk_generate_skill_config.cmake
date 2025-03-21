@@ -21,25 +21,35 @@
 include_guard(GLOBAL)
 
 #
-# Generate the C++ main function file for the skill.
+# Generate the skill config file for the skill.
 #
-# This file needs to be generated because it contains variable things like the
-# skill name and the name of the skill's header, etc.
-#
+# :param TARGET: the name for the target that generates the skill config file
+# :type TARGET: string
 # :param SKILL_NAME: the name of the skill
 # :type SKILL_NAME: string
-# :param MANIFEST: the path to the manifest file
-# :type MANIFEST: string
+# :param MANIFEST_PBBIN: the path to the manifest file
+# :type MANIFEST_PBBIN: string
+# :param PROTO_DESCRIPTOR_FILE: the path to the proto descriptor file
+# :type PROTO_DESCRIPTOR_FILE: string
+# :param SKILL_CONFIG_FILE_OUTPUT: the output path for the skill config file
+# :type SKILL_CONFIG_FILE_OUTPUT: string
 #
 # @public
 #
 function(intrinsic_sdk_generate_skill_config)
   set(options)
-  set(one_value_args SKILL_NAME MANIFEST)
+  set(one_value_args
+    TARGET
+    # TODO(wjwwood): extract skill name from manifest
+    SKILL_NAME
+    MANIFEST_PBBIN
+    PROTO_DESCRIPTOR_FILE
+    SKILL_CONFIG_FILE_OUTPUT
+  )
   set(multi_value_args)
 
   cmake_parse_arguments(
-    GENERATE_ARGS
+    arg
     "${options}"
     "${one_value_args}"
     "${multi_value_args}"
@@ -48,35 +58,22 @@ function(intrinsic_sdk_generate_skill_config)
 
   set(OUT_DIR ${CMAKE_CURRENT_BINARY_DIR})
 
-  # Generate binary version of the manifest textproto file using protoc.
+  # Generate the binary proto skill config
   add_custom_command(
-    OUTPUT ${OUT_DIR}/${GENERATE_ARGS_SKILL_NAME}_manifest.pbbin
-    COMMAND protobuf::protoc
-      --encode=intrinsic_proto.skills.SkillManifest
-      --descriptor_set_in=${intrinsic_sdk_cmake_DESCRIPTOR_SET_FILE}
-      < ${CMAKE_CURRENT_SOURCE_DIR}/${GENERATE_ARGS_MANIFEST}
-      > ${OUT_DIR}/${GENERATE_ARGS_SKILL_NAME}_manifest.pbbin
-    DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/${GENERATE_ARGS_MANIFEST}
-    COMMENT "Generating skill manifest for ${GENERATE_ARGS_SKILL_NAME}"
+    OUTPUT ${arg_SKILL_CONFIG_FILE_OUTPUT}
+    COMMAND intrinsic_sdk_cmake::skillserviceconfiggen_main
+    ARGS
+      --manifest_pbbin_filename=${arg_MANIFEST_PBBIN}
+      --proto_descriptor_filename=${arg_PROTO_DESCRIPTOR_FILE}
+      --output_config_filename=${arg_SKILL_CONFIG_FILE_OUTPUT}
+    COMMENT "Generating skill config for ${arg_SKILL_NAME}"
+    DEPENDS
+      ${arg_SKILL_CONFIG_FILE_OUTPUT}
+      ${arg_PROTO_DESCRIPTOR_FILE}
   )
 
-  # Generate the binary proto skill config
-  # add_custom_command(
-  #   OUTPUT ${OUT_DIR}/${GENERATE_ARGS_SKILL_NAME}_skill_config.pbbin
-  #   COMMAND ${intrinsic_sdk_DIR}/../../../bin/skill_service_config_main
-  #   ARGS
-  #     --manifest_pbbin_filename=${OUT_DIR}/${GENERATE_ARGS_SKILL_NAME}_manifest.pbbin
-  #     --proto_descriptor_filename=${OUT_DIR}/${GENERATE_ARGS_SKILL_NAME}_protos.desc
-  #     --output_config_filename=${OUT_DIR}/${GENERATE_ARGS_SKILL_NAME}_skill_config.pbbin
-  #   COMMENT "Generating skill config for ${GENERATE_ARGS_SKILL_NAME}"
-  #   DEPENDS
-  #     ${OUT_DIR}/${GENERATE_ARGS_SKILL_NAME}_manifest.pbbin
-  #     ${OUT_DIR}/${GENERATE_ARGS_SKILL_NAME}_protos.desc
-  # )
-
-  add_custom_target(${GENERATE_ARGS_SKILL_NAME}_skill_config
+  add_custom_target(${arg_TARGET}
     DEPENDS
-      ${OUT_DIR}/${GENERATE_ARGS_SKILL_NAME}_manifest.pbbin
-      # ${OUT_DIR}/${GENERATE_ARGS_SKILL_NAME}_skill_config.pbbin
+      ${arg_SKILL_CONFIG_FILE_OUTPUT}
   )
 endfunction()

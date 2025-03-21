@@ -4,9 +4,8 @@ set(strong_int_h_dir "${intrinsic_sdk_BAZEL_BIN_DIR}/${strong_int_h_prefix}")
 set(strong_int_h_path "${strong_int_h_dir}/strong_int.h")
 set(final_strong_int_h_INCLUDE_DIR "${CMAKE_CURRENT_BINARY_DIR}/strong_int_h_include_dir")
 set(final_strong_int_h_FILE "${final_strong_int_h_INCLUDE_DIR}/${strong_int_h_prefix}/strong_int.h")
-add_custom_target(
-  strong_int_h_target
-  BYPRODUCTS
+add_custom_command(
+  OUTPUT
     "${strong_int_h_path}"
     "${final_strong_int_h_FILE}"
   COMMAND
@@ -26,6 +25,11 @@ add_custom_target(
     "${intrinsic_sdk_SOURCE_DIR}"
   COMMENT
     "Generate the intrinsic/production/external/intops/strong_int.h file using bazel"
+)
+add_custom_target(strong_int_h_target
+  DEPENDS
+    "${strong_int_h_path}"
+    "${final_strong_int_h_FILE}"
 )
 
 # Glob the source files and then exclude files that don't make sense to be in the glob.

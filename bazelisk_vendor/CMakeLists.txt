@@ -55,3 +55,8 @@ install(FILES
   ${CMAKE_CURRENT_BINARY_DIR}/bazelisk_vendorConfigVersion.cmake
   DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/bazelisk_vendor
 )
+install(FILES
+  ${CMAKE_CURRENT_BINARY_DIR}/bazelisk_vendorConfig.cmake
+  ${CMAKE_CURRENT_BINARY_DIR}/bazelisk_vendorConfigVersion.cmake
+  DESTINATION share/${PROJECT_NAME}/cmake
+)

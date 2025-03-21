@@ -12,6 +12,10 @@ WORKDIR /opt/intrinsic
 ENV ROS_HOME=/tmp
 ENV RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
 
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends ros-jazzy-rmw-cyclonedds-cpp \
+    && rm -rf /var/lib/apt/lists/*
+
 # source stage: base + source added
 FROM base AS source
 
@@ -19,8 +23,8 @@ ADD ./ /opt/intrinsic/intrinsic_sdk_cmake/src/intrinsic_sdk_ros
 
 # Ensure we're running from the root of the repository so the ADD worked.
 RUN cd /opt/intrinsic/intrinsic_sdk_cmake/src/intrinsic_sdk_ros \
-	&& ls ./intrinsic_sdk_cmake/docker_images/intrinsic_sdk_cmake.Dockerfile \
-	|| (echo "you must build this dockerfile from the root of the repository" \
-	&& false)
+    && ls ./intrinsic_sdk_cmake/docker_images/intrinsic_sdk_cmake.Dockerfile \
+    || (echo "you must build this dockerfile from the root of the repository" \
+    && false)
 
 CMD ["bash"]

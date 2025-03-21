@@ -3,10 +3,10 @@
   href="http://download.ros.org/schema/package_format2.xsd"
   schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="2">
-  <name>pybind11_vendor</name>
+  <name>intrinsic_pybind11_vendor</name>
   <version>1.65.0</version>
   <description>
-    Wrapper around pybind11.
+    Wrapper around pybind11 for the intrinsic_sdk, different (for now) from the one in ROS.
   </description>
 
   <maintainer email="wjwwood@intrinsc.ai">William Woodall</maintainer>

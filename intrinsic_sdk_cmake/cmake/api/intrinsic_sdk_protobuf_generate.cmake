@@ -31,12 +31,14 @@ include_guard(GLOBAL)
 # :type IMPORT_DIRS: list of strings
 # :param SOURCES: the list of source files for the proto generation
 # :type SOURCES: list of strings
+# :param DESCRIPTOR_SET_OUTPUT: the output file path for the proto descriptor set file
+# :type DESCRIPTOR_SET_OUTPUT: string
 #
 # @public
 #
 function(intrinsic_sdk_protobuf_generate)
   set(options)
-  set(one_value_args NAME TARGET)
+  set(one_value_args NAME TARGET DESCRIPTOR_SET_OUTPUT)
   set(multi_value_args IMPORT_DIRS SOURCES)
 
   cmake_parse_arguments(
@@ -57,7 +59,7 @@ function(intrinsic_sdk_protobuf_generate)
 
   list(APPEND IMPORT_DIRS ${intrinsic_sdk_PROTO_DIR} ${googleapis_SOURCE_DIR})
 
-  set(DESCRIPTOR_SET ${OUT_DIR}/${GENERATE_ARGS_NAME}_protos.desc)
+  set(DESCRIPTOR_SET ${GENERATE_ARGS_DESCRIPTOR_SET_OUTPUT})
 
   add_library(${GENERATE_ARGS_TARGET} STATIC ${GENERATE_ARGS_SOURCES})
 

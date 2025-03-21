@@ -7,23 +7,23 @@ FROM ghcr.io/intrinsic-dev/intrinsic_sdk_cmake_source:${TAG} AS source
 # build_export_depends stage: source + rosdep install build_export depends
 FROM source AS build_export
 
-# Install build_export-like dependencies for the packages in intrinsic_sdk_ros.
+# Install build_export-like dependencies for the packages in intrinsic_sdk_cmake.
 # Exclude intrinsic_sdk_ros and intrinsic_sdk for now.
 RUN . /opt/ros/jazzy/setup.sh \
-	&& apt-get update \
-	&& rosdep init || true \
-	&& rosdep update \
-	&& cd /opt/intrinsic/intrinsic_sdk_cmake \
-	&& touch src/intrinsic_sdk_ros/intrinsic_sdk/COLCON_IGNORE \
-	&& touch src/intrinsic_sdk_ros/intrinsic_sdk_ros/COLCON_IGNORE \
-	&& rosdep install \
-		--from-paths src \
-		--ignore-src \
-		--default-yes \
-		--dependency-types buildtool_export \
-		--dependency-types build_export \
-		--dependency-types exec \
-	&& rm -rf /var/lib/apt/lists/*
+    && apt-get update \
+    && rosdep init || true \
+    && rosdep update \
+    && cd /opt/intrinsic/intrinsic_sdk_cmake \
+    && touch src/intrinsic_sdk_ros/intrinsic_sdk/COLCON_IGNORE \
+    && touch src/intrinsic_sdk_ros/intrinsic_sdk_ros/COLCON_IGNORE \
+    && rosdep install \
+        --from-paths src \
+        --ignore-src \
+        --default-yes \
+        --dependency-types buildtool_export \
+        --dependency-types build_export \
+        --dependency-types exec \
+    && rm -rf /var/lib/apt/lists/*
 
 # Save installed packages for re-install without source in later stage.
 # TODO(wjwwood): it would be nice to get the list of packages from rosdep
@@ -36,44 +36,45 @@ FROM source AS build
 # Install standard dependencies for the packages in intrinsic_sdk_ros.
 # Exclude intrinsic_sdk_ros and intrinsic_sdk for now.
 RUN . /opt/ros/jazzy/setup.sh \
-	&& apt-get update \
-	&& rosdep init || true \
-	&& rosdep update \
-	&& cd /opt/intrinsic/intrinsic_sdk_cmake \
-	&& touch src/intrinsic_sdk_ros/intrinsic_sdk/COLCON_IGNORE \
-	&& touch src/intrinsic_sdk_ros/intrinsic_sdk_ros/COLCON_IGNORE \
-	&& rosdep install \
-		--from-paths src \
-		--ignore-src \
-		--default-yes \
-	&& rm -rf /var/lib/apt/lists/*
+    && apt-get update \
+    && rosdep init || true \
+    && rosdep update \
+    && cd /opt/intrinsic/intrinsic_sdk_cmake \
+    && touch src/intrinsic_sdk_ros/intrinsic_sdk/COLCON_IGNORE \
+    && touch src/intrinsic_sdk_ros/intrinsic_sdk_ros/COLCON_IGNORE \
+    && rosdep install \
+        --from-paths src \
+        --ignore-src \
+        --default-yes \
+    && rm -rf /var/lib/apt/lists/*
 
 RUN . /opt/ros/jazzy/setup.sh \
-	&& cd /opt/intrinsic/intrinsic_sdk_cmake \
-	&& touch src/intrinsic_sdk_ros/intrinsic_sdk/COLCON_IGNORE \
-	&& touch src/intrinsic_sdk_ros/intrinsic_sdk_ros/COLCON_IGNORE \
-	&& colcon build \
-		--cmake-args -DBUILD_TESTING=ON \
-		--event-handlers console_direct+ console_stderr- \
-		--merge-install \
-		--executor=sequential
+    && cd /opt/intrinsic/intrinsic_sdk_cmake \
+    && touch src/intrinsic_sdk_ros/intrinsic_sdk/COLCON_IGNORE \
+    && touch src/intrinsic_sdk_ros/intrinsic_sdk_ros/COLCON_IGNORE \
+    && colcon build \
+        --cmake-args -DBUILD_TESTING=ON \
+        --event-handlers console_direct+ console_stderr- \
+        --merge-install \
+        --executor=sequential
 
+# TODO(wjwwood): reduce this further by not including the source code.
 # result stage: source + re-installed build_export depends + copy install artifacts
 FROM source AS result
 
 # Get the installed artifacts from the build stage.
 COPY --from=build \
-	/opt/intrinsic/intrinsic_sdk_cmake/install \
-	/opt/intrinsic/intrinsic_sdk_cmake/install
+    /opt/intrinsic/intrinsic_sdk_cmake/install \
+    /opt/intrinsic/intrinsic_sdk_cmake/install
 
 # Get the list of package from the run_deps stage.
 COPY --from=build_export \
-	/build_export_apt_packages.txt \
-	/build_export_apt_packages.txt
+    /build_export_apt_packages.txt \
+    /build_export_apt_packages.txt
 
 # Re-install the packages from the run_deps stage.
 # This avoids having the source code in the final image.
 RUN dpkg --set-selections < /build_export_apt_packages.txt \
-	&& apt-get dselect-upgrade
+    && apt-get dselect-upgrade
 
 CMD ["bash"]

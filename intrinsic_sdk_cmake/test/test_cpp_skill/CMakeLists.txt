@@ -13,6 +13,20 @@ intrinsic_sdk_generate_skill_manifest_pbbin(
   MANIFEST_PBBIN_OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/test_cpp_skill.manifest.pbbin"
 )
 
+# Generate the skill config file.
+intrinsic_sdk_generate_skill_config(
+  TARGET test_cpp_skill_skill_config
+  SKILL_NAME test_cpp_skill
+  MANIFEST_PBBIN "${CMAKE_CURRENT_BINARY_DIR}/test_cpp_skill.manifest.pbbin"
+  PROTO_DESCRIPTOR_FILE "${CMAKE_CURRENT_BINARY_DIR}/test_cpp_skill.desc"
+  SKILL_CONFIG_FILE_OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/test_cpp_skill_config.pbbin"
+)
+install(
+  FILES "${CMAKE_CURRENT_BINARY_DIR}/test_cpp_skill_config.pbbin"
+  DESTINATION share/${PROJECT_NAME}
+  OPTIONAL
+)
+
 # Generate the c++ main file for the skill.
 intrinsic_sdk_generate_skill_main_cc(
   MANIFEST_PBBIN "${CMAKE_CURRENT_BINARY_DIR}/test_cpp_skill.manifest.pbbin"
@@ -37,15 +51,28 @@ target_link_libraries(test_cpp_skill_main
   # Target that generates skill's protobuf files and library
   test_cpp_skill_protos
 )
+install(TARGETS test_cpp_skill_main DESTINATION lib/${PROJECT_NAME} OPTIONAL)
 
 # Create the skill container image.
-# intrinsic_sdk_generate_skill_container_image(
-#   TARGET test_cpp_skill_container_image
-#   # You could provide a custom dockerfile if the standard one is insufficient.
-#   # DOCKERFILE Dockerfile.my_custom_skill
-#   # Do not build by default, instead manually invoke this as needed.
-#   EXCLUDE_FROM_ALL
-# )
+intrinsic_sdk_generate_skill_container_image(
+  TARGET test_cpp_skill_container_image
+  # TODO(wjwwood): extract the skill name from the manifest
+  SKILL_NAME test_cpp_skill
+  SKILL_PACKAGE ${PROJECT_NAME}
+  SKILL_EXECUTABLE lib/${PROJECT_NAME}/test_cpp_skill_main
+  SKILL_CONFIG share/${PROJECT_NAME}/test_cpp_skill_config.pbbin
+  CONTAINER_CONTEXT_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+  CONTAINER_IMAGE_OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/test_cpp_skill_container_image.tar.gz"
+  # TODO(wjwwood): implement custom dockerfiles
+  # You could provide a custom dockerfile if the standard one is insufficient.
+  # DOCKERFILE Dockerfile.my_custom_skill
+  # You could have this included in ALL, but that's not usually recommended.
+  # ALL
+)
+add_dependencies(test_cpp_skill_container_image
+  test_cpp_skill_main
+  test_cpp_skill_skill_config
+)
 
 # # Create the skill bundle.
 # intrisic_sdk_generate_skill_bundle(

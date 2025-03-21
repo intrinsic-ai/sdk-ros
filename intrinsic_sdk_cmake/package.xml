@@ -23,7 +23,7 @@
   <depend>eigen_vendor</depend>
   <depend>flatbuffers_vendor</depend>
   <depend>grpc_vendor</depend>
-  <depend>pybind11_vendor</depend>
+  <depend>intrinsic_pybind11_vendor</depend>
   <depend>pybind11_abseil_vendor</depend>
   <depend>ortools_vendor</depend>
 
