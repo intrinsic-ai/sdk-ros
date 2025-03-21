@@ -20,6 +20,10 @@
 
 include_guard(GLOBAL)
 
+if(NOT DEFINED intrinsic_sdk_cmake_API_DIR)
+  message(FATAL_ERROR "intrinsic_sdk_cmake_API_DIR not defined, include via cmake/api/all.cmake")
+endif()
+
 #
 # Generate the skill container image.
 #
@@ -97,13 +101,14 @@ function(intrinsic_sdk_generate_skill_container_image)
     # BYPRODUCTS ${OUT_DIR}/${arg_SKILL_NAME}_container_image.tar.gz
     BYPRODUCTS ${arg_CONTAINER_IMAGE_OUTPUT}
     COMMAND podman build
-      -f "${intrinsic_sdk_cmake_DIR}/cmake/api/skill/resource/skill.Dockerfile"
+      -f "${intrinsic_sdk_cmake_API_DIR}/skill/resource/skill.Dockerfile"
       --build-arg SKILL_NAME=${arg_SKILL_NAME}
       --build-arg SKILL_PACKAGE=${arg_SKILL_PACKAGE}
       --build-arg SKILL_EXECUTABLE=${arg_SKILL_EXECUTABLE}
       --build-arg SKILL_CONFIG=${arg_SKILL_CONFIG}
       .
-    # COMMAND podman save 
+    # TODO(wjwwood): fix the saving issue
+    # COMMAND podman save
     WORKING_DIRECTORY ${arg_CONTAINER_CONTEXT_DIRECTORY}
     COMMENT "Generating skill container image for ${arg_SKILL_NAME}"
   )

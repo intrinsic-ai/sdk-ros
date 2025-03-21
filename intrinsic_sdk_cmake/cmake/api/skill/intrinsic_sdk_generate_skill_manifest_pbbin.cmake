@@ -62,4 +62,8 @@ function(intrinsic_sdk_generate_skill_manifest_pbbin)
     DEPENDS
       ${arg_MANIFEST_PBBIN_OUTPUT}
   )
+
+  if(TARGET intrinsic_proto_desc)
+    add_dependencies(${arg_TARGET} intrinsic_proto_desc)
+  endif()
 endfunction()

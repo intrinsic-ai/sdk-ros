@@ -51,9 +51,16 @@ function(intrinsic_sdk_generate_skill_main_cc)
 
   list(JOIN arg_HEADER_FILES "," joined_header_files)
 
+  # get_property(skill_service_generator_path
+  #   TARGET skill_service_generator_import
+  #   PROPERTY IMPORTED_LOCATION
+  # )
+  # message(FATAL_ERROR "skill_service_generator_path: ${skill_service_generator_path}")
   add_custom_command(
     OUTPUT ${arg_MAIN_FILE_OUTPUT}
-    COMMAND intrinsic_sdk_cmake::skill_service_generator
+    # TODO(wjwwood): figure out why the alias does not work...
+    # COMMAND intrinsic_sdk_cmake::skill_service_generator
+    COMMAND skill_service_generator_import
       --manifest=${arg_MANIFEST_PBBIN}
       --lang=cpp
       --out=${arg_MAIN_FILE_OUTPUT}

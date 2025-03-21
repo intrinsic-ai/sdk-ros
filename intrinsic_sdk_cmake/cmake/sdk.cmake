@@ -88,6 +88,10 @@ target_link_libraries(${PROJECT_NAME}
     intrinsic_sdk_protos
     intrinsic_sdk_services
 )
+# TODO(wjwwood): figure out why this is needed
+#   I did this to fix a linker error in dependent packages, see:
+#   https://zhangboyi.gitlab.io/post/2020-09-14-resolve-dso-missing-from-command-line-error/
+target_link_options(${PROJECT_NAME} INTERFACE "-Wl,--copy-dt-needed-entries")
 add_dependencies(${PROJECT_NAME} intrinsic_sdk_fbs strong_int_h_target)
 set_property(TARGET ${PROJECT_NAME} PROPERTY POSITION_INDEPENDENT_CODE ON)
 

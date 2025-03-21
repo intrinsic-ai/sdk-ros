@@ -20,7 +20,10 @@
 
 include_guard(GLOBAL)
 
-include("${intrinsic_sdk_cmake_DIR}/cmake/api/intrinsic_sdk_protobuf_generate.cmake")
+if(NOT DEFINED intrinsic_sdk_cmake_API_DIR)
+  message(FATAL_ERROR "intrinsic_sdk_cmake_API_DIR not defined, include via cmake/api/all.cmake")
+endif()
+include("${intrinsic_sdk_cmake_API_DIR}/intrinsic_sdk_protobuf_generate.cmake")
 
 #
 # Generate the manifest file for an Intrinsic Service bundle.
@@ -50,7 +53,7 @@ function(intrinsic_sdk_generate_service_manifest)
   )
 
   cmake_parse_arguments(
-    GENERATE_ARGS
+    arg
     "${options}"
     "${one_value_args}"
     "${multi_value_args}"
@@ -59,15 +62,15 @@ function(intrinsic_sdk_generate_service_manifest)
 
   set(OUT_DIR ${CMAKE_CURRENT_BINARY_DIR})
 
-  if (NOT GENERATE_ARGS_DEFAULT_CONFIGURATION STREQUAL "")
-    if (GENERATE_ARGS_PARAMETER_DESCRIPTOR STREQUAL "")
+  if (NOT arg_DEFAULT_CONFIGURATION STREQUAL "")
+    if (arg_PARAMETER_DESCRIPTOR STREQUAL "")
       message(ERROR "PARAMETER_DESCRIPTOR must be passed with DEFAULT_CONFIGURATION")
     endif()
 
     intrinsic_sdk_protobuf_generate(
-      NAME ${GENERATE_ARGS_SERVICE_NAME}
-      SOURCES ${GENERATE_ARGS_PARAMETER_DESCRIPTOR}
-      TARGET ${GENERATE_ARGS_PROTOS_TARGET})
+      NAME ${arg_SERVICE_NAME}
+      SOURCES ${arg_PARAMETER_DESCRIPTOR}
+      TARGET ${arg_PROTOS_TARGET})
 
     add_custom_command(
       OUTPUT ${OUT_DIR}/default_config.binarypb
@@ -75,18 +78,18 @@ function(intrinsic_sdk_generate_service_manifest)
       ARGS
         --descriptor_database
           ${intrinsic_sdk_DESCRIPTOR_DATABASE}
-          ${OUT_DIR}/${GENERATE_ARGS_SERVICE_NAME}_protos.desc
+          ${OUT_DIR}/${arg_SERVICE_NAME}_protos.desc
         --message_type=google.protobuf.Any
-        --textproto_in=${CMAKE_CURRENT_SOURCE_DIR}/${GENERATE_ARGS_DEFAULT_CONFIGURATION}
+        --textproto_in=${CMAKE_CURRENT_SOURCE_DIR}/${arg_DEFAULT_CONFIGURATION}
         --binproto_out=${OUT_DIR}/default_config.binarypb
       DEPENDS
-        ${CMAKE_CURRENT_SOURCE_DIR}/${GENERATE_ARGS_DEFAULT_CONFIGURATION}
-        ${OUT_DIR}/${GENERATE_ARGS_SERVICE_NAME}_protos.desc
-      COMMENT "Generating default config for ${GENERATE_ARGS_SERVICE_NAME}"
+        ${CMAKE_CURRENT_SOURCE_DIR}/${arg_DEFAULT_CONFIGURATION}
+        ${OUT_DIR}/${arg_SERVICE_NAME}_protos.desc
+      COMMENT "Generating default config for ${arg_SERVICE_NAME}"
     )
 
     add_custom_target(
-      ${GENERATE_ARGS_SERVICE_NAME}_default_config DEPENDS
+      ${arg_SERVICE_NAME}_default_config DEPENDS
         ${OUT_DIR}/default_config.binarypb
     )
 
@@ -98,14 +101,14 @@ function(intrinsic_sdk_generate_service_manifest)
     ARGS
       --descriptor_database ${intrinsic_sdk_DESCRIPTOR_DATABASE}
       --message_type=intrinsic_proto.services.ServiceManifest
-      --textproto_in=${CMAKE_CURRENT_SOURCE_DIR}/${GENERATE_ARGS_MANIFEST}
+      --textproto_in=${CMAKE_CURRENT_SOURCE_DIR}/${arg_MANIFEST}
       --binproto_out=${OUT_DIR}/service_manifest.binarypb
-    DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/${GENERATE_ARGS_MANIFEST}
-    COMMENT "Generating service manifest for ${GENERATE_ARGS_SERVICE_NAME}"
+    DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/${arg_MANIFEST}
+    COMMENT "Generating service manifest for ${arg_SERVICE_NAME}"
   )
 
   add_custom_target(
-    ${GENERATE_ARGS_SERVICE_NAME}_manifest DEPENDS
+    ${arg_SERVICE_NAME}_manifest DEPENDS
       ${OUT_DIR}/service_manifest.binarypb
   )
 endfunction()

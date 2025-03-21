@@ -28,19 +28,22 @@ if(NOT DEFINED intrinsic_sdk_cmake_DIR)
   message(FATAL_ERROR "intrinsic_sdk_cmake_DIR is unexpectedly not set")
 endif()
 
-set(_INTRINSIC_SDK_CMAKE_API_DIR "${intrinsic_sdk_cmake_DIR}/cmake/api")
+if(NOT DEFINED intrinsic_sdk_cmake_API_DIR)
+  set(intrinsic_sdk_cmake_API_DIR
+    "${intrinsic_sdk_cmake_DIR}/../../../share/intrinsic_sdk_cmake/cmake/api")
+endif()
 
 # Protobuf generation API
-include("${_INTRINSIC_SDK_CMAKE_API_DIR}/intrinsic_sdk_protobuf_generate.cmake")
+include("${intrinsic_sdk_cmake_API_DIR}/intrinsic_sdk_protobuf_generate.cmake")
 
 # Skill APIs
-include("${_INTRINSIC_SDK_CMAKE_API_DIR}/skill/intrinsic_sdk_generate_skill.cmake")
-include("${_INTRINSIC_SDK_CMAKE_API_DIR}/skill/intrinsic_sdk_generate_skill_config.cmake")
-include("${_INTRINSIC_SDK_CMAKE_API_DIR}/skill/intrinsic_sdk_generate_skill_container_image.cmake")
-include("${_INTRINSIC_SDK_CMAKE_API_DIR}/skill/intrinsic_sdk_generate_skill_main_cc.cmake")
-include("${_INTRINSIC_SDK_CMAKE_API_DIR}/skill/intrinsic_sdk_generate_skill_manifest_pbbin.cmake")
+include("${intrinsic_sdk_cmake_API_DIR}/skill/intrinsic_sdk_generate_skill.cmake")
+include("${intrinsic_sdk_cmake_API_DIR}/skill/intrinsic_sdk_generate_skill_config.cmake")
+include("${intrinsic_sdk_cmake_API_DIR}/skill/intrinsic_sdk_generate_skill_container_image.cmake")
+include("${intrinsic_sdk_cmake_API_DIR}/skill/intrinsic_sdk_generate_skill_main_cc.cmake")
+include("${intrinsic_sdk_cmake_API_DIR}/skill/intrinsic_sdk_generate_skill_manifest_pbbin.cmake")
 
 # Service APIs
-include("${_INTRINSIC_SDK_CMAKE_API_DIR}/service/intrinsic_sdk_generate_service_manifest.cmake")
+include("${intrinsic_sdk_cmake_API_DIR}/service/intrinsic_sdk_generate_service_manifest.cmake")
 
-unset(_INTRINSIC_SDK_CMAKE_API_DIR)
+unset(intrinsic_sdk_cmake_API_DIR)

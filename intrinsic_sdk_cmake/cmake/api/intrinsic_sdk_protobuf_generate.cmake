@@ -42,7 +42,7 @@ function(intrinsic_sdk_protobuf_generate)
   set(multi_value_args IMPORT_DIRS SOURCES)
 
   cmake_parse_arguments(
-    GENERATE_ARGS
+    arg
     "${options}"
     "${one_value_args}"
     "${multi_value_args}"
@@ -51,30 +51,35 @@ function(intrinsic_sdk_protobuf_generate)
 
   set(OUT_DIR ${CMAKE_CURRENT_BINARY_DIR})
 
-  if(GENERATE_ARGS_IMPORT_DIRS)
-    set(IMPORT_DIRS ${GENERATE_ARGS_IMPORT_DIRS})
+  if(arg_IMPORT_DIRS)
+    set(IMPORT_DIRS ${arg_IMPORT_DIRS})
   else()
     set(IMPORT_DIRS ${CMAKE_CURRENT_SOURCE_DIR})
   endif()
 
   list(APPEND IMPORT_DIRS ${intrinsic_sdk_PROTO_DIR} ${googleapis_SOURCE_DIR})
 
-  set(DESCRIPTOR_SET ${GENERATE_ARGS_DESCRIPTOR_SET_OUTPUT})
+  set(DESCRIPTOR_SET ${arg_DESCRIPTOR_SET_OUTPUT})
 
-  add_library(${GENERATE_ARGS_TARGET} STATIC ${GENERATE_ARGS_SOURCES})
+  add_library(${arg_TARGET} STATIC ${arg_SOURCES})
 
   protobuf_generate(
-    TARGET ${GENERATE_ARGS_TARGET}
+    TARGET ${arg_TARGET}
     LANGUAGE cpp
     IMPORT_DIRS ${IMPORT_DIRS}
     PROTOC_OUT_DIR ${OUT_DIR}
+    PROTOC_OPTIONS
+      --descriptor_set_in=${intrinsic_sdk_cmake_DESCRIPTOR_SET_FILE}
   )
+  if(TARGET intrinsic_proto_desc)
+    add_dependencies(${arg_TARGET} intrinsic_proto_desc)
+  endif()
 
-  target_include_directories(${GENERATE_ARGS_TARGET}
+  target_include_directories(${arg_TARGET}
     PUBLIC
       ${OUT_DIR}
   )
-  target_link_libraries(${GENERATE_ARGS_TARGET}
+  target_link_libraries(${arg_TARGET}
     PUBLIC
       absl::cordz_functions
       absl::log_internal_check_op
@@ -91,20 +96,24 @@ function(intrinsic_sdk_protobuf_generate)
   list(APPEND PROTOC_ARGS
     "--include_imports"
     "--include_source_info"
+    "--descriptor_set_in=${intrinsic_sdk_cmake_DESCRIPTOR_SET_FILE}"
     "--descriptor_set_out=${DESCRIPTOR_SET}"
   )
-  list(APPEND PROTOC_ARGS "${GENERATE_ARGS_SOURCES}")
+  list(APPEND PROTOC_ARGS "${arg_SOURCES}")
 
   add_custom_command(
     OUTPUT ${DESCRIPTOR_SET}
     COMMAND protobuf::protoc
     ARGS ${PROTOC_ARGS}
     DEPENDS ${protobuf_PROTOC_EXE}
-    COMMENT "Generating skill descriptor set for: ${GENERATE_ARGS_NAME}"
+    COMMENT "Generating skill descriptor set for: ${arg_NAME}"
     VERBATIM
   )
 
-  add_custom_target(${GENERATE_ARGS_TARGET}_desc DEPENDS ${DESCRIPTOR_SET})
+  add_custom_target(${arg_TARGET}_desc DEPENDS ${DESCRIPTOR_SET})
+  if(TARGET intrinsic_proto_desc)
+    add_dependencies(${arg_TARGET}_desc intrinsic_proto_desc)
+  endif()
 
-  add_dependencies(${GENERATE_ARGS_TARGET} ${GENERATE_ARGS_TARGET}_desc)
+  add_dependencies(${arg_TARGET} ${arg_TARGET}_desc)
 endfunction()

@@ -20,8 +20,11 @@
 
 include_guard(GLOBAL)
 
-include("${intrinsic_sdk_cmake_DIR}/cmake/api/intrinsic_sdk_protobuf_generate.cmake")
-include("${intrinsic_sdk_cmake_DIR}/cmake/api/skill/intrinsic_sdk_generate_skill_config.cmake")
+if(NOT DEFINED intrinsic_sdk_cmake_API_DIR)
+  message(FATAL_ERROR "intrinsic_sdk_cmake_API_DIR not defined, include via cmake/api/all.cmake")
+endif()
+include("${intrinsic_sdk_cmake_API_DIR}/intrinsic_sdk_protobuf_generate.cmake")
+include("${intrinsic_sdk_cmake_API_DIR}/skill/intrinsic_sdk_generate_skill_config.cmake")
 
 #
 # Generate all the components of an Intrinsic Skill and bundle them into an

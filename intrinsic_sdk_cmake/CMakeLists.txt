@@ -10,24 +10,8 @@ endif()
 # Fetch the sdk, intrinsic_sdk_SOURCE_DIR is set after this.
 include(cmake/fetch_sdk.cmake)
 
-# Find vendor packages to ensure dependencies are available.
-find_package(bazelisk_vendor REQUIRED)
-find_package(eigen_vendor REQUIRED)
-find_package(flatbuffers_vendor REQUIRED)
-find_package(grpc_vendor REQUIRED)  # Provides protobuf and abseilcpp
-find_package(intrinsic_pybind11_vendor REQUIRED)
-find_package(pybind11_abseil_vendor REQUIRED)
-find_package(ortools_vendor REQUIRED)
-
-# Find project dependencies.
-find_package(Eigen3 REQUIRED)
-find_package(flatbuffers REQUIRED)
-find_package(Protobuf CONFIG REQUIRED)
-find_package(gRPC CONFIG REQUIRED)
-set(PYBIND11_FINDPYTHON ON)
-find_package(pybind11 CONFIG REQUIRED)
-find_package(pybind11_abseil CONFIG REQUIRED)
-find_package(ortools CONFIG REQUIRED)
+# Find dependencies.
+include(cmake/dependencies.cmake)
 
 # Set important bazel related variables like intrinsic_sdk_BAZEL_BIN_DIR.
 include(cmake/bazel_setup.cmake)
@@ -51,6 +35,10 @@ include(cmake/sdk_tools.cmake)
 # Install cmake helper functions.
 install(
   DIRECTORY cmake/api
+  DESTINATION share/${PROJECT_NAME}/cmake
+)
+install(
+  FILES cmake/dependencies.cmake
   DESTINATION share/${PROJECT_NAME}/cmake
 )
 
@@ -82,6 +70,7 @@ install(
 if(BUILD_TESTING)
   # Imitate find_package(intrinsic_sdk_cmake) for testing
   set(intrinsic_sdk_cmake_DIR "${CMAKE_CURRENT_SOURCE_DIR}")
+  set(intrinsic_sdk_cmake_API_DIR "${intrinsic_sdk_cmake_DIR}/cmake/api")
   set(intrinsic_sdk_cmake_DESCRIPTOR_SET_FILE "${CMAKE_CURRENT_BINARY_DIR}/intrinsic_proto.desc")
   include(cmake/api/all.cmake)
 
