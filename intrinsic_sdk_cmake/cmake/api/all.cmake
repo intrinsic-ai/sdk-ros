@@ -45,5 +45,3 @@ include("${intrinsic_sdk_cmake_API_DIR}/skill/intrinsic_sdk_generate_skill_manif
 
 # Service APIs
 include("${intrinsic_sdk_cmake_API_DIR}/service/intrinsic_sdk_generate_service_manifest.cmake")
-
-unset(intrinsic_sdk_cmake_API_DIR)

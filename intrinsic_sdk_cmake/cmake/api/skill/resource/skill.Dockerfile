@@ -93,4 +93,4 @@ RUN sed --in-place \
 LABEL "ai.intrinsic.asset-id"="${SKILL_ASSET_ID_ORG}.${SKILL_NAME}"
 LABEL "ai.intrinsic.skill-image-name"="${SKILL_NAME}"
 
-CMD ["$SKILL_EXECUTABLE_ABS" ]
+CMD ["$SKILL_EXECUTABLE_ABS", "--skill_service_config_filename=$SKILL_CONFIG_ABS"]

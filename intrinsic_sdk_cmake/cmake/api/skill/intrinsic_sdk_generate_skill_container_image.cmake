@@ -48,6 +48,12 @@ endif()
 # Note that the skill main executable must be installed to be used in the
 # standard skill dockerfile.
 #
+# This target is not added to ALL by default, since this is an expensive target
+# to build and usually only needs to be built when deploying.
+# It is recommended to invoke this target manually with cmake using
+# `cmake --build <build dir> --target <TARGET>` or with colcon using the
+# `colcon build --cmake-target <TARGET> --packages-select <pkg name>` options.
+#
 # :param TARGET: the name of the target created by this function
 # :type TARGET: string
 # :param SKILL_EXECUTABLE: the relative path to the skill executable in the
@@ -61,13 +67,15 @@ endif()
 # :param SKILL_PACKAGE: the name of the cmake project/ament pacakge that
 #   contains the skill
 # :type SKILL_PACKAGE: string
+# :param SKILL_ASSET_ID_ORG: the name of the organization in the full skill name
+# :type SKILL_ASSET_ID_ORG: string
 # :param CONTAINER_CONTEXT_DIRECTORY: the directory to build the container in,
 #   which will also be the directory whose contents will be copied into the
 #   colcon workspace's src folder inside the container and should contain all
 #   the packages that are needed to build the skill package beyond rosdep
 #   dependencies.
 # :type CONTAINER_CONTEXT_DIRECTORY: string
-# :param CONTAINER_IMAGE_OUTPUT: the output path for the container image .tar.gz
+# :param CONTAINER_IMAGE_OUTPUT: the output path for the container image .tar
 # :type CONTAINER_IMAGE_OUTPUT: string
 #
 # @public
@@ -80,6 +88,7 @@ function(intrinsic_sdk_generate_skill_container_image)
     SKILL_CONFIG
     SKILL_NAME
     SKILL_PACKAGE
+    SKILL_ASSET_ID_ORG
     CONTAINER_CONTEXT_DIRECTORY
     CONTAINER_IMAGE_OUTPUT
   )
@@ -98,18 +107,21 @@ function(intrinsic_sdk_generate_skill_container_image)
   # Generate container image using the skill Dockerfile.
   add_custom_target(
     ${arg_TARGET}
-    # BYPRODUCTS ${OUT_DIR}/${arg_SKILL_NAME}_container_image.tar.gz
     BYPRODUCTS ${arg_CONTAINER_IMAGE_OUTPUT}
     COMMAND podman build
       -f "${intrinsic_sdk_cmake_API_DIR}/skill/resource/skill.Dockerfile"
+      --format="docker"
+      --output="type=tar,dest=${arg_CONTAINER_IMAGE_OUTPUT}"
       --build-arg SKILL_NAME=${arg_SKILL_NAME}
       --build-arg SKILL_PACKAGE=${arg_SKILL_PACKAGE}
       --build-arg SKILL_EXECUTABLE=${arg_SKILL_EXECUTABLE}
       --build-arg SKILL_CONFIG=${arg_SKILL_CONFIG}
+      --build-arg SKILL_ASSET_ID_ORG=${arg_SKILL_ASSET_ID_ORG}
       .
-    # TODO(wjwwood): fix the saving issue
     # COMMAND podman save
+    #   --format="docker-archive"
+    #   --output="${arg_CONTAINER_IMAGE_OUTPUT}"
     WORKING_DIRECTORY ${arg_CONTAINER_CONTEXT_DIRECTORY}
-    COMMENT "Generating skill container image for ${arg_SKILL_NAME}"
+    COMMENT "Generating skill container image for ${arg_SKILL_NAME}: ${arg_CONTAINER_IMAGE_OUTPUT}"
   )
 endfunction()

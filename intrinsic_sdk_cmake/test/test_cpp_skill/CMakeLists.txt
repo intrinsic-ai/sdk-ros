@@ -24,7 +24,6 @@ intrinsic_sdk_generate_skill_config(
 install(
   FILES "${CMAKE_CURRENT_BINARY_DIR}/test_cpp_skill_config.pbbin"
   DESTINATION share/${PROJECT_NAME}
-  OPTIONAL
 )
 
 # Generate the c++ main file for the skill.
@@ -61,17 +60,12 @@ intrinsic_sdk_generate_skill_container_image(
   SKILL_PACKAGE ${PROJECT_NAME}
   SKILL_EXECUTABLE lib/${PROJECT_NAME}/test_cpp_skill_main
   SKILL_CONFIG share/${PROJECT_NAME}/test_cpp_skill_config.pbbin
+  SKILL_ASSET_ID_ORG ai.intrinsic
   CONTAINER_CONTEXT_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-  CONTAINER_IMAGE_OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/test_cpp_skill_container_image.tar.gz"
+  CONTAINER_IMAGE_OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/test_cpp_skill_container_image.tar"
   # TODO(wjwwood): implement custom dockerfiles
   # You could provide a custom dockerfile if the standard one is insufficient.
-  # DOCKERFILE Dockerfile.my_custom_skill
-  # You could have this included in ALL, but that's not usually recommended.
-  # ALL
-)
-add_dependencies(test_cpp_skill_container_image
-  test_cpp_skill_main
-  test_cpp_skill_skill_config
+  # DOCKERFILE my_custom_skill.Dockerfile
 )
 
 # # Create the skill bundle.

@@ -60,3 +60,13 @@ install(FILES
   ${CMAKE_CURRENT_BINARY_DIR}/bazelisk_vendorConfigVersion.cmake
   DESTINATION share/${PROJECT_NAME}/cmake
 )
+
+# Install the essential ament_index package resources and the package.xml.
+install(CODE "
+  file(MAKE_DIRECTORY ${CMAKE_INSTALL_PREFIX}/share/ament_index/resource_index/packages)
+  file(TOUCH ${CMAKE_INSTALL_PREFIX}/share/ament_index/resource_index/packages/${PROJECT_NAME})
+")
+install(FILES
+  package.xml
+  DESTINATION share/${PROJECT_NAME}
+)
