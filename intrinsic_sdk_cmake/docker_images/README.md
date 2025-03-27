@@ -10,9 +10,9 @@ The images include:
 
 ## How to build the images
 
-These are some notes on how to build these images, which are normally hosted on ghcr.io/intrinsic-dev.
+These are some notes on how to build these images, which are normally hosted on ghcr.io/intrinsic-ai.
 
-You shouldn't try to push to the ghcr.io/intrinsic-dev container registry if you're not a project maintainer, but you might find the following useful for local testing if you're trying to contribute or debug an issue.
+You shouldn't try to push to the ghcr.io/intrinsic-ai container registry if you're not a project maintainer, but you might find the following useful for local testing if you're trying to contribute or debug an issue.
 
 ### (Optional): setup a local registry for testing
 
@@ -27,11 +27,11 @@ Then you need to edit `/etc/containers/registries.conf` to contain an entry like
 ```toml
 [[registry]]
 location = "localhost:5000"
-prefix = "ghcr.io/intrinsic-dev"
+prefix = "ghcr.io/intrinsic-ai"
 insecure = true
 ```
 
-Now, when you _pull_ (and only when you pull), if you reference `ghcr.io/intrinsic-dev` it will try to pull the images from your local registry.
+Now, when you _pull_ (and only when you pull), if you reference `ghcr.io/intrinsic-ai` it will try to pull the images from your local registry.
 
 ### Building Notes
 
@@ -59,7 +59,7 @@ First build the image that contains the source code, and if you're iterating on 
 ```
 # Make sure you're in the root directory of the repository.
 $ podman build \
-  -t ghcr.io/intrinsic-dev/intrinsic_sdk_cmake_source:latest \
+  -t ghcr.io/intrinsic-ai/intrinsic_sdk_cmake_source:latest \
   -f intrinsic_sdk_cmake/docker_images/intrinsic_sdk_cmake_source.Dockerfile \
   .
 ```
@@ -72,7 +72,7 @@ If you're using the local container registry, you will need to tag it and push i
 
 ```
 $ podman tag \
-  ghcr.io/intrinsic-dev/intrinsic_sdk_cmake_source:latest \
+  ghcr.io/intrinsic-ai/intrinsic_sdk_cmake_source:latest \
   localhost:5000/intrinsic_sdk_cmake_source:latest
 ...
 
@@ -86,7 +86,7 @@ Note that you may need to use `--tls-verify=false` to get it to push to the loca
 Once you're done testing, or if you're not using the local container registry, then you need to push to ghcr.io:
 
 ```
-$ podman push ghcr.io/intrinsic-dev/intrinsic_sdk_cmake_source:latest
+$ podman push ghcr.io/intrinsic-ai/intrinsic_sdk_cmake_source:latest
 ```
 
 Note you may need to login or authenticate with ghcr.io first and ensure you have permission to push to that project.
@@ -100,7 +100,7 @@ Make sure you have built and pushed the source image before trying to build this
 $ podman build \
   -v "$HOME/.cache/bazel:/root/.cache/bazel" \
   --build-arg TAG=latest \
-  -t ghcr.io/intrinsic-dev/intrinsic_sdk_cmake:latest \
+  -t ghcr.io/intrinsic-ai/intrinsic_sdk_cmake:latest \
   -f intrinsic_sdk_cmake/docker_images/intrinsic_sdk_cmake.Dockerfile \
   .
 ```
@@ -113,7 +113,7 @@ If you're using the local container registry, you will need to tag it and push i
 
 ```
 $ podman tag \
-  ghcr.io/intrinsic-dev/intrinsic_sdk_cmake:latest \
+  ghcr.io/intrinsic-ai/intrinsic_sdk_cmake:latest \
   localhost:5000/intrinsic_sdk_cmake:latest
 ...
 
@@ -125,7 +125,7 @@ $ podman push localhost:5000/intrinsic_sdk_cmake:latest --tls-verify=false
 Once you're done testing, or if you're not using the local container registry, then you need to push to ghcr.io:
 
 ```
-$ podman push ghcr.io/intrinsic-dev/intrinsic_sdk_cmake:latest
+$ podman push ghcr.io/intrinsic-ai/intrinsic_sdk_cmake:latest
 ```
 
 ### Build the run image

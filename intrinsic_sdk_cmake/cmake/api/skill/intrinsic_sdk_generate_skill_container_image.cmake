@@ -28,15 +28,15 @@ endif()
 # Generate the skill container image.
 #
 # This container image will build the user's skill in a container and produce
-# an archive (.tar.gz) containing the container image.
+# an archive (.tar) containing the container image.
 #
 # The process for building the container by default is to:
 #
-# - start with the ghcr.io/intrinsic-dev/intrinsic_sdk_cmake:latest image
+# - start with the ghcr.io/intrinsic-ai/intrinsic_sdk_cmake:latest image
 # - copy the contents of the CONTAINER_CONTEXT_DIRECTORY into the image
 # - install the dependencies of the package with rosdep install
 # - build the user's package with colcon and --packages-up-to $SKILL_PACKAGE
-# - restart with ghcr.io/intrinsic-dev/intrinsic_sdk_cmake:latest
+# - restart with ghcr.io/intrinsic-ai/intrinsic_sdk_cmake:latest
 # - install exec (run-time) only dependencies with rosdep install
 # - copy the install folder of the user's colcon build
 # - set up the container to run the SKILL_EXECUTABLE on start

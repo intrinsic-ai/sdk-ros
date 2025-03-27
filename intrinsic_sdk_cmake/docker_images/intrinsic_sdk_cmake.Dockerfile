@@ -2,7 +2,7 @@
 # Use the intrinsic_sdk_cmake_run image if you only want the runtime dependencies.
 
 ARG TAG=latest
-FROM ghcr.io/intrinsic-dev/intrinsic_sdk_cmake_source:${TAG} AS source
+FROM ghcr.io/intrinsic-ai/intrinsic_sdk_cmake_source:${TAG} AS source
 
 # build_export_depends stage: source + rosdep install build_export depends
 FROM source AS build_export

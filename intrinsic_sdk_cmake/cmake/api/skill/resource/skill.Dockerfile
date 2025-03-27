@@ -1,6 +1,6 @@
 # intrinsic_sdk_cmake build base + user code built and setup to run
 ARG TAG=latest
-FROM ghcr.io/intrinsic-dev/intrinsic_sdk_cmake:${TAG} as source
+FROM ghcr.io/intrinsic-ai/intrinsic_sdk_cmake:${TAG} as source
 
 # The name of the skill.
 ARG SKILL_NAME
