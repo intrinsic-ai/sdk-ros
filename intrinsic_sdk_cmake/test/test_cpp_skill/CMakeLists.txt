@@ -51,6 +51,7 @@ target_link_libraries(test_cpp_skill_main
   test_cpp_skill_protos
 )
 install(TARGETS test_cpp_skill_main DESTINATION lib/${PROJECT_NAME} OPTIONAL)
+add_dependencies(test_cpp_skill_main test_cpp_skill_skill_config)
 
 # Create the skill container image.
 intrinsic_sdk_generate_skill_container_image(
