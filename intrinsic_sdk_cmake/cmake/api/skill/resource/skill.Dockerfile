@@ -79,8 +79,8 @@ RUN ls $SKILL_CONFIG_ABS \
     || (echo "Skill executable does not exist '$SKILL_CONFIG_ABS'" \
         && false)
 
-RUN ln -sf $SKILL_EXECUTABLE_ABS /skill_main && \
-    ln -sf $SKILL_CONFIG_ABS /skill_config && \
+RUN ln -sf $SKILL_EXECUTABLE_ABS /skills/skill_service && \
+    ln -sf $SKILL_CONFIG_ABS /skills/skill_service_config.proto.bin && \
     sed --in-place \
         --expression '$isource "$SKILL_WORKSPACE/install/setup.bash"' \
         /ros_entrypoint.sh \
@@ -95,4 +95,6 @@ RUN ln -sf $SKILL_EXECUTABLE_ABS /skill_main && \
 LABEL "ai.intrinsic.asset-id"="${SKILL_ASSET_ID_ORG}.${SKILL_NAME}"
 LABEL "ai.intrinsic.skill-image-name"="${SKILL_NAME}"
 
-CMD ["/skill_main", "--skill_service_config_filename=/skill_config"]
+CMD [ \
+    "/skills/skill_service", \
+    "--skill_service_config_filename=/skills/skill_service_config.proto.bin"]
