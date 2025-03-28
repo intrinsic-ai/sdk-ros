@@ -4,33 +4,24 @@ FROM ros:jazzy AS base
 WORKDIR /opt/ros/underlay
 
 ENV ROS_HOME=/tmp
-ENV RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
+ENV RMW_IMPLEMENTATION=rmw_zenoh_cpp
 
 # underlay stage: base + dependencies built
 FROM base AS underlay
 
 ADD src/intrinsic_sdk_ros /opt/ros/underlay/src/intrinsic_sdk_ros
-
-RUN git clone https://github.com/eclipse-zenoh/zenoh-plugin-dds \
-    -b release-1.0.2 \
-    --recurse-submodules \
-    /opt/ros/underlay/src/zenoh-plugin-dds
+# TODO(Yadunund): Switch to ZENOH_CONFIG_OVERRIDE after the next jazzy sync.
+COPY zenoh_config.json5 /opt/zenoh_config.json5
 
 RUN . /opt/ros/jazzy/setup.sh \
     && apt-get update \
-    && apt install -y clang-14 ros-jazzy-ament-cmake-vendor-package cargo \
+    && apt install -y clang-16 ros-jazzy-ament-cmake-vendor-package cargo \
     && colcon build \
-        --continue-on-error \
-        --cmake-args -DCMAKE_C_COMPILER=clang-14 -DCMAKE_CXX_COMPILER=clang++-14 \
-        --event-handlers=console_direct+ \
-        --merge-install \
-        --packages-up-to zenoh_bridge_dds \
-    && colcon build \
+        --cmake-args -DCMAKE_C_COMPILER=clang-16 -DCMAKE_CXX_COMPILER=clang++-16 \
         --continue-on-error \
         --event-handlers=console_direct+ \
         --merge-install \
-        --packages-up-to intrinsic_sdk \
-        --packages-skip zenoh_bridge_dds
+        --packages-up-to intrinsic_sdk
 
 # overlay stage: underlay + service code built
 FROM underlay AS overlay
@@ -39,7 +30,7 @@ ARG SKILL_PACKAGE
 ARG DEPENDENCIES
 
 RUN apt-get update \
-    && apt install -y ros-jazzy-rmw-cyclonedds-cpp python3-protobuf ${DEPENDENCIES} \
+    && apt install -y ros-jazzy-rmw-zenoh-cpp python3-protobuf ${DEPENDENCIES} \
     && rm -rf /var/lib/apt/lists/*
 
 ADD src /opt/ros/overlay/src
@@ -51,7 +42,7 @@ RUN . /opt/ros/jazzy/setup.sh \
       --event-handlers=console_direct+ \
       --merge-install \
       --packages-up-to=${SKILL_PACKAGE} \
-      --packages-skip intrinsic_sdk zenoh_bridge_dds grpc_vendor
+      --packages-skip intrinsic_sdk grpc_vendor
 
 
 # result stage: base + copied install folders from the overlay + skill setup
@@ -61,7 +52,7 @@ ARG SKILL_PACKAGE
 ARG SKILL_NAME
 
 RUN apt-get update \
-    && apt-get install -y ros-jazzy-rmw-cyclonedds-cpp python3-protobuf ${DEPENDENCIES} \
+    && apt-get install -y ros-jazzy-rmw-zenoh-cpp python3-protobuf ${DEPENDENCIES} \
     && rm -rf /var/lib/apt/lists/*
 
 COPY --from=overlay /opt/ros/underlay/install /opt/ros/underlay/install
@@ -70,10 +61,12 @@ COPY --from=overlay /opt/ros/overlay/install /opt/ros/overlay/install
 RUN mkdir /skills \
     && ln -sf /opt/ros/overlay/install/lib/${SKILL_PACKAGE}/${SKILL_NAME}_main /skills/skill_service \
     && ln -sf /opt/ros/overlay/install/share/${SKILL_PACKAGE}/${SKILL_NAME}_skill_config.pbbin /skills/skill_service_config.proto.bin \
-    && sed --in-place --expression '$isource "/opt/ros/overlay/install/setup.bash"' /ros_entrypoint.sh \
-    && sed --in-place --expression '5 a/opt/ros/underlay/install/lib/zenoh_bridge_dds/zenoh_bridge_dds -m client -e tcp/zenoh-router.app-intrinsic-base:7447 --no-multicast-scouting &' /ros_entrypoint.sh
+    && sed --in-place --expression '$isource "/opt/ros/overlay/install/setup.bash"' /ros_entrypoint.sh
 
 LABEL "ai.intrinsic.asset-id"="ai.intrinsic.${SKILL_PACKAGE}.${SKILL_NAME}"
 LABEL "ai.intrinsic.skill-image-name"="${SKILL_NAME}_ros_image"
+
+# TODO(Yadunund): Switch to ZENOH_CONFIG_OVERRIDE after the next jazzy sync.
+ENV ZENOH_SESSION_CONFIG_URI=/opt/zenoh_config.json5
 
 CMD ["/skills/skill_service", "--skill_service_config_filename=/skills/skill_service_config.proto.bin"]
