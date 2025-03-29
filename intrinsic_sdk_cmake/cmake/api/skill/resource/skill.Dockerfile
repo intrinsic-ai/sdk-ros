@@ -79,7 +79,8 @@ RUN ls $SKILL_CONFIG_ABS \
     || (echo "Skill executable does not exist '$SKILL_CONFIG_ABS'" \
         && false)
 
-RUN ln -sf $SKILL_EXECUTABLE_ABS /skills/skill_service && \
+RUN mkdir -p /skills && \
+    ln -sf $SKILL_EXECUTABLE_ABS /skills/skill_service && \
     ln -sf $SKILL_CONFIG_ABS /skills/skill_service_config.proto.bin && \
     sed --in-place \
         --expression '$isource "$SKILL_WORKSPACE/install/setup.bash"' \
