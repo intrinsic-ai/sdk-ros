@@ -15,9 +15,8 @@ COPY zenoh_config.json5 /opt/zenoh_config.json5
 
 RUN . /opt/ros/jazzy/setup.sh \
     && apt-get update \
-    && apt install -y clang-16 ros-jazzy-ament-cmake-vendor-package \
+    && apt install -y ros-jazzy-ament-cmake-vendor-package \
     && colcon build \
-        --cmake-args -DCMAKE_C_COMPILER=clang-16 -DCMAKE_CXX_COMPILER=clang++-16 \
         --continue-on-error \
         --event-handlers=console_direct+ \
         --merge-install \
