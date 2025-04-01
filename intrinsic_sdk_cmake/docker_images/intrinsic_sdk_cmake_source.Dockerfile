@@ -13,6 +13,7 @@ ENV ROS_HOME=/tmp
 ENV RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
 
 RUN apt-get update \
+    && apt-get dist-upgrade -y \
     && apt-get install -y --no-install-recommends \
         git \
         ros-jazzy-rmw-cyclonedds-cpp \

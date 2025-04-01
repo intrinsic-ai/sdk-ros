@@ -11,7 +11,7 @@ FROM source AS build_export
 # Exclude intrinsic_sdk_ros and intrinsic_sdk for now.
 RUN . /opt/ros/jazzy/setup.sh \
     && apt-get update \
-    && rosdep init || true \
+    && (rosdep init || true) \
     && rosdep update \
     && cd /opt/intrinsic/intrinsic_sdk_cmake \
     && touch src/intrinsic_sdk_ros/intrinsic_sdk/COLCON_IGNORE \
@@ -37,7 +37,7 @@ FROM source AS build
 # Exclude intrinsic_sdk_ros and intrinsic_sdk for now.
 RUN . /opt/ros/jazzy/setup.sh \
     && apt-get update \
-    && rosdep init || true \
+    && (rosdep init || true) \
     && rosdep update \
     && cd /opt/intrinsic/intrinsic_sdk_cmake \
     && touch src/intrinsic_sdk_ros/intrinsic_sdk/COLCON_IGNORE \

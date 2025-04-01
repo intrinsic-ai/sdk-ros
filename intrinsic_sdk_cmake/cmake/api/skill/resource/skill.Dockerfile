@@ -28,7 +28,7 @@ ARG SKILL_PACKAGE
 # Install build and run dependencies for the user's packages.
 RUN . /opt/intrinsic/intrinsic_sdk_cmake/install/setup.sh \
     && apt-get update \
-    && rosdep init || true \
+    && (rosdep init || true) \
     && rosdep update \
     && cd $SKILL_WORKSPACE \
     && rosdep install \
@@ -57,7 +57,7 @@ ARG SKILL_ASSET_ID_ORG
 # Install run dependencies for user's packages.
 RUN . /opt/intrinsic/intrinsic_sdk_cmake/install/setup.sh \
     && apt-get update \
-    && rosdep init || true \
+    && (rosdep init || true) \
     && rosdep update \
     && cd $SKILL_WORKSPACE \
     && rosdep install \
