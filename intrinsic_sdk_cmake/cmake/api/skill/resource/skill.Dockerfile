@@ -86,11 +86,13 @@ RUN mkdir -p /skills && \
         --expression '$isource "$SKILL_WORKSPACE/install/setup.bash"' \
         /ros_entrypoint.sh \
     && sed --in-place \
-        --expression \
-            '5 a/opt/intrinsic/intrinsic_sdk_cmake/install/lib/zenoh_bridge_dds/zenoh_bridge_dds \
-             -m client \
-             -e tcp/zenoh-router.app-intrinsic-base:7447 \
-             --no-multicast-scouting &' \
+        --expression '$iexport RMW_IMPLEMENTATION=rmw_zenoh_cpp' \
+        /ros_entrypoint.sh \
+    && sed --in-place \
+        --expression '$iexport ENV ROS_HOME=/tmp' \
+        /ros_entrypoint.sh \
+    && sed --in-place \
+        --expression '$iexport ZENOH_SESSION_CONFIG_URI=/opt/zenoh_config.json5' \
         /ros_entrypoint.sh
 
 LABEL "ai.intrinsic.asset-id"="${SKILL_ASSET_ID_ORG}.${SKILL_NAME}"
