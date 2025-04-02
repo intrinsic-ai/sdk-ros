@@ -4,7 +4,7 @@ project(bazelisk_vendor)
 include(GNUInstallDirs)
 
 set(LIBEXEC_DIR "${CMAKE_INSTALL_LIBDIR}/bazelisk_vendor"
-    CACHE PATH "Location of program executables" )
+  CACHE PATH "Location of program executables")
 
 function(download_and_install BINARY_NAME)
   set(BAZELISK_VERSION 1.25.0)
@@ -27,17 +27,16 @@ function(extract_version_from_xml_tag VERSION_STRING XML_FILE)
   file(READ ${XML_FILE} XML_CONTENT)
 
   if(XML_CONTENT MATCHES "<version>\\s*([^<]*)\\s*</version>")
-    set(VERSION_STRING "${CMAKE_MATCH_1}")
-    string(STRIP "${VERSION_STRING}" VERSION_STRING)
-    set(VERSION_STRING "${VERSION_STRING}" PARENT_SCOPE)
+    set(${VERSION_STRING} "${CMAKE_MATCH_1}")
+    string(STRIP "${${VERSION_STRING}}" ${VERSION_STRING})
+    set(${VERSION_STRING} "${${VERSION_STRING}}" PARENT_SCOPE)
   else()
     message(FATAL_ERROR "Failed to extract a <version> from file: ${XML_FILE}")
   endif()
-
 endfunction()
 
-extract_version_from_xml_tag(VERSION_STRING "${CMAKE_CURRENT_SOURCE_DIR}/package.xml")
-message(STATUS "bazelisk_vendor version: ${VERSION_STRING}")
+extract_version_from_xml_tag(version_string_out "${CMAKE_CURRENT_SOURCE_DIR}/package.xml")
+message(STATUS "bazelisk_vendor version: ${version_string_out}")
 
 include(CMakePackageConfigHelpers)
 configure_package_config_file(bazelisk_vendorConfig.cmake.in
@@ -47,7 +46,7 @@ configure_package_config_file(bazelisk_vendorConfig.cmake.in
 )
 write_basic_package_version_file(
   "${CMAKE_CURRENT_BINARY_DIR}/bazelisk_vendorConfigVersion.cmake"
-  VERSION "${VERSION_STRING}"
+  VERSION "${version_string_out}"
   COMPATIBILITY SameMajorVersion
 )
 install(FILES

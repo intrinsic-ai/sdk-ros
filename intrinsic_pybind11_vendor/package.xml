@@ -9,14 +9,14 @@
     Wrapper around pybind11 for the intrinsic_sdk, different (for now) from the one in ROS.
   </description>
 
-  <maintainer email="wjwwood@intrinsc.ai">William Woodall</maintainer>
+  <maintainer email="wjwwood@intrinsic.ai">William Woodall</maintainer>
 
   <!-- The contents of this package are Apache-2.0 -->
   <license>Apache-2.0</license>
   <!-- Pybind11 is BSD-3-Clause -->
   <license>BSD-3-Clause</license>
 
-  <author email="wjwwood@intrinsc.ai">William Woodall</author>
+  <author email="wjwwood@intrinsic.ai">William Woodall</author>
 
   <buildtool_depend>ament_cmake</buildtool_depend>
   <buildtool_depend>ament_cmake_vendor_package</buildtool_depend>

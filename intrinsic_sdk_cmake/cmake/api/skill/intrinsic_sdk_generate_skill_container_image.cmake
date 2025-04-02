@@ -69,6 +69,10 @@ endif()
 # :type SKILL_PACKAGE: string
 # :param SKILL_ASSET_ID_ORG: the name of the organization in the full skill name
 # :type SKILL_ASSET_ID_ORG: string
+# :param CONTAINER_TAG_NAME: the container image's tag name to be given when
+#   building the container image, which can be used outside of cmake to
+#   interact with, or delete, the container image that is created in this target
+# :type CONTAINER_TAG_NAME: string
 # :param CONTAINER_CONTEXT_DIRECTORY: the directory to build the container in,
 #   which will also be the directory whose contents will be copied into the
 #   colcon workspace's src folder inside the container and should contain all
@@ -89,6 +93,7 @@ function(intrinsic_sdk_generate_skill_container_image)
     SKILL_NAME
     SKILL_PACKAGE
     SKILL_ASSET_ID_ORG
+    CONTAINER_TAG_NAME
     CONTAINER_CONTEXT_DIRECTORY
     CONTAINER_IMAGE_OUTPUT
   )
@@ -110,17 +115,17 @@ function(intrinsic_sdk_generate_skill_container_image)
     BYPRODUCTS ${arg_CONTAINER_IMAGE_OUTPUT}
     COMMAND podman build
       -f "${intrinsic_sdk_cmake_API_DIR}/skill/resource/skill.Dockerfile"
-      --format="docker"
-      --output="type=tar,dest=${arg_CONTAINER_IMAGE_OUTPUT}"
       --build-arg SKILL_NAME=${arg_SKILL_NAME}
       --build-arg SKILL_PACKAGE=${arg_SKILL_PACKAGE}
       --build-arg SKILL_EXECUTABLE=${arg_SKILL_EXECUTABLE}
       --build-arg SKILL_CONFIG=${arg_SKILL_CONFIG}
       --build-arg SKILL_ASSET_ID_ORG=${arg_SKILL_ASSET_ID_ORG}
+      --tag {arg_CONTAINER_TAG_NAME}
       .
-    # COMMAND podman save
-    #   --format="docker-archive"
-    #   --output="${arg_CONTAINER_IMAGE_OUTPUT}"
+    COMMAND podman save
+      --format="docker-archive"
+      --output="${arg_CONTAINER_IMAGE_OUTPUT}"
+      {arg_CONTAINER_TAG_NAME}
     WORKING_DIRECTORY ${arg_CONTAINER_CONTEXT_DIRECTORY}
     COMMENT "Generating skill container image for ${arg_SKILL_NAME}: ${arg_CONTAINER_IMAGE_OUTPUT}"
   )

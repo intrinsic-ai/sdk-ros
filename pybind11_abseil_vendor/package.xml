@@ -9,14 +9,14 @@
     Wrapper around pybind11_abseil.
   </description>
 
-  <maintainer email="wjwwood@intrinsc.ai">William Woodall</maintainer>
+  <maintainer email="wjwwood@intrinsic.ai">William Woodall</maintainer>
 
   <!-- The contents of this package are Apache-2.0 -->
   <license>Apache-2.0</license>
   <!-- pybind11_abseil uses the same BSD-3-Clause as pybind11 -->
   <license>BSD-3-Clause</license>
 
-  <author email="wjwwood@intrinsc.ai">William Woodall</author>
+  <author email="wjwwood@intrinsic.ai">William Woodall</author>
 
   <buildtool_depend>ament_cmake</buildtool_depend>
   <buildtool_depend>ament_cmake_vendor_package</buildtool_depend>

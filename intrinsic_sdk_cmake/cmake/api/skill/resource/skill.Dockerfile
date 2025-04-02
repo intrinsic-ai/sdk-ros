@@ -21,41 +21,14 @@ ENV SKILL_WORKSPACE=/opt/${SKILL_NAME}_workspace
 # Add the user's code to the container.
 ADD ./ $SKILL_WORKSPACE/src
 
+# build stage: build dependencies + build the packages
 FROM source as build
 
 ARG SKILL_PACKAGE
 
 # Install build and run dependencies for the user's packages.
 RUN . /opt/intrinsic/intrinsic_sdk_cmake/install/setup.sh \
-    && apt-get update \
-    && (rosdep init || true) \
-    && rosdep update \
-    && cd $SKILL_WORKSPACE \
-    && rosdep install \
-        --from-paths src \
-        --ignore-src \
-        --default-yes \
-        --skip-keys intrinsic_sdk_cmake \
-    && rm -rf /var/lib/apt/lists/*
-
-# Build the user's packages.
-RUN . /opt/intrinsic/intrinsic_sdk_cmake/install/setup.sh \
-    && cd $SKILL_WORKSPACE \
-    && colcon build \
-        --cmake-args -DBUILD_TESTING=ON \
-        --event-handlers console_direct+ console_stderr- \
-        --merge-install \
-        --executor=sequential \
-        --packages-up-to $SKILL_PACKAGE
-
-FROM source as run
-
-ARG SKILL_EXECUTABLE
-ARG SKILL_CONFIG
-ARG SKILL_ASSET_ID_ORG
-
-# Install run dependencies for user's packages.
-RUN . /opt/intrinsic/intrinsic_sdk_cmake/install/setup.sh \
+    && set -x \
     && apt-get update \
     && (rosdep init || true) \
     && rosdep update \
@@ -65,11 +38,73 @@ RUN . /opt/intrinsic/intrinsic_sdk_cmake/install/setup.sh \
         --ignore-src \
         --default-yes \
         --dependency-types exec \
-        --skip-keys intrinsic_sdk_cmake \
+    && dpkg --get-selections > /user_exec_apt_packages.txt \
+    && rosdep install \
+        --from-paths src \
+        --ignore-src \
+        --default-yes \
     && rm -rf /var/lib/apt/lists/*
 
+# Build the user's packages.
+RUN . /opt/intrinsic/intrinsic_sdk_cmake/install/setup.sh \
+    && set -x \
+    && cd $SKILL_WORKSPACE \
+    && colcon build \
+        --cmake-args -DBUILD_TESTING=ON \
+        --event-handlers console_direct+ console_stderr- \
+        --merge-install \
+        --executor=sequential \
+        --packages-up-to $SKILL_PACKAGE
+
+# exec_depends stage: capture just the exec depends using the source
+FROM ghcr.io/intrinsic-ai/intrinsic_sdk_cmake_run:${TAG} as exec_depends
+
+ARG SKILL_NAME
+ENV SKILL_WORKSPACE=/opt/${SKILL_NAME}_workspace
+
+COPY --from=source \
+    $SKILL_WORKSPACE \
+    $SKILL_WORKSPACE
+
+RUN . /opt/intrinsic/intrinsic_sdk_cmake/install/setup.sh \
+    && set -x \
+    && apt-get update \
+    && (rosdep init || true) \
+    && rosdep update \
+    && cd $SKILL_WORKSPACE \
+    && rosdep install \
+        --from-paths src \
+        --ignore-src \
+        --default-yes \
+        --dependency-types exec \
+    && dpkg --get-selections > /user_exec_apt_packages.txt \
+    && rm -rf /var/lib/apt/lists/*
+
+# run stage: install exec dependencies + copy install artifacts from build stage
+FROM ghcr.io/intrinsic-ai/intrinsic_sdk_cmake_run:${TAG} as run
+
+ARG SKILL_EXECUTABLE
+ARG SKILL_CONFIG
+ARG SKILL_ASSET_ID_ORG
+
+ARG SKILL_NAME
+ENV SKILL_WORKSPACE=/opt/${SKILL_NAME}_workspace
+
+# Install run dependencies for user's packages.
+COPY --from=exec_depends \
+    /user_exec_apt_packages.txt \
+    /user_exec_apt_packages.txt
+RUN set -x \
+    && apt-get update \
+    && apt-cache dumpavail | dpkg --merge-avail \
+    && dpkg --set-selections < /user_exec_apt_packages.txt \
+    && apt-get dselect-upgrade -y \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy build artifacts from user's packages.
 COPY --from=build $SKILL_WORKSPACE/install $SKILL_WORKSPACE/install
 
+# Ensure skill executable and config file exist.
 ENV SKILL_EXECUTABLE_ABS=$SKILL_WORKSPACE/install/$SKILL_EXECUTABLE
 RUN ls $SKILL_EXECUTABLE_ABS \
     || (echo "Skill executable does not exist '$SKILL_EXECUTABLE_ABS'" \
@@ -79,25 +114,21 @@ RUN ls $SKILL_CONFIG_ABS \
     || (echo "Skill executable does not exist '$SKILL_CONFIG_ABS'" \
         && false)
 
-RUN mkdir -p /skills && \
-    ln -sf $SKILL_EXECUTABLE_ABS /skills/skill_service && \
-    ln -sf $SKILL_CONFIG_ABS /skills/skill_service_config.proto.bin && \
-    sed --in-place \
+# Link skill executable and skill config file into well known locations needed by Flowstate.
+# Also ensure the user's workspace is sourced so the skill main can be run correctly.
+RUN set -x \
+    && mkdir -p /skills \
+    && ln -sf $SKILL_EXECUTABLE_ABS /skills/skill_service \
+    && ln -sf $SKILL_CONFIG_ABS /skills/skill_service_config.proto.bin \
+    && sed --in-place \
         --expression '$isource "$SKILL_WORKSPACE/install/setup.bash"' \
-        /ros_entrypoint.sh \
-    && sed --in-place \
-        --expression '$iexport RMW_IMPLEMENTATION=rmw_zenoh_cpp' \
-        /ros_entrypoint.sh \
-    && sed --in-place \
-        --expression '$iexport ENV ROS_HOME=/tmp' \
-        /ros_entrypoint.sh \
-    && sed --in-place \
-        --expression '$iexport ZENOH_SESSION_CONFIG_URI=/opt/zenoh_config.json5' \
         /ros_entrypoint.sh
 
+# Set some labels used by Flowstate.
 LABEL "ai.intrinsic.asset-id"="${SKILL_ASSET_ID_ORG}.${SKILL_NAME}"
 LABEL "ai.intrinsic.skill-image-name"="${SKILL_NAME}"
 
+# Execute the skill main by default, but note that Flowstate will likely override this statement.
 CMD [ \
     "/skills/skill_service", \
     "--skill_service_config_filename=/skills/skill_service_config.proto.bin"]

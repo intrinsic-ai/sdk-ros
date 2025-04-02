@@ -9,13 +9,13 @@
     Wrapper around the Intrinsic SDK so it can be used from CMake.
   </description>
 
-  <maintainer email="wjwwood@intrinsc.ai">William Woodall</maintainer>
+  <maintainer email="wjwwood@intrinsic.ai">William Woodall</maintainer>
 
   <license>Apache License 2.0</license>  <!-- This package is Apache 2.0 -->
   <license>Intrinsic License</license>  <!-- The Intrinsic SDK has a custom license for now -->
 
   <author email="mjcarroll@intrinsic.ai">Michael Carroll</author>
-  <author email="wjwwood@intrinsc.ai">William Woodall</author>
+  <author email="wjwwood@intrinsic.ai">William Woodall</author>
 
   <buildtool_depend>cmake</buildtool_depend>
   <buildtool_depend>bazelisk_vendor</buildtool_depend>

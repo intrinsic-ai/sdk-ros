@@ -62,6 +62,7 @@ intrinsic_sdk_generate_skill_container_image(
   SKILL_EXECUTABLE lib/${PROJECT_NAME}/test_cpp_skill_main
   SKILL_CONFIG share/${PROJECT_NAME}/test_cpp_skill_config.pbbin
   SKILL_ASSET_ID_ORG ai.intrinsic
+  CONTAINER_TAG_NAME "test_cpp_skill:latest"
   CONTAINER_CONTEXT_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
   CONTAINER_IMAGE_OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/test_cpp_skill_container_image.tar"
   # TODO(wjwwood): implement custom dockerfiles

@@ -12,6 +12,6 @@ find_package(ament_cmake REQUIRED)
 # Find the cmake wrapper around the Intrinsic SDK.
 find_package(intrinsic_sdk_cmake REQUIRED)
 
-ament_package(
-  # CONFIG_EXTRAS cmake/intrinsic_sdk-extras.cmake.in
-)
+ament_export_dependencies(intrinsic_sdk_cmake)
+
+ament_package()

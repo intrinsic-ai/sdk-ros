@@ -9,7 +9,7 @@
     Wrapper around or-tools.
   </description>
 
-  <maintainer email="wjwwood@intrinsc.ai">William Woodall</maintainer>
+  <maintainer email="wjwwood@intrinsic.ai">William Woodall</maintainer>
 
   <license>Apache License 2.0</license>
 

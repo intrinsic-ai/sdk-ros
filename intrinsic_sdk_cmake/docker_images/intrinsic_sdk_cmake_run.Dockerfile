@@ -1,23 +1,23 @@
-# dependencies stage: source + rosdep install run dependencies only
-FROM source AS dependencies
+ARG TAG=latest
+FROM ghcr.io/intrinsic-ai/intrinsic_sdk_cmake:${TAG} as build_image
 
-# Install exec dependencies for the packages in intrinsic_sdk_ros.
-# Exclude intrinsic_sdk_ros and intrinsic_sdk for now.
-RUN . /opt/ros/jazzy/setup.sh \
+FROM ghcr.io/intrinsic-ai/intrinsic_sdk_cmake_base:${TAG} as result
+
+# Get the installed artifacts from the build stage.
+COPY --from=build_image \
+    /opt/intrinsic/intrinsic_sdk_cmake/install \
+    /opt/intrinsic/intrinsic_sdk_cmake/install
+
+# Get the list of exec dependencies from a previous build stage.
+COPY --from=build_image \
+    /exec_apt_packages.txt \
+    /exec_apt_packages.txt
+
+# Re-install the packages needed for exec.
+# This avoids having the source code and unnecessary dependencies in the final image.
+RUN set -x \
     && apt-get update \
-    && rosdep init || true \
-    && rosdep update \
-    && cd /opt/intrinsic/intrinsic_sdk_cmake \
-    && touch src/intrinsic_sdk_ros/intrinsic_sdk/COLCON_IGNORE \
-    && touch src/intrinsic_sdk_ros/intrinsic_sdk_ros/COLCON_IGNORE \
-    && rosdep install \
-        --from-paths src \
-        --ignore-src \
-        --default-yes \
-        --dependency-types exec \
+    && apt-cache dumpavail | dpkg --merge-avail \
+    && dpkg --set-selections < /exec_apt_packages.txt \
+    && apt-get dselect-upgrade -y \
     && rm -rf /var/lib/apt/lists/*
-
-# Save installed packages for re-install without source in the run stage.
-# TODO(wjwwood): it would be nice to get the list of packages from rosdep
-#   without installing them, but I couldn't figure out how to do that easily.
-RUN dpkg --get-selections > /exec_apt_packages.txt

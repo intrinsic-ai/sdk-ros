@@ -2,20 +2,52 @@
 # Use the intrinsic_sdk_cmake_run image if you only want the runtime dependencies.
 
 ARG TAG=latest
-FROM ghcr.io/intrinsic-ai/intrinsic_sdk_cmake_source:${TAG} AS source
+FROM ghcr.io/intrinsic-ai/intrinsic_sdk_cmake_base:${TAG} AS base
 
-# build_export_depends stage: source + rosdep install build_export depends
+# source stage: base + source added
+FROM base AS source
+
+ADD ./ /opt/intrinsic/intrinsic_sdk_cmake/src/intrinsic_sdk_ros
+
+# Ensure we're running from the root of the repository so the ADD worked.
+RUN cd /opt/intrinsic/intrinsic_sdk_cmake/src/intrinsic_sdk_ros \
+    && ls ./intrinsic_sdk_cmake/docker_images/intrinsic_sdk_cmake.Dockerfile \
+    || (echo "you must build this dockerfile from the root of the repository" \
+    && false)
+
+# build_export stage: source + rosdep install build_export depends
 FROM source AS build_export
 
-# Install build_export-like dependencies for the packages in intrinsic_sdk_cmake.
-# Exclude intrinsic_sdk_ros and intrinsic_sdk for now.
-RUN . /opt/ros/jazzy/setup.sh \
+# Setup rosdep
+RUN set -x \
     && apt-get update \
-    && (rosdep init || true) \
-    && rosdep update \
+    && apt-get install -y --no-install-recommends \
+        python3-rosdep \
+    && rm -rf /var/lib/apt/lists/*
+
+# Bootstrap rosdep
+RUN set -x \
+    && rosdep init \
+    && rosdep update --rosdistro jazzy
+
+# Install exec-like dependencies for the packages in intrinsic_sdk_cmake and
+# save them for re-install in a later stage.
+# Exclude intrinsic_sdk_ros and intrinsic_sdk for now.
+# TODO(wjwwood): it would be nice to get the list of packages from rosdep
+#   without installing them, but I couldn't figure out how to do that easily.
+RUN . /opt/ros/jazzy/setup.sh \
+    && set -x \
+    && apt-get update \
+    && rosdep update --rosdistro jazzy \
     && cd /opt/intrinsic/intrinsic_sdk_cmake \
     && touch src/intrinsic_sdk_ros/intrinsic_sdk/COLCON_IGNORE \
     && touch src/intrinsic_sdk_ros/intrinsic_sdk_ros/COLCON_IGNORE \
+    && rosdep install \
+        --from-paths src \
+        --ignore-src \
+        --default-yes \
+        --dependency-types exec \
+    && dpkg --get-selections > /exec_apt_packages.txt \
     && rosdep install \
         --from-paths src \
         --ignore-src \
@@ -23,22 +55,38 @@ RUN . /opt/ros/jazzy/setup.sh \
         --dependency-types buildtool_export \
         --dependency-types build_export \
         --dependency-types exec \
+    && dpkg --get-selections > /build_export_apt_packages.txt \
     && rm -rf /var/lib/apt/lists/*
 
-# Save installed packages for re-install without source in later stage.
-# TODO(wjwwood): it would be nice to get the list of packages from rosdep
-#   without installing them, but I couldn't figure out how to do that easily.
-RUN dpkg --get-selections > /build_export_apt_packages.txt
+# build stage: build_export + rosdep install all depends + packages up to intrinsic_sdk_cmake built
+FROM build_export AS build
 
-# build stage: source + rosdep install build depends + packages up to intrinsic_sdk_cmake built
-FROM source AS build
+# Install other development tools.
+RUN set -x \
+    && apt-get update \
+    && apt-get install -y --no-install-recommends \
+        build-essential \
+        git \
+        python3-colcon-common-extensions \
+        python3-colcon-mixin \
+        python3-vcstool \
+    && rm -rf /var/lib/apt/lists/*
 
-# Install standard dependencies for the packages in intrinsic_sdk_ros.
+# Setup colcon mixin and metadata.
+RUN set -x \
+    && colcon mixin add default \
+        https://raw.githubusercontent.com/colcon/colcon-mixin-repository/master/index.yaml \
+    && colcon mixin update \
+    && colcon metadata add default \
+        https://raw.githubusercontent.com/colcon/colcon-metadata-repository/master/index.yaml \
+    && colcon metadata update
+
+# Install the rest of the standard dependencies for the packages in intrinsic_sdk_ros.
 # Exclude intrinsic_sdk_ros and intrinsic_sdk for now.
 RUN . /opt/ros/jazzy/setup.sh \
+    && set -x \
     && apt-get update \
-    && (rosdep init || true) \
-    && rosdep update \
+    && rosdep update --rosdistro jazzy \
     && cd /opt/intrinsic/intrinsic_sdk_cmake \
     && touch src/intrinsic_sdk_ros/intrinsic_sdk/COLCON_IGNORE \
     && touch src/intrinsic_sdk_ros/intrinsic_sdk_ros/COLCON_IGNORE \
@@ -48,7 +96,9 @@ RUN . /opt/ros/jazzy/setup.sh \
         --default-yes \
     && rm -rf /var/lib/apt/lists/*
 
+# Build intrinsic_sdk_cmake and all of its dependencies.
 RUN . /opt/ros/jazzy/setup.sh \
+    && set -x \
     && cd /opt/intrinsic/intrinsic_sdk_cmake \
     && touch src/intrinsic_sdk_ros/intrinsic_sdk/COLCON_IGNORE \
     && touch src/intrinsic_sdk_ros/intrinsic_sdk_ros/COLCON_IGNORE \
@@ -58,23 +108,56 @@ RUN . /opt/ros/jazzy/setup.sh \
         --merge-install \
         --executor=sequential
 
-# TODO(wjwwood): reduce this further by not including the source code.
-# result stage: source + re-installed build_export depends + copy install artifacts
-FROM source AS result
+# result stage: base + copy install artifacts + re-installed build_export depends + dev tools
+FROM base AS result
 
 # Get the installed artifacts from the build stage.
 COPY --from=build \
     /opt/intrinsic/intrinsic_sdk_cmake/install \
     /opt/intrinsic/intrinsic_sdk_cmake/install
 
-# Get the list of package from the run_deps stage.
+# Get the list of build_export depends from the build_export stage.
 COPY --from=build_export \
     /build_export_apt_packages.txt \
     /build_export_apt_packages.txt
+# Also get the list of exec depends from the build_export stage for use in run image later.
+COPY --from=build_export \
+    /exec_apt_packages.txt \
+    /exec_apt_packages.txt
 
 # Re-install the packages from the run_deps stage.
 # This avoids having the source code in the final image.
-RUN dpkg --set-selections < /build_export_apt_packages.txt \
-    && apt-get dselect-upgrade
+RUN set -x \
+    && apt-get update \
+    && apt-cache dumpavail | dpkg --merge-avail \
+    && dpkg --set-selections < /build_export_apt_packages.txt \
+    && apt-get dselect-upgrade -y \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install other development tools.
+RUN set -x \
+    && apt-get update \
+    && apt-get install -y --no-install-recommends \
+        build-essential \
+        git \
+        python3-colcon-common-extensions \
+        python3-colcon-mixin \
+        python3-rosdep \
+        python3-vcstool \
+    && rm -rf /var/lib/apt/lists/*
+
+# Bootstrap rosdep
+RUN set -x \
+    && rosdep init \
+    && rosdep update --rosdistro jazzy
+
+# Setup colcon mixin and metadata.
+RUN set -x \
+    && colcon mixin add default \
+        https://raw.githubusercontent.com/colcon/colcon-mixin-repository/master/index.yaml \
+    && colcon mixin update \
+    && colcon metadata add default \
+        https://raw.githubusercontent.com/colcon/colcon-metadata-repository/master/index.yaml \
+    && colcon metadata update
 
 CMD ["bash"]

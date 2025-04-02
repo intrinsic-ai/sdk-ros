@@ -9,7 +9,7 @@
     Wrapper around grpc.
   </description>
 
-  <maintainer email="mjcarroll@intrinsc.ai">Michael Carroll</maintainer>
+  <maintainer email="wjwwood@intrinsic.ai">William Woodall</maintainer>
 
   <license>Apache-2.0</license>  <!-- The contents of this package and the upstream gRPC library are both Apache-2.0 -->
 

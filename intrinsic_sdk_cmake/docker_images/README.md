@@ -4,8 +4,8 @@ These docker images are used as the standard foundation for cmake/ROS based cont
 
 The images include:
 
-- intrinsic_sdk_source: contains the source code of this repository
-- intrinsic_sdk_cmake: builds off of intrinsic_sdk_source, contains the built artifacts of intrinsic_sdk_cmake and its build_export dependencies, which makes it appropriate for a user's container that build's their software to depend on
+- intrinsic_sdk_cmake_base: contains the base container image with settings and prerequisites installed
+- intrinsic_sdk_cmake: builds off of intrinsic_sdk_cmake_base, contains the built artifacts of intrinsic_sdk_cmake and its build_export dependencies, which makes it appropriate for a user's container that build's their software to depend on
 - intrinsic_sdk_cmake_run: contains the built artifacts of intrinsic_sdk_cmake and its run-time dependencies, appropriate for a slimmed down run-time only image for the user
 
 ## How to build the images
@@ -46,25 +46,25 @@ This will prevent errors where the cache is expected to exist and also it will a
 ---
 
 Also the images are set up to build the `latest` tag by default, but they take an argument `ARG TAG=latest` if you want to build them for a different, more specific tag.
-This doesn't happen with the source image since it doesn't depend on another of our images.
+This doesn't happen with the base image since it doesn't depend on another of our images.
 
 ---
 
 Additionally, you should always build the images from the root of the repository, so that the docker images can access the local files from a consistent location.
 
-### Build the source image
+### Build the base image
 
-First build the image that contains the source code, and if you're iterating on the source code in this repository, then you'll need to re-run this step and rebuild subsequent container images to have your changes take effect in the container images:
+First build the base image:
 
 ```
 # Make sure you're in the root directory of the repository.
 $ podman build \
-  -t ghcr.io/intrinsic-ai/intrinsic_sdk_cmake_source:latest \
-  -f intrinsic_sdk_cmake/docker_images/intrinsic_sdk_cmake_source.Dockerfile \
+  -t ghcr.io/intrinsic-ai/intrinsic_sdk_cmake_base:latest \
+  -f intrinsic_sdk_cmake/docker_images/intrinsic_sdk_cmake_base.Dockerfile \
   .
 ```
 
-Note the source image doesn't need the bazel cache volume because it doesn't build anything, but it also wouldn't hurt to include it.
+Note the base image doesn't need the bazel cache volume because it doesn't build anything, but it also wouldn't hurt to include it.
 
 #### (Optional) push to local container registry
 
@@ -72,11 +72,11 @@ If you're using the local container registry, you will need to tag it and push i
 
 ```
 $ podman tag \
-  ghcr.io/intrinsic-ai/intrinsic_sdk_cmake_source:latest \
-  localhost:5000/intrinsic_sdk_cmake_source:latest
+  ghcr.io/intrinsic-ai/intrinsic_sdk_cmake_base:latest \
+  localhost:5000/intrinsic_sdk_cmake_base:latest
 ...
 
-$ podman push localhost:5000/intrinsic_sdk_cmake_source:latest --tls-verify=false
+$ podman push localhost:5000/intrinsic_sdk_cmake_base:latest --tls-verify=false
 ```
 
 Note that you may need to use `--tls-verify=false` to get it to push to the local registry.
@@ -86,14 +86,14 @@ Note that you may need to use `--tls-verify=false` to get it to push to the loca
 Once you're done testing, or if you're not using the local container registry, then you need to push to ghcr.io:
 
 ```
-$ podman push ghcr.io/intrinsic-ai/intrinsic_sdk_cmake_source:latest
+$ podman push ghcr.io/intrinsic-ai/intrinsic_sdk_cmake_base:latest
 ```
 
 Note you may need to login or authenticate with ghcr.io first and ensure you have permission to push to that project.
 
 ### Build the main image
 
-Make sure you have built and pushed the source image before trying to build this image.
+Make sure you have built and pushed the base image before trying to build this image, and if you are iterating on the source code in this repository, make sure you rebuild this image and dependent images to uptake the source code changes.
 
 ```
 # Make sure you're in the root directory of the repository.
@@ -105,7 +105,7 @@ $ podman build \
   .
 ```
 
-Note that if you want to build it off of a different tag of the source image, you'll need to change the `TAG` argument.
+Note that if you want to build it off of a different tag of the base image, you'll need to change the `TAG` argument.
 
 #### (Optional) push to local container registry
 
