@@ -10,22 +10,19 @@ FROM ros:jazzy AS base
 WORKDIR /opt/intrinsic
 
 ENV ROS_HOME=/tmp
-ENV RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
+ENV RMW_IMPLEMENTATION=rmw_zenoh_cpp
 
 RUN apt-get update \
     && apt-get dist-upgrade -y \
     && apt-get install -y --no-install-recommends \
         git \
-        ros-jazzy-rmw-cyclonedds-cpp \
+        ros-jazzy-rmw-zenoh-cpp \
     && rm -rf /var/lib/apt/lists/*
 
 # source stage: base + source added
 FROM base AS source
 
 ADD ./ /opt/intrinsic/intrinsic_sdk_cmake/src/intrinsic_sdk_ros
-
-RUN cd /opt/intrinsic/intrinsic_sdk_cmake/src \
-    && git clone https://github.com/eclipse-zenoh/zenoh-plugin-dds.git -b 1.0.2
 
 # Ensure we're running from the root of the repository so the ADD worked.
 RUN cd /opt/intrinsic/intrinsic_sdk_cmake/src/intrinsic_sdk_ros \
