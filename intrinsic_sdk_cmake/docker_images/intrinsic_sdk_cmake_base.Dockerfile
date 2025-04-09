@@ -32,7 +32,7 @@ RUN set -x \
         --expression '$iexport ENV ROS_HOME=/tmp' \
         /ros_entrypoint.sh \
     && sed --in-place \
-        --expression '$iexport ZENOH_CONFIG_OVERRIDE=\'connect/endpoints=["tcp/zenoh-router.app-intrinsic-base:7447"]\'' \
+        --expression '$iexport ZENOH_CONFIG_OVERRIDE='\'connect/endpoints=[\"tcp/zenoh-router.app-intrinsic-base:7447\"]\''' \
         /ros_entrypoint.sh
 
 CMD ["bash"]
