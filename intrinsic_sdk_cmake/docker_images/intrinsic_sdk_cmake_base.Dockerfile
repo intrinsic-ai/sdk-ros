@@ -24,7 +24,6 @@ RUN apt-get update \
     && apt-get install -y --no-install-recommends ros-jazzy-rmw-zenoh-cpp \
     && rm -rf /var/lib/apt/lists/*
 ENV RMW_IMPLEMENTATION=rmw_zenoh_cpp
-COPY intrinsic_sdk_cmake/docker_images/zenoh_config.json5 /opt/zenoh_config.json5
 RUN set -x \
     && sed --in-place \
         --expression '$iexport RMW_IMPLEMENTATION=rmw_zenoh_cpp' \
@@ -33,7 +32,7 @@ RUN set -x \
         --expression '$iexport ENV ROS_HOME=/tmp' \
         /ros_entrypoint.sh \
     && sed --in-place \
-        --expression '$iexport ZENOH_SESSION_CONFIG_URI=/opt/zenoh_config.json5' \
+        --expression '$iexport ZENOH_CONFIG_OVERRIDE='\'connect/endpoints=["tcp/tcp/zenoh-router.app-intrinsic-base:7447"]\'' \
         /ros_entrypoint.sh
 
 CMD ["bash"]

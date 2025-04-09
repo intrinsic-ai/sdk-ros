@@ -16,10 +16,6 @@ ENV RMW_IMPLEMENTATION=rmw_zenoh_cpp
 FROM base AS underlay
 
 ADD src/intrinsic_sdk_ros /opt/ros/underlay/src/intrinsic_sdk_ros
-# TODO(Yadunund): Switch to ZENOH_CONFIG_OVERRIDE after the next jazzy sync.
-COPY \
-    src/intrinsic_sdk_ros/intrinsic_sdk_cmake/docker_images/zenoh_config.json5 \
-    /opt/zenoh_config.json5
 
 RUN . /opt/ros/jazzy/setup.sh \
     && apt-get update \
@@ -54,9 +50,6 @@ RUN . /opt/ros/jazzy/setup.sh \
 # result stage: base + copied install folders from the overlay + service setup
 FROM base
 
-# TODO(Yadunund): Switch to ZENOH_CONFIG_OVERRIDE after the next jazzy sync.
-ENV ZENOH_SESSION_CONFIG_URI=/opt/zenoh_config.json5
-
 ARG SERVICE_PACKAGE
 ARG SERVICE_NAME
 ARG DEPENDENCIES
@@ -87,7 +80,7 @@ RUN cp \
         --expression '$iexport ENV ROS_HOME=/tmp' \
         /ros_entrypoint.sh \
     && sed --in-place \
-        --expression '$iexport ZENOH_SESSION_CONFIG_URI=/opt/zenoh_config.json5' \
+        --expression '$iexport ZENOH_CONFIG_OVERRIDE='\'connect/endpoints=["tcp/tcp/zenoh-router.app-intrinsic-base:7447"]\'' \
         /ros_entrypoint.sh
 # TODO(Yadunund): Switch to ZENOH_CONFIG_OVERRIDE after the next jazzy sync.
 
