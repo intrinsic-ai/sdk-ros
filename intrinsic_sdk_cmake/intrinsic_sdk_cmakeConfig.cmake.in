@@ -1,0 +1,43 @@
+@PACKAGE_INIT@
+
+set(_prefix "${intrinsic_sdk_cmake_DIR}/../../..")
+include("${_prefix}/share/intrinsic_sdk_cmake/cmake/dependencies.cmake")
+include("${_prefix}/share/intrinsic_sdk_cmake/cmake/intrinsic_sdk_cmakeTargets.cmake")
+
+set(intrinsic_sdk_cmake_DESCRIPTOR_SET_FILE
+  "${_prefix}/share/intrinsic_sdk_cmake/intrinsic_proto.desc"
+)
+
+# Import skillbundlegen binary
+add_executable(skillbundlegen_import IMPORTED)
+set_target_properties(skillbundlegen_import
+  PROPERTIES
+    IMPORTED_LOCATION "${_prefix}/bin/skillbundlegen"
+)
+add_executable(${PROJECT_NAME}::skillbundlegen ALIAS skillbundlegen_import)
+set_property(TARGET skillbundlegen_import PROPERTY ALIAS_GLOBAL TRUE)
+
+# Import skillserviceconfiggen_main binary
+add_executable(skillserviceconfiggen_main_import IMPORTED)
+set_target_properties(skillserviceconfiggen_main_import
+  PROPERTIES
+    IMPORTED_LOCATION "${_prefix}/bin/skillserviceconfiggen_main"
+)
+add_executable(${PROJECT_NAME}::skillserviceconfiggen_main ALIAS skillserviceconfiggen_main_import)
+set_property(TARGET skillserviceconfiggen_main_import PROPERTY ALIAS_GLOBAL TRUE)
+
+# Import skill_service_generator binary
+add_executable(skill_service_generator_import IMPORTED)
+set_target_properties(skill_service_generator_import
+  PROPERTIES
+    IMPORTED_LOCATION "${_prefix}/bin/skill_service_generator"
+)
+add_executable(${PROJECT_NAME}::skill_service_generator ALIAS skill_service_generator_import)
+set_property(TARGET skill_service_generator_import PROPERTY ALIAS_GLOBAL TRUE)
+
+include("${_prefix}/share/intrinsic_sdk_cmake/cmake/api/all.cmake")
+
+# Check for expected components
+check_required_components(intrinsic_sdk_cmake)
+
+unset(_prefix)

@@ -1,0 +1,33 @@
+<?xml version="1.0"?>
+<?xml-model
+  href="http://download.ros.org/schema/package_format2.xsd"
+  schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="3">
+  <name>intrinsic_sdk_cmake</name>
+  <version>0.1.0</version>
+  <description>
+    Wrapper around the Intrinsic SDK so it can be used from CMake.
+  </description>
+
+  <maintainer email="wjwwood@intrinsic.ai">William Woodall</maintainer>
+
+  <license>Apache License 2.0</license>  <!-- This package is Apache 2.0 -->
+  <license>Intrinsic License</license>  <!-- The Intrinsic SDK has a custom license for now -->
+
+  <author email="mjcarroll@intrinsic.ai">Michael Carroll</author>
+  <author email="wjwwood@intrinsic.ai">William Woodall</author>
+
+  <buildtool_depend>cmake</buildtool_depend>
+  <buildtool_depend>bazelisk_vendor</buildtool_depend>
+
+  <depend>eigen_vendor</depend>
+  <depend>flatbuffers_vendor</depend>
+  <depend>grpc_vendor</depend>
+  <depend>intrinsic_pybind11_vendor</depend>
+  <depend>pybind11_abseil_vendor</depend>
+  <depend>ortools_vendor</depend>
+
+  <export>
+    <build_type>cmake</build_type>
+  </export>
+</package>

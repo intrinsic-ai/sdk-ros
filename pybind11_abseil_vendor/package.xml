@@ -3,22 +3,26 @@
   href="http://download.ros.org/schema/package_format2.xsd"
   schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="2">
-  <name>intrinsic_sdk</name>
-  <version>0.1.0</version>
+  <name>pybind11_abseil_vendor</name>
+  <version>1.65.0</version>
   <description>
-    (deprecated: use intrinsic_sdk_ros) ROS Wrapper for the Intrinsic SDK
+    Wrapper around pybind11_abseil.
   </description>
 
   <maintainer email="wjwwood@intrinsic.ai">William Woodall</maintainer>
 
-  <license>Intrinsic - See LICENSE</license>
+  <!-- The contents of this package are Apache-2.0 -->
+  <license>Apache-2.0</license>
+  <!-- pybind11_abseil uses the same BSD-3-Clause as pybind11 -->
+  <license>BSD-3-Clause</license>
 
-  <author email="mjcarroll@intrinsic.ai">Michael Carroll</author>
   <author email="wjwwood@intrinsic.ai">William Woodall</author>
 
   <buildtool_depend>ament_cmake</buildtool_depend>
+  <buildtool_depend>ament_cmake_vendor_package</buildtool_depend>
 
-  <depend>intrinsic_sdk_ros</depend>
+  <depend>grpc_vendor</depend>
+  <depend>intrinsic_pybind11_vendor</depend>
 
   <export>
     <build_type>ament_cmake</build_type>
