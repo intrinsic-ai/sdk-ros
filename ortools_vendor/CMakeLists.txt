@@ -9,6 +9,8 @@ endif()
 
 find_package(ament_cmake REQUIRED)
 find_package(ament_cmake_vendor_package REQUIRED)
+find_package(abseil_cpp_vendor REQUIRED)
+find_package(re2_vendor REQUIRED)
 find_package(grpc_vendor REQUIRED)
 ament_add_default_options()
 

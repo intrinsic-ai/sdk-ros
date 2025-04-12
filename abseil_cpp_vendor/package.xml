@@ -3,27 +3,20 @@
   href="http://download.ros.org/schema/package_format2.xsd"
   schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="2">
-  <name>pybind11_abseil_vendor</name>
-  <version>1.65.0</version>
+  <name>abseil_cpp_vendor</name>
+  <version>0.1.0</version>
   <description>
-    Wrapper around pybind11_abseil.
+    Wrapper around abseil-cpp.
   </description>
 
   <maintainer email="wjwwood@intrinsic.ai">William Woodall</maintainer>
 
-  <!-- The contents of this package are Apache-2.0 -->
-  <license>Apache-2.0</license>
-  <!-- pybind11_abseil uses the same BSD-3-Clause as pybind11 -->
-  <license>BSD-3-Clause</license>
+  <license>Apache-2.0</license>  <!-- The contents of this package and abseil-cpp are both Apache-2.0 -->
 
   <author email="wjwwood@intrinsic.ai">William Woodall</author>
 
   <buildtool_depend>ament_cmake</buildtool_depend>
   <buildtool_depend>ament_cmake_vendor_package</buildtool_depend>
-
-  <depend>abseil_cpp_vendor</depend>
-  <depend>grpc_vendor</depend>
-  <depend>intrinsic_pybind11_vendor</depend>
 
   <export>
     <build_type>ament_cmake</build_type>

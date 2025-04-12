@@ -20,6 +20,7 @@
   <buildtool_depend>cmake</buildtool_depend>
   <buildtool_depend>bazelisk_vendor</buildtool_depend>
 
+  <depend>abseil_cpp_vendor</depend>
   <depend>eigen_vendor</depend>
   <depend>flatbuffers_vendor</depend>
   <depend>grpc_vendor</depend>

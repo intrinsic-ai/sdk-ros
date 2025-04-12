@@ -4,8 +4,8 @@ include(FetchContent)
 # Fetch the intrinsic sdk source code during configure stage.
 FetchContent_Declare(
   intrinsic_sdk
-  URL https://github.com/intrinsic-ai/sdk/archive/refs/tags/v1.16.20250210.tar.gz
-  URL_HASH SHA256=be55bdb2c761b7d55476c2ee843c4e444e0953f03aafce2481797eec98e19ac0
+  URL https://github.com/intrinsic-ai/sdk/archive/refs/tags/v1.17.20250331.tar.gz
+  URL_HASH SHA256=0de09dec1340474c861b6b288e4bc142300ac277031b31aa09e1cebc32ea9f5b
   DOWNLOAD_EXTRACT_TIMESTAMP FALSE
 )
 FetchContent_GetProperties(intrinsic_sdk)

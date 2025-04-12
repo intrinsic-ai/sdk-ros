@@ -1,6 +1,7 @@
 # find_package() all the dependencies, this is used by the intrinsic_sdk_cmakeConfig.cmake too.
 
 # Find vendor packages to ensure dependencies are available.
+find_package(abseil_cpp_vendor REQUIRED)
 find_package(bazelisk_vendor REQUIRED)
 find_package(eigen_vendor REQUIRED)
 find_package(flatbuffers_vendor REQUIRED)
