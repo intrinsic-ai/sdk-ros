@@ -11,6 +11,7 @@ find_package(ament_cmake REQUIRED)
 find_package(ament_cmake_vendor_package REQUIRED)
 find_package(abseil_cpp_vendor REQUIRED)
 find_package(re2_vendor REQUIRED)
+find_package(re2 REQUIRED)
 
 ament_vendor(grpc_vendor
   VCS_URL https://github.com/grpc/grpc
@@ -21,7 +22,7 @@ ament_vendor(grpc_vendor
     -DABSL_ENABLE_INSTALL:BOOL=ON
     -DABSL_PROPAGATE_CXX_STD:BOOL=ON
     -DgRPC_INSTALL:BOOL=ON
-    -DgRPC_RE2_PROVIDER="package"
+    -DgRPC_RE2_PROVIDER=package
     -DgRPC_BUILD_TESTS:BOOL=OFF
     -DgRPC_BUILD_CSHARP_EXT:BOOL=OFF
     -DgRPC_BUILD_GRPC_CSHARP_PLUGIN:BOOL=OFF
@@ -43,5 +44,10 @@ if (TARGET grpc_vendor)
           PATTERN "*.proto" # select header files
   )
 endif()
+
+ament_export_dependencies(
+  abseil_cpp_vendor
+  re2_vendor
+)
 
 ament_package()

@@ -47,6 +47,7 @@ list(FILTER intrinsic_SRCS EXCLUDE REGEX "/intrinsic/icon/release/hello_world.cc
 list(FILTER intrinsic_SRCS EXCLUDE REGEX "/intrinsic/icon/release/reset_simulation.cc")
 list(FILTER intrinsic_SRCS EXCLUDE REGEX "/intrinsic/icon/tools")
 # TODO(wjwwood): figure out the compiler errors here and re-add these icon files when possible.
+list(FILTER intrinsic_SRCS EXCLUDE REGEX "/intrinsic/icon/control/c_api")
 list(FILTER intrinsic_SRCS EXCLUDE REGEX "/intrinsic/icon/hal")
 list(FILTER intrinsic_SRCS EXCLUDE REGEX "/intrinsic/icon/hardware_modules")
 list(FILTER intrinsic_SRCS EXCLUDE REGEX "/intrinsic/icon/utils/realtime_metrics.cc")
@@ -55,6 +56,7 @@ list(FILTER intrinsic_SRCS EXCLUDE REGEX "/intrinsic/icon/interprocess/remote_tr
 list(FILTER intrinsic_SRCS EXCLUDE REGEX "/intrinsic/icon/interprocess/shared_memory_lockstep")
 list(FILTER intrinsic_SRCS EXCLUDE REGEX "/intrinsic/icon/interprocess/shared_memory_manager")
 list(FILTER intrinsic_SRCS EXCLUDE REGEX "/intrinsic/platform/pubsub/")
+list(FILTER intrinsic_SRCS EXCLUDE REGEX "/intrinsic/tools")
 list(FILTER intrinsic_SRCS EXCLUDE REGEX "/intrinsic/util/proto/source_code_info_view_py.cc")
 list(FILTER intrinsic_SRCS EXCLUDE REGEX "/intrinsic/util/path_resolver/")
 list(FILTER intrinsic_SRCS EXCLUDE REGEX "/intrinsic/scene/product/")
