@@ -16,6 +16,7 @@ ament_vendor(opencensus_cpp_vendor
   VCS_URL https://github.com/census-instrumentation/opencensus-cpp
   # Last commit on main branch before it was archived
   VCS_VERSION 50eb5de762e5f87e206c011a4f930adb1a1775b1
+  PATCHES patches
   CMAKE_ARGS
     -DCMAKE_CXX_STANDARD=20
     -DOpenCensus_BUILD_TESTING:BOOL=OFF

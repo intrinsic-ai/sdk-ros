@@ -1,0 +1,15 @@
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index dd46ada..1232fb5 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -34,6 +34,8 @@ if(NOT CMAKE_CXX_STANDARD)
+   set(CMAKE_CXX_STANDARD_REQUIRED ON)
+ endif()
+ 
++include(GNUInstallDirs)
++
+ include(CTest) # Defines option BUILD_TESTING.
+ enable_testing()
+ 
+
+
