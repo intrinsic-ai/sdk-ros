@@ -14,6 +14,9 @@ find_package(abseil_cpp_vendor REQUIRED)
 ament_vendor(re2_vendor
   VCS_URL https://github.com/google/re2
   VCS_VERSION 2024-07-02
+  # TODO(wjwwood): try to upstream patches, specifically the one about the
+  #   include directory not being part of the library target's public api, see:
+  #     https://github.com/intrinsic-dev/intrinsic_sdk_ros/pull/22#issue-2990048932
   PATCHES patches
   CMAKE_ARGS
     -DCMAKE_CXX_STANDARD=20

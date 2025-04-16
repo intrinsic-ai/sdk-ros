@@ -9,6 +9,7 @@ find_package(grpc_vendor REQUIRED)  # Provides protobuf and abseilcpp
 find_package(intrinsic_pybind11_vendor REQUIRED)
 find_package(pybind11_abseil_vendor REQUIRED)
 find_package(ortools_vendor REQUIRED)
+find_package(opencensus_cpp_vendor REQUIRED)
 
 # Find project dependencies.
 find_package(Eigen3 REQUIRED)
@@ -20,3 +21,4 @@ find_package(pybind11 CONFIG REQUIRED)
 find_package(Python COMPONENTS Development)
 find_package(pybind11_abseil CONFIG REQUIRED)
 find_package(ortools CONFIG REQUIRED)
+find_package(OpenCensus REQUIRED)

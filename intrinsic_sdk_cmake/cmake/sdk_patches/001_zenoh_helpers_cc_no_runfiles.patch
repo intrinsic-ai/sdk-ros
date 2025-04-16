@@ -1,0 +1,77 @@
+--- a/intrinsic/platform/pubsub/zenoh_util/zenoh_helpers.cc	2025-04-16 01:42:13.992272008 +0000
++++ b/intrinsic/platform/pubsub/zenoh_util/zenoh_helpers.cc	2025-04-16 02:05:54.732351721 +0000
+@@ -2,7 +2,9 @@
+ 
+ #include "intrinsic/platform/pubsub/zenoh_util/zenoh_helpers.h"
+ 
++#include <array>
+ #include <cstdlib>
++#include <filesystem>
+ #include <string>
+ #include <vector>
+ 
+@@ -10,13 +12,10 @@
+ #include "absl/strings/match.h"
+ #include "absl/strings/str_split.h"
+ #include "absl/strings/string_view.h"
+-#include "ortools/base/path.h"
+-#include "rules_cc/cc/runfiles/runfiles.h"
++// #include "ortools/base/path.h"
+ 
+ namespace intrinsic {
+ 
+-using ::rules_cc::cc::runfiles::Runfiles;
+-
+ bool RunningUnderTest() {
+   return (getenv("TEST_TMPDIR") != nullptr) ||
+          (getenv("PORTSERVER_ADDRESS") != nullptr);
+@@ -26,26 +25,32 @@
+   return getenv("KUBERNETES_SERVICE_HOST") != nullptr;
+ }
+ 
++#ifndef INTRINSIC_SDK_CMAKE_LIB_PATH
++#error "Compiler definition INTRINSIC_SDK_CMAKE_LIB_PATH is required."
++#endif
++
++#ifndef INTRINSIC_SDK_CMAKE_SHARE_PATH
++#error "Compiler definition INTRINSIC_SDK_CMAKE_SHARE_PATH is required."
++#endif
++
+ std::string GetZenohRunfilesPath(absl::string_view file_path) {
+-  std::string error;
+-  std::string path = std::string(file_path);
+-  std::unique_ptr<Runfiles> runfiles;
+-  std::string repository = BAZEL_CURRENT_REPOSITORY;
+-  if (repository == "") {
+-    // If empty, running in current repository.
+-    repository = "_main";
++  // Patched by intrinsic-dev/intrinsic_sdk_ros.git to work in a CMake context.
++  // TODO(wjwwood): consider using ament_index to make this code relocatable.
++  std::array<std::filesystem::path, 2> prefix_paths = {
++    std::filesystem::path(INTRINSIC_SDK_CMAKE_LIB_PATH),
++    std::filesystem::path(INTRINSIC_SDK_CMAKE_SHARE_PATH)
++  };
++
++  // Prefer a more complete path in the lib or share path over just the give file_path.
++  for (const auto & prefix_path : prefix_paths) {
++    std::filesystem::path possible_path = prefix_path / file_path;
++    if (std::filesystem::exists(possible_path)) {
++      return possible_path.string();
++    }
+   }
+ 
+-  if (RunningUnderTest()) {
+-    std::string error;
+-    runfiles = std::unique_ptr<Runfiles>(Runfiles::CreateForTest(&error));
+-    path = runfiles->Rlocation(file::JoinPath(repository, file_path));
+-  } else if (!RunningInKubernetes()) {
+-    runfiles = std::unique_ptr<Runfiles>(
+-        Runfiles::Create(program_invocation_name, &error));
+-    path = runfiles->Rlocation(file::JoinPath(repository, file_path));
+-  }
+-  return path;
++  // Return the original file_path if nothing better was found.
++  return std::string(file_path);
+ }
+ 
+ absl::Status ValidZenohKeyexpr(absl::string_view keyexpr) {
