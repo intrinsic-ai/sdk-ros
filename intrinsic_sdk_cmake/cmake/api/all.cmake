@@ -41,7 +41,7 @@ include("${intrinsic_sdk_cmake_API_DIR}/skill/intrinsic_sdk_generate_skill.cmake
 include("${intrinsic_sdk_cmake_API_DIR}/skill/intrinsic_sdk_generate_skill_config.cmake")
 include("${intrinsic_sdk_cmake_API_DIR}/skill/intrinsic_sdk_generate_skill_container_image.cmake")
 include("${intrinsic_sdk_cmake_API_DIR}/skill/intrinsic_sdk_generate_skill_main_cc.cmake")
-include("${intrinsic_sdk_cmake_API_DIR}/skill/intrinsic_sdk_generate_skill_manifest_pbbin.cmake")
+include("${intrinsic_sdk_cmake_API_DIR}/skill/intrinsic_sdk_generate_skill_bundle.cmake")
 
 # Service APIs
 include("${intrinsic_sdk_cmake_API_DIR}/service/intrinsic_sdk_generate_service_manifest.cmake")

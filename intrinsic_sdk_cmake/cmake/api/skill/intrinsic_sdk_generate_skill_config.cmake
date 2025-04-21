@@ -57,7 +57,7 @@ function(intrinsic_sdk_generate_skill_config)
   # Generate the binary proto skill config
   add_custom_command(
     OUTPUT ${arg_SKILL_CONFIG_FILE_OUTPUT}
-    COMMAND inbuild
+    COMMAND inbuild_import
     ARGS
       skill generate config
       --manifest=${arg_MANIFEST}

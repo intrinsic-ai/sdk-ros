@@ -51,7 +51,7 @@ function(intrinsic_sdk_generate_skill_main_cc)
 
   add_custom_command(
     OUTPUT ${arg_MAIN_FILE_OUTPUT}
-    COMMAND inbuild
+    COMMAND inbuild_import
       skill generate entrypoint
       --manifest=${arg_MANIFEST_PBBIN}
       --language=cpp

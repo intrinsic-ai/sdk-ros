@@ -56,7 +56,7 @@ set(OUT_DIR ${CMAKE_CURRENT_BINARY_DIR})
 # Generate the binary proto skill config
 add_custom_command(
   OUTPUT ${arg_SKILL_BUNDLE_OUTPUT}
-  COMMAND inbuild
+  COMMAND inbuild_import
   ARGS
     skill bundle
     --manifest=${arg_MANIFEST}
