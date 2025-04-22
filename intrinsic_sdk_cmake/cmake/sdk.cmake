@@ -55,7 +55,7 @@ list(FILTER intrinsic_SRCS EXCLUDE REGEX "/intrinsic/icon/utils/metrics_logger.c
 list(FILTER intrinsic_SRCS EXCLUDE REGEX "/intrinsic/icon/interprocess/remote_trigger")
 list(FILTER intrinsic_SRCS EXCLUDE REGEX "/intrinsic/icon/interprocess/shared_memory_lockstep")
 list(FILTER intrinsic_SRCS EXCLUDE REGEX "/intrinsic/icon/interprocess/shared_memory_manager")
-list(FILTER intrinsic_SRCS EXCLUDE REGEX "/intrinsic/platform/pubsub/")
+list(FILTER intrinsic_SRCS EXCLUDE REGEX "/intrinsic/platform/pubsub/python/")
 list(FILTER intrinsic_SRCS EXCLUDE REGEX "/intrinsic/tools")
 list(FILTER intrinsic_SRCS EXCLUDE REGEX "/intrinsic/util/proto/source_code_info_view_py.cc")
 list(FILTER intrinsic_SRCS EXCLUDE REGEX "/intrinsic/util/path_resolver/")
@@ -82,6 +82,7 @@ target_link_libraries(${PROJECT_NAME}
     flatbuffers::flatbuffers
     gRPC::grpc++
     ortools::ortools
+    opencensus-cpp::stats
     protobuf::libprotobuf
     pybind11::pybind11
     pybind11_abseil::absl_casters
@@ -96,6 +97,13 @@ target_link_libraries(${PROJECT_NAME}
 target_link_options(${PROJECT_NAME} INTERFACE "-Wl,--copy-dt-needed-entries")
 add_dependencies(${PROJECT_NAME} intrinsic_sdk_fbs strong_int_h_target)
 set_property(TARGET ${PROJECT_NAME} PROPERTY POSITION_INDEPENDENT_CODE ON)
+# TODO(wjwwood): this is a bit fragile because it only works in the install case
+#   we could use something like ament_index to make it relocatable
+target_compile_definitions(${PROJECT_NAME}
+  PRIVATE
+    -DINTRINSIC_SDK_CMAKE_LIB_PATH="${CMAKE_INSTALL_PREFIX}/lib"
+    -DINTRINSIC_SDK_CMAKE_SHARE_PATH="${CMAKE_INSTALL_PREFIX}/share"
+)
 
 # Install the library.
 install(
