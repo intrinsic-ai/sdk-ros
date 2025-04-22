@@ -38,7 +38,7 @@ include_guard(GLOBAL)
 #
 function(intrinsic_sdk_generate_skill_main_cc)
   set(options)
-  set(one_value_args MANIFEST_PBBIN MAIN_FILE_OUTPUT HEADER_FILE)
+  set(one_value_args MANIFEST MAIN_FILE_OUTPUT HEADER_FILE)
   set(multi_value_args)
 
   cmake_parse_arguments(
@@ -53,11 +53,11 @@ function(intrinsic_sdk_generate_skill_main_cc)
     OUTPUT ${arg_MAIN_FILE_OUTPUT}
     COMMAND inbuild_import
       skill generate entrypoint
-      --manifest=${arg_MANIFEST_PBBIN}
+      --manifest=${arg_MANIFEST}
       --language=cpp
       --output=${arg_MAIN_FILE_OUTPUT}
       --cc_header=${arg_HEADER_FILE}
-    DEPENDS ${arg_MANIFEST_PBBIN}
+    DEPENDS ${arg_MANIFEST}
     COMMENT "Generating skill cpp main file: ${arg_MAIN_FILE_OUTPUT}"
   )
 endfunction()

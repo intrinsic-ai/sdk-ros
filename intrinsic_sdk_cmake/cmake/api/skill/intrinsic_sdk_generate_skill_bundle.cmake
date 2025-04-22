@@ -69,7 +69,7 @@ add_custom_command(
     ${arg_OCI_IMAGE}
 )
 
-add_custom_target(${arg_TARGET}
+add_custom_target(${arg_TARGET} ALL
   DEPENDS
     ${arg_SKILL_BUNDLE_OUTPUT}
 )
