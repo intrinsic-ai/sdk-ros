@@ -21,55 +21,56 @@
 include_guard(GLOBAL)
 
 #
-# Generate the skill config file for the skill.
+# Generate a skill bundle that can be deployed to Flowstate.
 #
-# :param TARGET: the name for the target that generates the skill config file
-# :type TARGET: string
-# :param MANIFEST: the path to the manifest textproto file
+# :param MANIFEST: the path to the manifest file
 # :type MANIFEST: string
-# :param PROTO_DESCRIPTOR_FILE: the path to the proto descriptor file
-# :type PROTO_DESCRIPTOR_FILE: string
-# :param SKILL_CONFIG_FILE_OUTPUT: the output path for the skill config file
-# :type SKILL_CONFIG_FILE_OUTPUT: string
+# :param PROTOS_TARGET: the cmake target for generating the skill's proto files
+# :type PROTOS_TARGET: cmake target
+# :param SOURCES: the list of source files for the skill target
+# :type SOURCES: list of strings
 #
 # @public
 #
-function(intrinsic_sdk_generate_skill_config)
-  set(options)
-  set(one_value_args
-    TARGET
-    MANIFEST
-    PROTO_DESCRIPTOR_FILE
-    SKILL_CONFIG_FILE_OUTPUT
-  )
-  set(multi_value_args)
+function(intrinsic_sdk_generate_skill_bundle)
+set(options)
+set(one_value_args
+  TARGET
+  MANIFEST
+  PROTO_DESCRIPTOR_FILE
+  OCI_IMAGE
+  SKILL_BUNDLE_OUTPUT
+)
+set(multi_value_args)
 
-  cmake_parse_arguments(
-    arg
-    "${options}"
-    "${one_value_args}"
-    "${multi_value_args}"
-    ${ARGN}
-  )
+cmake_parse_arguments(
+  arg
+  "${options}"
+  "${one_value_args}"
+  "${multi_value_args}"
+  ${ARGN}
+)
 
-  set(OUT_DIR ${CMAKE_CURRENT_BINARY_DIR})
+set(OUT_DIR ${CMAKE_CURRENT_BINARY_DIR})
 
-  # Generate the binary proto skill config
-  add_custom_command(
-    OUTPUT ${arg_SKILL_CONFIG_FILE_OUTPUT}
-    COMMAND inbuild_import
-    ARGS
-      skill generate config
-      --manifest=${arg_MANIFEST}
-      --file_descriptor_set=${arg_PROTO_DESCRIPTOR_FILE}
-      --output=${arg_SKILL_CONFIG_FILE_OUTPUT}
-    COMMENT "Generating skill config for ${arg_TARGET}"
-    DEPENDS
-      ${arg_PROTO_DESCRIPTOR_FILE}
-  )
+# Generate the binary proto skill config
+add_custom_command(
+  OUTPUT ${arg_SKILL_BUNDLE_OUTPUT}
+  COMMAND inbuild_import
+  ARGS
+    skill bundle
+    --manifest=${arg_MANIFEST}
+    --file_descriptor_set=${arg_PROTO_DESCRIPTOR_FILE}
+    --oci_image=${arg_OCI_IMAGE}
+    --output=${arg_SKILL_BUNDLE_OUTPUT}
+  COMMENT "Generating skill config for ${arg_TARGET}"
+  DEPENDS
+    ${arg_PROTO_DESCRIPTOR_FILE}
+    ${arg_OCI_IMAGE}
+)
 
-  add_custom_target(${arg_TARGET}
-    DEPENDS
-      ${arg_SKILL_CONFIG_FILE_OUTPUT}
-  )
+add_custom_target(${arg_TARGET} ALL
+  DEPENDS
+    ${arg_SKILL_BUNDLE_OUTPUT}
+)
 endfunction()

@@ -26,11 +26,11 @@ include_guard(GLOBAL)
 # This file needs to be generated because it contains variable things like the
 # skill name and the name of the skill's header, etc.
 #
-# :param MANIFEST_PBBIN: the path to the pbbin file for the skill manifest.
-#   This can be generated using intrinsic_sdk_generate_skill_manifest_pbbin().
-# :type MANIFEST_PBBIN: string
-# :param HEADER_FILES: the paths to additional header files that need to be included
-# :type HEADER_FILES: list of strings
+# :param MANIFEST: the path to the skill manifest in textproto format.
+# :type MANIFEST: string
+# :param HEADER_FILE: the path to the header file containing the
+#     "create skill" method referenced in the Skill Manifest.
+# :type HEADER_FILE: lstring
 # :param MAIN_FILE_OUTPUT: the path of the output C++ main function file
 # :type MAIN_FILE_OUTPUT: string
 #
@@ -38,8 +38,8 @@ include_guard(GLOBAL)
 #
 function(intrinsic_sdk_generate_skill_main_cc)
   set(options)
-  set(one_value_args MANIFEST_PBBIN MAIN_FILE_OUTPUT)
-  set(multi_value_args HEADER_FILES)
+  set(one_value_args MANIFEST MAIN_FILE_OUTPUT HEADER_FILE)
+  set(multi_value_args)
 
   cmake_parse_arguments(
     arg
@@ -49,23 +49,15 @@ function(intrinsic_sdk_generate_skill_main_cc)
     ${ARGN}
   )
 
-  list(JOIN arg_HEADER_FILES "," joined_header_files)
-
-  # get_property(skill_service_generator_path
-  #   TARGET skill_service_generator_import
-  #   PROPERTY IMPORTED_LOCATION
-  # )
-  # message(FATAL_ERROR "skill_service_generator_path: ${skill_service_generator_path}")
   add_custom_command(
     OUTPUT ${arg_MAIN_FILE_OUTPUT}
-    # TODO(wjwwood): figure out why the alias does not work...
-    # COMMAND intrinsic_sdk_cmake::skill_service_generator
-    COMMAND skill_service_generator_import
-      --manifest=${arg_MANIFEST_PBBIN}
-      --lang=cpp
-      --out=${arg_MAIN_FILE_OUTPUT}
-      --cc_headers=${joined_header_files}
-    DEPENDS ${arg_MANIFEST_PBBIN}
+    COMMAND inbuild_import
+      skill generate entrypoint
+      --manifest=${arg_MANIFEST}
+      --language=cpp
+      --output=${arg_MAIN_FILE_OUTPUT}
+      --cc_header=${arg_HEADER_FILE}
+    DEPENDS ${arg_MANIFEST}
     COMMENT "Generating skill cpp main file: ${arg_MAIN_FILE_OUTPUT}"
   )
 endfunction()

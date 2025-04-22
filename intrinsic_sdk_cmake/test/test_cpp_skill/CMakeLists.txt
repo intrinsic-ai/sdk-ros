@@ -6,18 +6,10 @@ intrinsic_sdk_protobuf_generate(
   DESCRIPTOR_SET_OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/test_cpp_skill.desc"
 )
 
-# Generate the protobufbin (pbbin) file for the skill manifest.
-intrinsic_sdk_generate_skill_manifest_pbbin(
-  TARGET test_cpp_skill_manifest
-  MANIFEST_TEXTPROTO test_cpp_skill.manifest.textproto
-  MANIFEST_PBBIN_OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/test_cpp_skill.manifest.pbbin"
-)
-
 # Generate the skill config file.
 intrinsic_sdk_generate_skill_config(
   TARGET test_cpp_skill_skill_config
-  SKILL_NAME test_cpp_skill
-  MANIFEST_PBBIN "${CMAKE_CURRENT_BINARY_DIR}/test_cpp_skill.manifest.pbbin"
+  MANIFEST "${CMAKE_CURRENT_SOURCE_DIR}/test_cpp_skill.manifest.textproto"
   PROTO_DESCRIPTOR_FILE "${CMAKE_CURRENT_BINARY_DIR}/test_cpp_skill.desc"
   SKILL_CONFIG_FILE_OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/test_cpp_skill_config.pbbin"
 )
@@ -28,8 +20,8 @@ install(
 
 # Generate the c++ main file for the skill.
 intrinsic_sdk_generate_skill_main_cc(
-  MANIFEST_PBBIN "${CMAKE_CURRENT_BINARY_DIR}/test_cpp_skill.manifest.pbbin"
-  HEADER_FILES test_cpp_skill.h
+  MANIFEST "${CMAKE_CURRENT_SOURCE_DIR}/test_cpp_skill.manifest.textproto"
+  HEADER_FILE test_cpp_skill.h
   MAIN_FILE_OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/test_cpp_skill_main.cc"
 )
 
@@ -70,7 +62,13 @@ intrinsic_sdk_generate_skill_container_image(
   # DOCKERFILE my_custom_skill.Dockerfile
 )
 
-# # Create the skill bundle.
-# intrisic_sdk_generate_skill_bundle(
+# Create the skill bundle.
+intrinsic_sdk_generate_skill_bundle(
+  TARGET test_cpp_skill_bundle
+  MANIFEST "${CMAKE_CURRENT_SOURCE_DIR}/test_cpp_skill.manifest.textproto"
+  PROTO_DESCRIPTOR_FILE "${CMAKE_CURRENT_BINARY_DIR}/test_cpp_skill.desc"
+  OCI_IMAGE "${CMAKE_CURRENT_BINARY_DIR}/test_cpp_skill_container_image.tar"
+  SKILL_BUNDLE_OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/test_cpp_skill.bundle.tar"
+)
 
-# )
+install(FILES "${CMAKE_CURRENT_BINARY_DIR}/test_cpp_skill.bundle.tar" DESTINATION share/${PROJECT_NAME})
