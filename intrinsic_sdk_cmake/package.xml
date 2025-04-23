@@ -20,11 +20,13 @@
   <buildtool_depend>cmake</buildtool_depend>
   <buildtool_depend>bazelisk_vendor</buildtool_depend>
 
+  <depend>abseil_cpp_vendor</depend>
   <depend>eigen_vendor</depend>
   <depend>flatbuffers_vendor</depend>
   <depend>grpc_vendor</depend>
   <depend>intrinsic_pybind11_vendor</depend>
   <depend>pybind11_abseil_vendor</depend>
+  <depend>opencensus_cpp_vendor</depend>
   <depend>ortools_vendor</depend>
 
   <export>

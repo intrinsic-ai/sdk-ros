@@ -53,7 +53,7 @@ function(intrinsic_sdk_generate_skill_manifest_pbbin)
       --descriptor_set_in=${intrinsic_sdk_cmake_DESCRIPTOR_SET_FILE}
       < ${CMAKE_CURRENT_SOURCE_DIR}/${arg_MANIFEST_TEXTPROTO}
       > ${arg_MANIFEST_PBBIN_OUTPUT}
-    DEPENDS ${arg_MANIFEST_TEXTPROTO}
+    DEPENDS ${arg_MANIFEST_TEXTPROTO} ${intrinsic_sdk_cmake_DESCRIPTOR_SET_FILE}
     COMMENT "Generating skill manifest pbbin file: ${arg_MANIFEST_PBBIN_OUTPUT}"
     VERBATIM
   )
