@@ -14,7 +14,7 @@ ament_vendor(abseil_cpp_vendor
   VCS_URL https://github.com/abseil/abseil-cpp
   VCS_VERSION 20240722.0
   CMAKE_ARGS
-    -DCMAKE_CXX_STANDARD=20
+    -DCMAKE_CXX_STANDARD=${CMAKE_CXX_STANDARD}
     -DABSL_BUILD_TESTING:BOOL=OFF
     -DABSL_ENABLE_INSTALL:BOOL=ON
 )

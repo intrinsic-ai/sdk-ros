@@ -13,4 +13,4 @@ if [ $result -ne 0 ]; then
 	fi
 fi
 
-return $result
+exit $result
