@@ -1,10 +1,14 @@
 # Fetch the sdk and make it available for use locally.
 
+file(READ "${CMAKE_CURRENT_SOURCE_DIR}/cmake/sdk_version.json" sdk_version_json)
+string(JSON sdk_version GET ${sdk_version_json} "sdk_version")
+message(STATUS "intrinsic-ai/sdk version: ${sdk_version}")
+
 include(FetchContent)
 # Fetch the intrinsic sdk source code during configure stage.
 FetchContent_Declare(
   intrinsic_sdk
-  URL https://github.com/intrinsic-ai/sdk/archive/refs/tags/v1.17.20250331.tar.gz
+  URL https://github.com/intrinsic-ai/sdk/archive/refs/tags/${sdk_version}.tar.gz
   URL_HASH SHA256=0de09dec1340474c861b6b288e4bc142300ac277031b31aa09e1cebc32ea9f5b
   DOWNLOAD_EXTRACT_TIMESTAMP FALSE
   PATCH_COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/cmake/sdk_patches/apply_patch.sh
