@@ -1,8 +1,9 @@
 # This Dockerfile provides an image with intrinsic_sdk_cmake with its build dependencies.
 # Use the intrinsic_sdk_cmake_run image if you only want the runtime dependencies.
 
+ARG REPOSITORY=ghcr.io/intrinsic-ai
 ARG TAG=latest
-FROM ghcr.io/intrinsic-ai/intrinsic_sdk_cmake_base:${TAG} AS base
+FROM ${REPOSITORY}/intrinsic_sdk_cmake_base:${TAG} AS base
 
 # source stage: base + source added
 FROM base AS source

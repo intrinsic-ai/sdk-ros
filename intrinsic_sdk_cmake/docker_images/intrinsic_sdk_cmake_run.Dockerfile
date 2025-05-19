@@ -1,7 +1,8 @@
+ARG REPOSITORY=ghcr.io/intrinsic-ai
 ARG TAG=latest
-FROM ghcr.io/intrinsic-ai/intrinsic_sdk_cmake:${TAG} as build_image
+FROM ${REPOSITORY}/intrinsic_sdk_cmake:${TAG} as build_image
 
-FROM ghcr.io/intrinsic-ai/intrinsic_sdk_cmake_base:${TAG} as result
+FROM ${REPOSITORY}/intrinsic_sdk_cmake_base:${TAG} as result
 
 # Get the installed artifacts from the build stage.
 COPY --from=build_image \

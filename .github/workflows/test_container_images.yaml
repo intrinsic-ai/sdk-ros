@@ -1,0 +1,68 @@
+name: Build and Test Container Images
+run-name: ${{ github.actor }}'s changes have triggered a build, test, and push of the sdk container images.
+on:
+  workflow_call:
+  pull_request:
+    types: [opened, reopened, synchronize, edited]
+jobs:
+  build-container-images:
+    uses: ./.github/workflows/build_container_images.yaml
+  test-container-images:
+    runs-on: ubuntu-latest
+    needs: [build-container-images]
+    outputs:
+      intrinsic_ai_sdk_version: ${{ needs.build-container-images.outputs.intrinsic_ai_sdk_version }}
+    steps:
+      - run: echo "The job was automatically triggered by a ${{ github.event_name }} event."
+      - run: echo "This job is now running on a ${{ runner.os }} server."
+      - run: echo "The name of your branch is ${{ github.ref }} and your repository is ${{ github.repository }}."
+
+      # Checkout.
+      - name: Check out repository code
+        uses: actions/checkout@v4
+
+      # Extract the intrinsic sdk version being used.
+      - name: Get intrinsic-ai/sdk Version
+        run: echo "INTRINSIC_AI_SDK_VERSION=${{ needs.build-container-images.outputs.intrinsic_ai_sdk_version }}" >> $GITHUB_ENV
+      - run: echo "The Intrinsic SDK version being used is ${{ env.INTRINSIC_AI_SDK_VERSION }}"
+
+      # Download images from build workflow and load them into the local docker for testing.
+      - name: Download intrinsic_sdk_cmake_base container image
+        uses: actions/download-artifact@v4
+        with:
+          name: intrinsic_sdk_cmake_base_image
+          path: ${{ runner.temp }}
+      - name: Load intrinsic_sdk_cmake_base container image into docker
+        run: docker load --input ${{ runner.temp }}/intrinsic_sdk_cmake_base.tar
+      - name: Download intrinsic_sdk_cmake container image
+        uses: actions/download-artifact@v4
+        with:
+          name: intrinsic_sdk_cmake_image
+          path: ${{ runner.temp }}
+      - name: Load intrinsic_sdk_cmake container image into docker
+        run: docker load --input ${{ runner.temp }}/intrinsic_sdk_cmake.tar
+      - name: Download intrinsic_sdk_cmake_run container image
+        uses: actions/download-artifact@v4
+        with:
+          name: intrinsic_sdk_cmake_run_image
+          path: ${{ runner.temp }}
+      - name: Load intrinsic_sdk_cmake_run container image into docker
+        run: docker load --input ${{ runner.temp }}/intrinsic_sdk_cmake_run.tar
+
+      # Build the test case using the temporary images.
+      - name: Test intrinsic_sdk_cmake Docker Images
+        uses: docker/build-push-action@v5
+        with:
+          context: intrinsic_sdk_cmake
+          file: intrinsic_sdk_cmake/cmake/api/skill/resource/skill.Dockerfile
+          build-args: |
+            REPOSITORY=localhost:5000
+            TAG=temp
+            SKILL_NAME=test_cpp_skill
+            SKILL_PACKAGE=intrinsic_sdk_cmake
+            SKILL_EXECUTABLE=lib/intrinsic_sdk_cmake/test_cpp_skill_main
+            SKILL_CONFIG=share/intrinsic_sdk_cmake/test_cpp_skill_config.pbbin
+          tags: |
+            test_intrinsic_sdk_cmake_images:temp
+
+      - run: echo "🍏 This job's status is ${{ job.status }}."
