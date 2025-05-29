@@ -1,6 +1,7 @@
 # Fetch the sdk and make it available for use locally.
 
-file(READ "${CMAKE_CURRENT_SOURCE_DIR}/cmake/sdk_version.json" sdk_version_json)
+set(SDK_VERSION_JSON_FILE "${CMAKE_CURRENT_SOURCE_DIR}/cmake/sdk_version.json")
+file(READ "${SDK_VERSION_JSON_FILE}" sdk_version_json)
 string(JSON sdk_version GET ${sdk_version_json} "sdk_version")
 message(STATUS "intrinsic-ai/sdk version: ${sdk_version}")
 
