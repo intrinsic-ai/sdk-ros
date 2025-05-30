@@ -1,4 +1,0 @@
-[registry."ghcr.io/intrinsic-ai"]
-  mirrors = ["localhost:5000"]
-  http = true
-  insecure = true
