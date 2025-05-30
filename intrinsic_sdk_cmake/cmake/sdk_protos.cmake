@@ -2,6 +2,9 @@ file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/protos_gen)
 
 file(GLOB_RECURSE intrinsic_proto_SRCS "${intrinsic_sdk_SOURCE_DIR}/**/*.proto")
 list(FILTER intrinsic_proto_SRCS EXCLUDE REGEX "_test\\.proto$")
+# This regex will match the full path of 'intrinsic/icon/proto/service.proto'
+# but not 'intrinsic/icon/proto/v1/service.proto'
+list(FILTER intrinsic_proto_SRCS EXCLUDE REGEX "${intrinsic_sdk_SOURCE_DIR}/intrinsic/icon/proto/service\\.proto$")
 
 set(grpc_SOURCE_DIR "${gRPC_DIR}/../../../share/grpc-proto")
 
