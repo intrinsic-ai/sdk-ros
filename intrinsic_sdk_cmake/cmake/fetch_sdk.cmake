@@ -10,7 +10,7 @@ include(FetchContent)
 FetchContent_Declare(
   intrinsic_sdk
   URL https://github.com/intrinsic-ai/sdk/archive/refs/tags/${sdk_version}.tar.gz
-  URL_HASH SHA256=0de09dec1340474c861b6b288e4bc142300ac277031b31aa09e1cebc32ea9f5b
+  URL_HASH SHA256=5a2a57655816561967852229cd3c8d02a9942ea6c65e2ee2d8f63c2b6eb7025e
   DOWNLOAD_EXTRACT_TIMESTAMP FALSE
   PATCH_COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/cmake/sdk_patches/apply_patch.sh
     ${CMAKE_CURRENT_SOURCE_DIR}/cmake/sdk_patches/001_zenoh_helpers_cc_no_runfiles.patch
