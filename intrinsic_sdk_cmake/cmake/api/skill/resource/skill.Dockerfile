@@ -55,8 +55,7 @@ RUN . /opt/intrinsic/intrinsic_sdk_cmake/install/setup.sh \
         --event-handlers console_direct+ console_stderr- \
         --merge-install \
         --executor=sequential \
-        --packages-up-to $SKILL_PACKAGE \
-    && which gcc
+        --packages-up-to $SKILL_PACKAGE
 
 # exec_depends stage: capture just the exec depends using the source
 FROM ${REPOSITORY}/intrinsic_sdk_cmake_run:${TAG} AS exec_depends
