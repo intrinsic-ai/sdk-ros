@@ -3,6 +3,56 @@ file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/protos_gen)
 file(GLOB_RECURSE intrinsic_proto_SRCS "${intrinsic_sdk_SOURCE_DIR}/**/*.proto")
 list(FILTER intrinsic_proto_SRCS EXCLUDE REGEX "_test\\.proto$")
 
+set(exclude_SRCS
+  intrinsic/icon/proto/service.proto 
+  third_party/ros2/ros_interfaces/jazzy/diagnostic_msgs/srv/self_test.proto
+  third_party/ros2/ros_interfaces/jazzy/diagnostic_msgs/srv/add_diagnostics.proto
+  third_party/ros2/ros_interfaces/jazzy/rcl_interfaces/srv/set_parameters.proto
+  third_party/ros2/ros_interfaces/jazzy/rcl_interfaces/srv/describe_parameters.proto
+  third_party/ros2/ros_interfaces/jazzy/rcl_interfaces/srv/get_parameters.proto
+  third_party/ros2/ros_interfaces/jazzy/rcl_interfaces/srv/set_parameters_atomically.proto
+  third_party/ros2/ros_interfaces/jazzy/rcl_interfaces/srv/list_parameters.proto
+  third_party/ros2/ros_interfaces/jazzy/rcl_interfaces/srv/get_parameter_types.proto
+  third_party/ros2/ros_interfaces/jazzy/rcl_interfaces/srv/get_logger_levels.proto
+  third_party/ros2/ros_interfaces/jazzy/rcl_interfaces/srv/set_logger_levels.proto
+  third_party/ros2/ros_interfaces/jazzy/nav_msgs/srv/set_map.proto
+  third_party/ros2/ros_interfaces/jazzy/nav_msgs/srv/load_map.proto
+  third_party/ros2/ros_interfaces/jazzy/nav_msgs/srv/get_map.proto
+  third_party/ros2/ros_interfaces/jazzy/nav_msgs/srv/get_plan.proto
+  third_party/ros2/ros_interfaces/jazzy/pcl_msgs/srv/update_filename.proto
+  third_party/ros2/ros_interfaces/jazzy/sensor_msgs/srv/set_camera_info.proto
+  third_party/ros2/ros_interfaces/jazzy/test_msgs/srv/arrays.proto
+  third_party/ros2/ros_interfaces/jazzy/test_msgs/action/nested_message.proto
+  third_party/ros2/ros_interfaces/jazzy/test_msgs/action/fibonacci.proto
+  third_party/ros2/ros_interfaces/jazzy/test_msgs/srv/basic_types.proto
+  third_party/ros2/ros_interfaces/jazzy/test_msgs/srv/empty.proto
+  third_party/ros2/ros_interfaces/jazzy/visualization_msgs/srv/get_interactive_markers.proto
+  third_party/ros2/ros_interfaces/jazzy/control_msgs/action/parallel_gripper_command.proto
+  third_party/ros2/ros_interfaces/jazzy/control_msgs/action/single_joint_position.proto
+  third_party/ros2/ros_interfaces/jazzy/control_msgs/action/joint_trajectory.proto
+  third_party/ros2/ros_interfaces/jazzy/control_msgs/action/gripper_command.proto
+  third_party/ros2/ros_interfaces/jazzy/control_msgs/action/point_head.proto
+  third_party/ros2/ros_interfaces/jazzy/control_msgs/srv/query_trajectory_state.proto
+  third_party/ros2/ros_interfaces/jazzy/control_msgs/action/follow_joint_trajectory.proto
+  third_party/ros2/ros_interfaces/jazzy/control_msgs/srv/query_calibration_state.proto
+  third_party/ros2/ros_interfaces/jazzy/lifecycle_msgs/srv/get_state.proto
+  third_party/ros2/ros_interfaces/jazzy/lifecycle_msgs/srv/get_available_transitions.proto
+  third_party/ros2/ros_interfaces/jazzy/lifecycle_msgs/srv/get_available_states.proto
+  third_party/ros2/ros_interfaces/jazzy/lifecycle_msgs/srv/change_state.proto
+  third_party/ros2/ros_interfaces/jazzy/type_description_interfaces/srv/get_type_description.proto
+  third_party/ros2/ros_interfaces/jazzy/std_srvs/srv/set_bool.proto
+  third_party/ros2/ros_interfaces/jazzy/std_srvs/srv/empty.proto
+  third_party/ros2/ros_interfaces/jazzy/std_srvs/srv/trigger.proto
+  third_party/ros2/ros_interfaces/jazzy/action_msgs/srv/cancel_goal.proto
+  third_party/ros2/ros_interfaces/jazzy/composition_interfaces/srv/load_node.proto
+  third_party/ros2/ros_interfaces/jazzy/composition_interfaces/srv/unload_node.proto
+  third_party/ros2/ros_interfaces/jazzy/composition_interfaces/srv/list_nodes.proto
+)
+
+foreach(file_to_remove IN LISTS exclude_SRCS)
+  list(REMOVE_ITEM intrinsic_proto_SRCS ${intrinsic_sdk_SOURCE_DIR}/${file_to_remove})
+endforeach()
+
 set(grpc_SOURCE_DIR "${gRPC_DIR}/../../../share/grpc-proto")
 
 # Prepare additional proto dependencies.
@@ -18,6 +68,7 @@ set(googleapis_SRCS
   ${googleapis_SOURCE_DIR}/google/longrunning/operations.proto
   ${googleapis_SOURCE_DIR}/google/rpc/code.proto
   ${googleapis_SOURCE_DIR}/google/rpc/status.proto
+  ${googleapis_SOURCE_DIR}/google/type/color.proto
 )
 set(grpc_gateway_SRCS
   ${grpc_gateway_SOURCE_DIR}/protoc-gen-openapiv2/options/annotations.proto
