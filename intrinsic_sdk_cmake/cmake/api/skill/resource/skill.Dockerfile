@@ -1,6 +1,7 @@
 # intrinsic_sdk_cmake build base + user code built and setup to run
+ARG REPOSITORY=ghcr.io/intrinsic-ai
 ARG TAG=latest
-FROM ghcr.io/intrinsic-ai/intrinsic_sdk_cmake:${TAG} as source
+FROM ${REPOSITORY}/intrinsic_sdk_cmake:${TAG} AS source
 
 # The name of the skill.
 ARG SKILL_NAME
@@ -22,7 +23,7 @@ ENV SKILL_WORKSPACE=/opt/${SKILL_NAME}_workspace
 ADD ./ $SKILL_WORKSPACE/src
 
 # build stage: build dependencies + build the packages
-FROM source as build
+FROM source AS build
 
 ARG SKILL_PACKAGE
 
@@ -57,7 +58,7 @@ RUN . /opt/intrinsic/intrinsic_sdk_cmake/install/setup.sh \
         --packages-up-to $SKILL_PACKAGE
 
 # exec_depends stage: capture just the exec depends using the source
-FROM ghcr.io/intrinsic-ai/intrinsic_sdk_cmake_run:${TAG} as exec_depends
+FROM ${REPOSITORY}/intrinsic_sdk_cmake_run:${TAG} AS exec_depends
 
 ARG SKILL_NAME
 ENV SKILL_WORKSPACE=/opt/${SKILL_NAME}_workspace
@@ -81,7 +82,7 @@ RUN . /opt/intrinsic/intrinsic_sdk_cmake/install/setup.sh \
     && rm -rf /var/lib/apt/lists/*
 
 # run stage: install exec dependencies + copy install artifacts from build stage
-FROM ghcr.io/intrinsic-ai/intrinsic_sdk_cmake_run:${TAG} as run
+FROM ${REPOSITORY}/intrinsic_sdk_cmake_run:${TAG} AS run
 
 ARG SKILL_EXECUTABLE
 ARG SKILL_CONFIG
