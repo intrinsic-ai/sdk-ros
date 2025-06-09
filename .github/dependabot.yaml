@@ -1,0 +1,6 @@
+version: 2
+updates:
+  - package-ecosystem: "docker"
+    directory: "/intrinsic_sdk_cmake/docker_images/"
+    schedule:
+      interval: "daily"
