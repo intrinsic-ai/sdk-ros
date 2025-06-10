@@ -19,5 +19,5 @@ FetchContent_Declare(
 FetchContent_GetProperties(intrinsic_sdk)
 if(NOT intrinsic_sdk_POPULATED)
   # Fetch the content using previously declared details
-  FetchContent_Populate(intrinsic_sdk)
+  FetchContent_MakeAvailable(intrinsic_sdk)
 endif()
