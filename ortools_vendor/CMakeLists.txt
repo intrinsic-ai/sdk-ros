@@ -16,7 +16,7 @@ ament_add_default_options()
 
 ament_vendor(or-tools
   VCS_URL https://github.com/google/or-tools
-  VCS_VERSION stable
+  VCS_VERSION ed94162b910fa58896db99191378d3b71a5313af  # 9.11
   CMAKE_ARGS
     -DCMAKE_CXX_STANDARD=20
     -DBUILD_DEPS:BOOL=OFF

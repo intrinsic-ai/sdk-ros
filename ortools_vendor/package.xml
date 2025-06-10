@@ -19,6 +19,7 @@
   <buildtool_depend>ament_cmake_vendor_package</buildtool_depend>
 
   <depend>abseil_cpp_vendor</depend>
+  <depend>bzip2</depend>
   <depend>grpc_vendor</depend>
   <depend>re2_vendor</depend>
 
