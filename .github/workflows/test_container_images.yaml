@@ -11,7 +11,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: [build-container-images]
     outputs:
-      intrinsic_ai_sdk_version: ${{ needs.build-container-images.outputs.intrinsic_ai_sdk_version }}
+      intrinsic_ai_sdk_version: ${{ env.INTRINSIC_AI_SDK_VERSION }}
     steps:
       - run: echo "The job was automatically triggered by a ${{ github.event_name }} event."
       - run: echo "This job is now running on a ${{ runner.os }} server."
