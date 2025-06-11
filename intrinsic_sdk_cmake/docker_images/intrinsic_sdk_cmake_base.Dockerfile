@@ -2,7 +2,7 @@
 # It needs to be built from the root of the intrinsic_sdk_ros repository.
 
 # base stage: ghcr.io/sloretz/ros:jazzy-ros-core + configs + rmw_zenoh
-FROM ghcr.io/sloretz/ros:jazzy-ros-core AS base
+FROM ghcr.io/sloretz/ros:jazzy-ros-core-2025-06-08 AS base
 # TODO(wjwwood): this is based on the ROS image because we still use
 #   ament_cmake, we should move away from that and either vendor ament_cmake or
 #   avoid it entirely.
