@@ -11,7 +11,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: [build-container-images]
     outputs:
-      intrinsic_ai_sdk_version: ${{ env.INTRINSIC_AI_SDK_VERSION }}
+      intrinsic_ai_sdk_version: ${{ steps.intrinsic_ai_sdk_version.outputs.version }}
     steps:
       - run: echo "The job was automatically triggered by a ${{ github.event_name }} event."
       - run: echo "This job is now running on a ${{ runner.os }} server."
@@ -25,6 +25,8 @@ jobs:
       - name: Get intrinsic-ai/sdk Version
         run: echo "INTRINSIC_AI_SDK_VERSION=${{ needs.build-container-images.outputs.intrinsic_ai_sdk_version }}" >> $GITHUB_ENV
       - run: echo "The Intrinsic SDK version being used is ${{ env.INTRINSIC_AI_SDK_VERSION }}"
+      - id: intrinsic_ai_sdk_version
+        run: echo "version=${{ env.INTRINSIC_AI_SDK_VERSION }}" >> "$GITHUB_OUTPUT"
 
       # Download images from build workflow and load them into the local docker for testing.
       - name: Download intrinsic_sdk_cmake_base container image
