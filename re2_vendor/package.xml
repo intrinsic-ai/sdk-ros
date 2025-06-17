@@ -11,7 +11,7 @@
 
   <maintainer email="wjwwood@intrinsic.ai">William Woodall</maintainer>
 
-  <license>Apache-2.0</license>  <!-- The contents of this package are Apache-2.0 -->
+  <license>Intrinsic License</license>  <!-- This package has a custom license -->
   <license>BSD-3-Clause</license>  <!-- The contents of re2 are "BSD-3-Clause license" -->
 
   <author email="wjwwood@intrinsic.ai">William Woodall</author>

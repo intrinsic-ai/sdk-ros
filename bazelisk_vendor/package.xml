@@ -11,8 +11,8 @@
 
   <maintainer email="wjwwood@intrinsic.ai">William Woodall</maintainer>
 
-  <!-- The contents of this package and the upstream bazelisk project are both Apache-2.0 -->
-  <license>Apache License 2.0</license>
+  <license>Intrinsic License</license>  <!-- This package has a custom license -->
+  <license>Apache License 2.0</license>  <!-- The bazelisk project is Apache-2.0 -->
 
   <author email="wjwwood@intrinsic.ai">William Woodall</author>
 
