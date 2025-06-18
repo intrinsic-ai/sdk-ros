@@ -11,8 +11,8 @@
 
   <maintainer email="wjwwood@intrinsic.ai">William Woodall</maintainer>
 
-  <!-- The contents of this package are Apache-2.0 -->
-  <license>Apache-2.0</license>
+  <!-- This package has a custom license -->
+  <license>Intrinsic License</license>
   <!-- Eigen is primarily MPL-2.0 -->
   <license>MPL-2.0</license>
 

@@ -11,7 +11,8 @@
 
   <maintainer email="wjwwood@intrinsic.ai">William Woodall</maintainer>
 
-  <license>Apache-2.0</license>  <!-- The contents of this package and abseil-cpp are both Apache-2.0 -->
+  <license>Intrinsic License</license>  <!-- This package has a custom license -->
+  <license>Apache-2.0</license>  <!-- The package abseil-cpp is Apache-2.0 -->
 
   <author email="wjwwood@intrinsic.ai">William Woodall</author>
 
