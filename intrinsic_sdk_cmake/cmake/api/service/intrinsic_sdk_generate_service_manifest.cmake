@@ -75,18 +75,16 @@ function(intrinsic_sdk_generate_service_manifest)
 
     add_custom_command(
       OUTPUT ${OUT_DIR}/default_config.binarypb
-      COMMAND ${intrinsic_sdk_DIR}/../../../lib/intrinsic_sdk/textproto_to_binproto.py
-      ARGS
-        --descriptor_database
-          ${intrinsic_sdk_DESCRIPTOR_DATABASE}
-          ${OUT_DIR}/${arg_SERVICE_NAME}_protos.desc
-        --message_type=google.protobuf.Any
-        --textproto_in=${CMAKE_CURRENT_SOURCE_DIR}/${arg_DEFAULT_CONFIGURATION}
-        --binproto_out=${OUT_DIR}/default_config.binarypb
+      COMMAND protobuf::protoc
+        --encode=google.protobuf.Any
+        --descriptor_set_in="${OUT_DIR}/${arg_SERVICE_NAME}_protos.desc:${intrinsic_sdk_cmake_DESCRIPTOR_SET_FILE}"
+        < ${CMAKE_CURRENT_SOURCE_DIR}/${arg_DEFAULT_CONFIGURATION}
+        > ${OUT_DIR}/default_config.binarypb
       DEPENDS
         ${CMAKE_CURRENT_SOURCE_DIR}/${arg_DEFAULT_CONFIGURATION}
         ${OUT_DIR}/${arg_SERVICE_NAME}_protos.desc
       COMMENT "Generating default config for ${arg_SERVICE_NAME}"
+      # VERBATIM
     )
 
     add_custom_target(
@@ -98,13 +96,12 @@ function(intrinsic_sdk_generate_service_manifest)
 
   add_custom_command(
     OUTPUT ${OUT_DIR}/service_manifest.binarypb
-    COMMAND ${intrinsic_sdk_DIR}/../../../lib/intrinsic_sdk/textproto_to_binproto.py
-    ARGS
-      --descriptor_database ${intrinsic_sdk_DESCRIPTOR_DATABASE}
-      --message_type=intrinsic_proto.services.ServiceManifest
-      --textproto_in=${CMAKE_CURRENT_SOURCE_DIR}/${arg_MANIFEST}
-      --binproto_out=${OUT_DIR}/service_manifest.binarypb
-    DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/${arg_MANIFEST}
+    COMMAND protobuf::protoc
+      --encode=intrinsic_proto.services.ServiceManifest
+      --descriptor_set_in=${intrinsic_sdk_cmake_DESCRIPTOR_SET_FILE}
+      < ${CMAKE_CURRENT_SOURCE_DIR}/${arg_MANIFEST}
+      > ${OUT_DIR}/service_manifest.binarypb
+    DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/${arg_MANIFEST} ${intrinsic_sdk_cmake_DESCRIPTOR_SET_FILE}
     COMMENT "Generating service manifest for ${arg_SERVICE_NAME}"
   )
 
