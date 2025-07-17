@@ -70,7 +70,8 @@ function(intrinsic_sdk_generate_service_manifest)
     intrinsic_sdk_protobuf_generate(
       NAME ${arg_SERVICE_NAME}
       SOURCES ${arg_PARAMETER_DESCRIPTOR}
-      TARGET ${arg_PROTOS_TARGET})
+      TARGET ${arg_PROTOS_TARGET}
+      DESCRIPTOR_SET_OUTPUT "${OUT_DIR}/${arg_SERVICE_NAME}_protos.desc")
 
     add_custom_command(
       OUTPUT ${OUT_DIR}/default_config.binarypb
