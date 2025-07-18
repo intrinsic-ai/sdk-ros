@@ -84,7 +84,6 @@ function(intrinsic_sdk_generate_service_manifest)
         ${CMAKE_CURRENT_SOURCE_DIR}/${arg_DEFAULT_CONFIGURATION}
         ${OUT_DIR}/${arg_SERVICE_NAME}_protos.desc
       COMMENT "Generating default config for ${arg_SERVICE_NAME}"
-      # VERBATIM
     )
 
     add_custom_target(
