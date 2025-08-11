@@ -11,8 +11,8 @@
 
   <maintainer email="wjwwood@intrinsic.ai">William Woodall</maintainer>
 
-  <!-- The contents of this package are Apache-2.0 -->
-  <license>Apache-2.0</license>
+  <!-- This package has a custom license -->
+  <license>Intrinsic License</license>
   <!-- pybind11_abseil uses the same BSD-3-Clause as pybind11 -->
   <license>BSD-3-Clause</license>
 

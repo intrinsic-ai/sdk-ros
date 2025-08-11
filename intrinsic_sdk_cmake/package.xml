@@ -11,8 +11,7 @@
 
   <maintainer email="wjwwood@intrinsic.ai">William Woodall</maintainer>
 
-  <license>Apache License 2.0</license>  <!-- This package is Apache 2.0 -->
-  <license>Intrinsic License</license>  <!-- The Intrinsic SDK has a custom license for now -->
+  <license>Intrinsic License</license>
 
   <author email="mjcarroll@intrinsic.ai">Michael Carroll</author>
   <author email="wjwwood@intrinsic.ai">William Woodall</author>
