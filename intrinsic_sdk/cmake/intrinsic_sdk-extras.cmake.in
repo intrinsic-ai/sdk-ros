@@ -1,1 +1,1 @@
-message(WARNING "This package ('intrinsic_sdk') is deprecated, use 'intrinsic_sdk_ros' instead.")
+message(WARNING "This package ('intrinsic_sdk') is deprecated, use 'intrinsic_sdk_cmake' instead.")
