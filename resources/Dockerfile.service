@@ -80,9 +80,8 @@ RUN cp \
         --expression '$iexport ENV ROS_HOME=/tmp' \
         /ros_entrypoint.sh \
     && sed --in-place \
-        --expression '$iexport ZENOH_CONFIG_OVERRIDE='\'connect/endpoints=["tcp/zenoh-router.app-intrinsic-base:7447"]\'' \
+        --expression '$iexport ZENOH_CONFIG_OVERRIDE='\'connect/endpoints=[\"tcp/zenoh-router.app-intrinsic-base:7447\"]\''' \
         /ros_entrypoint.sh
-# TODO(Yadunund): Switch to ZENOH_CONFIG_OVERRIDE after the next jazzy sync.
 
 # Build arguments are not substituted in the CMD command and hence we set environemnt variables
 # which can be substituted instead.
