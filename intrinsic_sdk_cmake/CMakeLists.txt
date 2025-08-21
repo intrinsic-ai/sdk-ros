@@ -13,9 +13,6 @@ include(cmake/fetch_sdk.cmake)
 # Find dependencies.
 include(cmake/dependencies.cmake)
 
-# Set important bazel related variables like intrinsic_sdk_BAZEL_BIN_DIR.
-include(cmake/bazel_setup.cmake)
-
 # Bring in additional googleapis necessary to build Intrinsic proto files.
 # Note that googleapis_SOURCE_DIR and grpc_gateway_SOURCE_DIR come from here.
 include(cmake/fetch_googleapis.cmake)
@@ -33,9 +30,6 @@ include(cmake/sdk_imw_zenoh.cmake)
 
 # Build the sdk C++ sources into a library.
 include(cmake/sdk.cmake)
-
-# Extract tool binaries from bazel build of sdk.
-include(cmake/sdk_tools.cmake)
 
 # Install cmake helper functions.
 install(

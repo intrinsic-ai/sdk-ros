@@ -2,7 +2,6 @@
 
 # Find vendor packages to ensure dependencies are available.
 find_package(abseil_cpp_vendor REQUIRED)
-find_package(bazelisk_vendor REQUIRED)
 find_package(eigen_vendor REQUIRED)
 find_package(flatbuffers_vendor REQUIRED)
 find_package(grpc_vendor REQUIRED)  # Provides protobuf and abseilcpp

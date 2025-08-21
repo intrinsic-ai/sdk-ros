@@ -1,5 +1,17 @@
---- a/intrinsic/platform/pubsub/zenoh_util/zenoh_helpers.cc	2025-04-16 01:42:13.992272008 +0000
-+++ b/intrinsic/platform/pubsub/zenoh_util/zenoh_helpers.cc	2025-04-16 02:05:54.732351721 +0000
+From 796a34771534a394f99df82552222e1e670311be Mon Sep 17 00:00:00 2001
+From: Michael Carroll <mjcarroll@intrinsic.ai>
+Date: Thu, 21 Aug 2025 20:06:20 +0000
+Subject: [PATCH 1/2] Remove use of runfiles from the zenoh helpers
+
+Signed-off-by: Michael Carroll <mjcarroll@intrinsic.ai>
+---
+ .../pubsub/zenoh_util/zenoh_helpers.cc        | 47 ++++++++++---------
+ 1 file changed, 26 insertions(+), 21 deletions(-)
+
+diff --git a/intrinsic/platform/pubsub/zenoh_util/zenoh_helpers.cc b/intrinsic/platform/pubsub/zenoh_util/zenoh_helpers.cc
+index b94efec1..b766ef05 100644
+--- a/intrinsic/platform/pubsub/zenoh_util/zenoh_helpers.cc
++++ b/intrinsic/platform/pubsub/zenoh_util/zenoh_helpers.cc
 @@ -2,7 +2,9 @@
  
  #include "intrinsic/platform/pubsub/zenoh_util/zenoh_helpers.h"
@@ -25,7 +37,7 @@
  bool RunningUnderTest() {
    return (getenv("TEST_TMPDIR") != nullptr) ||
           (getenv("PORTSERVER_ADDRESS") != nullptr);
-@@ -26,26 +25,32 @@
+@@ -26,26 +25,32 @@ bool RunningInKubernetes() {
    return getenv("KUBERNETES_SERVICE_HOST") != nullptr;
  }
  
@@ -45,20 +57,13 @@
 -  if (repository == "") {
 -    // If empty, running in current repository.
 -    repository = "_main";
+-  }
 +  // Patched by intrinsic-dev/intrinsic_sdk_ros.git to work in a CMake context.
 +  // TODO(wjwwood): consider using ament_index to make this code relocatable.
 +  std::array<std::filesystem::path, 2> prefix_paths = {
 +    std::filesystem::path(INTRINSIC_SDK_CMAKE_LIB_PATH),
 +    std::filesystem::path(INTRINSIC_SDK_CMAKE_SHARE_PATH)
 +  };
-+
-+  // Prefer a more complete path in the lib or share path over just the give file_path.
-+  for (const auto & prefix_path : prefix_paths) {
-+    std::filesystem::path possible_path = prefix_path / file_path;
-+    if (std::filesystem::exists(possible_path)) {
-+      return possible_path.string();
-+    }
-   }
  
 -  if (RunningUnderTest()) {
 -    std::string error;
@@ -68,10 +73,20 @@
 -    runfiles = std::unique_ptr<Runfiles>(
 -        Runfiles::Create(program_invocation_name, &error));
 -    path = runfiles->Rlocation(file::JoinPath(repository, file_path));
--  }
++  // Prefer a more complete path in the lib or share path over just the give file_path.
++  for (const auto & prefix_path : prefix_paths) {
++    std::filesystem::path possible_path = prefix_path / file_path;
++    if (std::filesystem::exists(possible_path)) {
++      return possible_path.string();
++    }
+   }
 -  return path;
++
 +  // Return the original file_path if nothing better was found.
 +  return std::string(file_path);
  }
  
  absl::Status ValidZenohKeyexpr(absl::string_view keyexpr) {
+-- 
+2.51.0.rc2.233.g662b1ed5c5-goog
+

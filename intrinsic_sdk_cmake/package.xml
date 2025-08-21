@@ -5,9 +5,7 @@
 <package format="3">
   <name>intrinsic_sdk_cmake</name>
   <version>0.1.0</version>
-  <description>
-    Wrapper around the Intrinsic SDK so it can be used from CMake.
-  </description>
+  <description> Wrapper around the Intrinsic SDK so it can be used from CMake. </description>
 
   <maintainer email="wjwwood@intrinsic.ai">William Woodall</maintainer>
 
@@ -17,7 +15,6 @@
   <author email="wjwwood@intrinsic.ai">William Woodall</author>
 
   <buildtool_depend>cmake</buildtool_depend>
-  <buildtool_depend>bazelisk_vendor</buildtool_depend>
 
   <depend>abseil_cpp_vendor</depend>
   <depend>eigen_vendor</depend>

@@ -13,11 +13,13 @@ FetchContent_Declare(
   URL https://github.com/intrinsic-ai/sdk/archive/refs/tags/${sdk_version}.tar.gz
   URL_HASH ${sdk_checksum}
   DOWNLOAD_EXTRACT_TIMESTAMP FALSE
-  PATCH_COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/cmake/sdk_patches/apply_patch.sh
-    ${CMAKE_CURRENT_SOURCE_DIR}/cmake/sdk_patches/001_zenoh_helpers_cc_no_runfiles.patch
+  PATCH_COMMAND git apply --ignore-space-change --ignore-whitespace 
+    "sdk_patches/0001-Remove-use-of-runfiles-from-the-zenoh-helpers.patch"
+    "sdk_patches/0002-Vendor-generated-strong_int.h-file-for-amd64.patch"
 )
 FetchContent_GetProperties(intrinsic_sdk)
 if(NOT intrinsic_sdk_POPULATED)
   # Fetch the content using previously declared details
   FetchContent_MakeAvailable(intrinsic_sdk)
 endif()
+
