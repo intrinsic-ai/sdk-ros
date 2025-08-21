@@ -1,4 +1,8 @@
 {
 	"sdk_version": "v1.19.20250519",
-	"sdk_checksum": "SHA256=91cea6ba18fdd67809ecbc5adf17d250e9a6652743e3945b7ddd94c00460b9a8"
+	"sdk_checksum": "SHA256=91cea6ba18fdd67809ecbc5adf17d250e9a6652743e3945b7ddd94c00460b9a8",
+	"inctl_version": "v1.22.20250811",
+	"inctl_checksum": "SHA256=c3283a498d646442c7301eb6cea8c549e322738c65a1804e0e52552b99d8fe17",
+	"inbuild_version": "v1.22.20250811",
+	"inbuild_checksum": "SHA256=3e725bdfa1156fec3870f85c565ffeaefb5241fd7e8720deff907aaf1b14678a"
 }
