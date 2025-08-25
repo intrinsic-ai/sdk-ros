@@ -1,0 +1,5 @@
+---
+DiscoveredCamera[]    cameras  # a list of discovered cameras
+
+bool success          # true if the query completed successfully
+string error_message  # non-empty human-readable string if error
