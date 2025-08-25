@@ -1,0 +1,5 @@
+---
+SensorInfo[] sensors  # a list of sensors present in the device
+
+bool success          # true if the query completed successfully
+string error_message  # non-empty human-readable string if error
