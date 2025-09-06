@@ -15,7 +15,7 @@ ENV RMW_IMPLEMENTATION=rmw_zenoh_cpp
 # underlay stage: base + dependencies built
 FROM base AS underlay
 
-ADD src/intrinsic_sdk_ros /opt/ros/underlay/src/intrinsic_sdk_ros
+ADD src/sdk-ros /opt/ros/underlay/src/sdk-ros
 
 RUN . /opt/ros/jazzy/setup.sh \
     && apt-get update \
