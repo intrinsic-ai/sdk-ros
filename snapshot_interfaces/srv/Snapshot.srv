@@ -1,0 +1,25 @@
+# The intent of this service is to take a snapshot of a collection of sensor
+# topics published by a camera. This can be useful in applications where full
+# streaming of all of the sensor topics of the camera exceed the available
+# bandwidth, or are only periodically needed.  Because many cameras have
+# several sensors, there are lists for Image, PointCloud2, Imu, and Temperature
+# topics. A call to this service can capture a variable number of each of those
+# topic types.
+
+uint32 capture_policy                # Sets waiting behavior, as per enums:
+uint32 WAIT_FOR_NEXT=0               # Default: wait for the next message
+uint32 MOST_RECENT=1                 # Retrieve the most-recent message
+uint32 WAIT_FOR_TRIGGER_TIME=2       # Wait until trigger_time
+builtin_interfaces/Time trigger_time # Only used by WAIT_FOR_TRIGGER_TIME
+
+builtin_interfaces/Duration timeout  # If nonzero, the maximum time to wait
+
+---
+
+ImageSnapshot[] images               # Captured images and matching CameraInfos
+PointCloud2Snapshot[] point_clouds   # Captured point clouds
+ImuSnapshot[] imus                   # Captured IMUs
+TemperatureSnapshot[] temperatures   # Captured temperatures
+
+bool success                         # true if all topics were captured
+string error_message                 # human-readable error string
