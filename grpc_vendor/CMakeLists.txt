@@ -15,7 +15,7 @@ find_package(re2 REQUIRED)
 
 ament_vendor(grpc_vendor
   VCS_URL https://github.com/grpc/grpc
-  VCS_VERSION v1.71.0
+  VCS_VERSION v1.74.0
   CMAKE_ARGS
     -DCMAKE_CXX_STANDARD=${CMAKE_CXX_STANDARD}
     -DABSL_BUILD_TESTING:BOOL=OFF

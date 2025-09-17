@@ -5,9 +5,7 @@
 <package format="3">
   <name>intrinsic_sdk_cmake</name>
   <version>0.1.0</version>
-  <description>
-    Wrapper around the Intrinsic SDK so it can be used from CMake.
-  </description>
+  <description> Wrapper around the Intrinsic SDK so it can be used from CMake. </description>
 
   <maintainer email="wjwwood@intrinsic.ai">William Woodall</maintainer>
 
@@ -25,6 +23,7 @@
   <depend>grpc_vendor</depend>
   <depend>intrinsic_pybind11_vendor</depend>
   <depend>pybind11_abseil_vendor</depend>
+  <depend>pybind11_protobuf_vendor</depend>
   <depend>opencensus_cpp_vendor</depend>
   <depend>ortools_vendor</depend>
 

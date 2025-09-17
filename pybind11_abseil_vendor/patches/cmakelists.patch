@@ -57,7 +57,7 @@
 +)
 +
 +install(
-+  TARGETS absl_casters
++  TARGETS absl_casters import_status_module status status_pyinit_google3 register_status_bindings init_from_tag status_caster no_throw_status ok_status_singleton_lib status_not_ok_exception utils_pybind11_absl raw_ptr_from_capsule void_ptr_from_capsule check_status_module_imported status_from_py_exc py_base_utilities status_from_core_py_exc
 +  EXPORT pybind11_abseil-targets
 +  ARCHIVE DESTINATION lib
 +  LIBRARY DESTINATION lib

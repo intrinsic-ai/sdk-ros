@@ -1,0 +1,294 @@
+From 0205a4e705679ccb6dccce89ede9b9a2f2c76674 Mon Sep 17 00:00:00 2001
+From: Michael Carroll <mjcarroll@intrinsic.ai>
+Date: Fri, 12 Sep 2025 22:57:06 +0000
+Subject: [PATCH] Make cmake more amenable to vendoring
+
+Signed-off-by: Michael Carroll <mjcarroll@intrinsic.ai>
+---
+ CMakeLists.txt                         | 42 ++++++-------
+ cmake/Config.cmake.in                  |  5 ++
+ cmake/dependencies/CMakeLists.txt      | 82 --------------------------
+ pybind11_protobuf/CMakeLists.txt       | 56 ++++++++++--------
+ pybind11_protobuf/tests/CMakeLists.txt | 14 +----
+ 5 files changed, 62 insertions(+), 137 deletions(-)
+ create mode 100644 cmake/Config.cmake.in
+ delete mode 100644 cmake/dependencies/CMakeLists.txt
+
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index 4ec0f64..4a4b6e2 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -1,6 +1,4 @@
+ cmake_minimum_required(VERSION 3.18)
+-list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
+-
+ project(pybind11_protobuf LANGUAGES CXX)
+ 
+ if(NOT DEFINED CMAKE_CXX_STANDARD)
+@@ -15,27 +13,31 @@ set(CMAKE_CXX_EXTENSIONS OFF)
+ 
+ set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+ 
+-# ============================================================================
+-# Options
+-
+-option(USE_SYSTEM_ABSEIL "Force usage of system provided abseil-cpp" OFF)
+-option(USE_SYSTEM_PROTOBUF "Force usage of system provided Protobuf" OFF)
+-option(USE_SYSTEM_PYBIND "Force usage of system provided pybind11" OFF)
++find_package(Protobuf CONFIG REQUIRED)
++set(PYBIND11_FINDPYTHON ON)
++find_package(pybind11 CONFIG REQUIRED)
++find_package(Protobuf CONFIG REQUIRED)
++find_package(pybind11_abseil CONFIG REQUIRED)
++find_package(Python3 REQUIRED COMPONENTS Interpreter Development.Module)
+ 
+-# ============================================================================
+-# Testing
+ include(CTest)
+-option(PYBIND11_PROTOBUF_BUILD_TESTING
+-       "If ON, build all of pybind11_protobuf's own tests." ${BUILD_TESTING})
++include(CMakePackageConfigHelpers)
++include(GNUInstallDirs)
+ 
+ # ============================================================================
+-# Find Python
+-find_package(Python3 REQUIRED COMPONENTS Interpreter Development.Module)
++# Testing
++add_subdirectory(pybind11_protobuf)
+ 
+ # ============================================================================
+-# Build dependencies
+-add_subdirectory(cmake/dependencies dependencies)
+-
+-set(TOP_LEVEL_DIR ${CMAKE_CURRENT_LIST_DIR})
+-include_directories(${TOP_LEVEL_DIR} ${pybind11_INCLUDE_DIRS})
+-add_subdirectory(pybind11_protobuf)
++# Packaging 
++
++configure_package_config_file("cmake/Config.cmake.in"
++  "${CMAKE_CURRENT_BINARY_DIR}/pybind11_protobufConfig.cmake"
++  INSTALL_DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/pybind11_protobuf
++)
++
++install(
++  FILES
++    "${CMAKE_CURRENT_BINARY_DIR}/pybind11_protobufConfig.cmake"
++  DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/pybind11_protobuf
++)
+diff --git a/cmake/Config.cmake.in b/cmake/Config.cmake.in
+new file mode 100644
+index 0000000..497c060
+--- /dev/null
++++ b/cmake/Config.cmake.in
+@@ -0,0 +1,5 @@
++@PACKAGE_INIT@
++
++include("${CMAKE_CURRENT_LIST_DIR}/pybind11_protobufTargets.cmake")
++
++check_required_components(pybind11_protobuf)
+diff --git a/cmake/dependencies/CMakeLists.txt b/cmake/dependencies/CMakeLists.txt
+deleted file mode 100644
+index 76c1035..0000000
+--- a/cmake/dependencies/CMakeLists.txt
++++ /dev/null
+@@ -1,82 +0,0 @@
+-include(FetchContent)
+-set(BUILD_SHARED_LIBS ON)
+-set(BUILD_TESTING OFF)
+-
+-message(CHECK_START "Checking for external dependencies")
+-list(APPEND CMAKE_MESSAGE_INDENT "  ")
+-
+-if(NOT TARGET absl::base)
+-  if(USE_SYSTEM_ABSEIL)
+-    # Version omitted, as absl only allows EXACT version matches
+-    find_package(absl REQUIRED)
+-  else()
+-    message(CHECK_START "Fetching Abseil-cpp")
+-    list(APPEND CMAKE_MESSAGE_INDENT "  ")
+-    # ensure that abseil also installs itself, since we are using it in our
+-    # public API
+-    set(ABSL_ENABLE_INSTALL ON)
+-    set(ABSL_PROPAGATE_CXX_STD ON)
+-    set(ABSL_USE_SYSTEM_INCLUDES ON)
+-    set(ABSL_BUILD_TESTING OFF)
+-    FetchContent_Declare(
+-      absl
+-      GIT_REPOSITORY "https://github.com/abseil/abseil-cpp.git"
+-      GIT_TAG "20240722.0"
+-      GIT_SHALLOW TRUE)
+-    FetchContent_MakeAvailable(absl)
+-    list(POP_BACK CMAKE_MESSAGE_INDENT)
+-    message(CHECK_PASS "fetched")
+-  endif()
+-endif()
+-
+-if(NOT TARGET protobuf::libprotobuf)
+-  if(USE_SYSTEM_PROTOBUF)
+-    find_package(protobuf 5.29.2 REQUIRED)
+-  else()
+-    message(CHECK_START "Fetching Protobuf")
+-    list(APPEND CMAKE_MESSAGE_INDENT "  ")
+-    set(protobuf_BUILD_TESTS OFF)
+-    FetchContent_Declare(
+-      Protobuf
+-      GIT_REPOSITORY "https://github.com/protocolbuffers/protobuf.git"
+-      GIT_TAG "v29.2"
+-      GIT_SHALLOW TRUE)
+-    FetchContent_MakeAvailable(Protobuf)
+-    list(POP_BACK CMAKE_MESSAGE_INDENT)
+-    message(CHECK_PASS "fetched")
+-  endif()
+-endif()
+-
+-if(NOT TARGET pybind11::pybind11_headers)
+-  if(USE_SYSTEM_PYBIND)
+-    find_package(pybind11 2.13.6 REQUIRED)
+-  else()
+-    message(CHECK_START "Fetching pybind11")
+-    list(APPEND CMAKE_MESSAGE_INDENT "  ")
+-    FetchContent_Declare(
+-      pybind11
+-      GIT_REPOSITORY "https://github.com/pybind/pybind11.git"
+-      GIT_TAG "v2.13.6"
+-      GIT_SHALLOW TRUE)
+-    FetchContent_MakeAvailable(pybind11)
+-    list(POP_BACK CMAKE_MESSAGE_INDENT)
+-    message(CHECK_PASS "fetched")
+-  endif()
+-endif()
+-
+-if(PYBIND11_PROTOBUF_BUILD_TESTING AND NOT TARGET pybind11_abseil::absl_casters)
+-  message(CHECK_START "Fetching pybind11_abseil")
+-  list(APPEND CMAKE_MESSAGE_INDENT "  ")
+-  FetchContent_Declare(
+-    pybind11_abseil
+-    GIT_REPOSITORY "https://github.com/pybind/pybind11_abseil.git"
+-    # TODO(mizux) use a release version tag once available.
+-    GIT_TAG "master"
+-    GIT_SHALLOW TRUE)
+-  FetchContent_MakeAvailable(pybind11_abseil)
+-  list(POP_BACK CMAKE_MESSAGE_INDENT)
+-  message(CHECK_PASS "fetched")
+-endif()
+-
+-list(POP_BACK CMAKE_MESSAGE_INDENT)
+-message(CHECK_PASS "all dependencies found")
+diff --git a/pybind11_protobuf/CMakeLists.txt b/pybind11_protobuf/CMakeLists.txt
+index 7a9cdc1..6d18001 100644
+--- a/pybind11_protobuf/CMakeLists.txt
++++ b/pybind11_protobuf/CMakeLists.txt
+@@ -1,3 +1,4 @@
++
+ # ============================================================================
+ # pybind11_proto_utils pybind11 extension module
+ pybind11_add_module(pybind11_proto_utils MODULE proto_utils.cc proto_utils.h)
+@@ -9,10 +10,13 @@ if(APPLE)
+ endif()
+ 
+ target_include_directories(pybind11_proto_utils
+-                           INTERFACE $<BUILD_INTERFACE:${TOP_LEVEL_DIR}>)
++  PUBLIC "$<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}>" 
++         "$<INSTALL_INTERFACE:include/${PROJECT_NAME}>")
+ 
+-target_link_libraries(pybind11_proto_utils PUBLIC absl::strings
+-                                                  protobuf::libprotobuf)
++target_link_libraries(
++  pybind11_proto_utils 
++  PUBLIC absl::strings
++         protobuf::libprotobuf)
+ 
+ # ============================================================================
+ # pybind11_native_proto_caster shared library
+@@ -40,7 +44,8 @@ target_link_libraries(
+          pybind11::pybind11)
+ 
+ target_include_directories(pybind11_native_proto_caster
+-                           PUBLIC $<BUILD_INTERFACE:${TOP_LEVEL_DIR}>)
++  PUBLIC "$<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}>" 
++         "$<INSTALL_INTERFACE:include/${PROJECT_NAME}>")
+ 
+ # ============================================================================
+ # pybind11_wrapped_proto_caster shared library
+@@ -64,26 +69,31 @@ target_link_libraries(
+          pybind11::pybind11)
+ 
+ target_include_directories(pybind11_wrapped_proto_caster
+-                           PUBLIC $<BUILD_INTERFACE:${TOP_LEVEL_DIR}>)
++  PUBLIC "$<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}>" 
++         "$<INSTALL_INTERFACE:include/${PROJECT_NAME}>")
+ 
+-if(BUILD_TESTING)
+-  add_subdirectory(tests)
+-endif()
++install(
++  TARGETS pybind11_wrapped_proto_caster pybind11_native_proto_caster pybind11_proto_utils
++  EXPORT pybind11_protobuf-targets
++  ARCHIVE DESTINATION lib
++  LIBRARY DESTINATION lib
++  RUNTIME DESTINATION bin
++)
++
++install(
++  DIRECTORY "${PROJECT_SOURCE_DIR}/pybind11_protobuf/"
++  DESTINATION "include/${PROJECT_NAME}/pybind11_protobuf"
++  FILES_MATCHING
++  PATTERN "*.h"
++)
+ 
+-if(CMAKE_INSTALL_PYDIR)
+-  # Copying to two target directories for simplicity. It is currently unknown
+-  # how to determine here which copy is actually being used.
+-  install(
+-    TARGETS status_py_extension_stub ok_status_singleton
+-    EXPORT pybind11_abseilTargets
+-    LIBRARY DESTINATION ${CMAKE_INSTALL_PYDIR}/pybind11_abseil
+-    ARCHIVE DESTINATION ${CMAKE_INSTALL_PYDIR}/pybind11_abseil
+-    RUNTIME DESTINATION ${CMAKE_INSTALL_PYDIR}/pybind11_abseil)
++install(
++  EXPORT pybind11_protobuf-targets
++  FILE pybind11_protobufTargets.cmake
++  NAMESPACE pybind11_protobuf::
++  DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/pybind11_protobuf
++)
+ 
+-  install(
+-    TARGETS status_py_extension_stub ok_status_singleton
+-    EXPORT pybind11_abseil_cppTargets
+-    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+-    ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+-    RUNTIME DESTINATION ${CMAKE_INSTALL_LIBDIR})
++if(BUILD_TESTING)
++  add_subdirectory(tests)
+ endif()
+diff --git a/pybind11_protobuf/tests/CMakeLists.txt b/pybind11_protobuf/tests/CMakeLists.txt
+index 20e31cc..ffe84c9 100644
+--- a/pybind11_protobuf/tests/CMakeLists.txt
++++ b/pybind11_protobuf/tests/CMakeLists.txt
+@@ -1,21 +1,11 @@
+-#
+-# Evaluate if Protobuf uses the system package, otherwise explicitly include the
+-# required macro
+-#
+-FetchContent_GetProperties(Protobuf SOURCE_DIR Protobuf_SOURCE_DIR)
+-if(Protobuf_SOURCE_DIR)
+-  # Use macros from content made available by FetchContent
+-  include(${Protobuf_SOURCE_DIR}/cmake/protobuf-generate.cmake)
+-endif()
+-
+ # cmake-format: off
+ function(generate_cc_proto protoname)
+   # Generate C++ files (.pb.h, .pb.cc)
+   #
+   add_library(${protoname}_cc_proto OBJECT)
+   target_include_directories(${protoname}_cc_proto
+-    PRIVATE $<TARGET_PROPERTY:protobuf::libprotobuf,INCLUDE_DIRECTORIES>
+-            $<BUILD_INTERFACE:${CMAKE_BINARY_DIR}>)
++    PRIVATE $<BUILD_INTERFACE:${CMAKE_BINARY_DIR}>)
++  target_link_libraries(${protoname}_cc_proto PRIVATE protobuf::libprotobuf)
+   protobuf_generate(
+     TARGET ${protoname}_cc_proto
+     PROTOS ${CMAKE_SOURCE_DIR}/pybind11_protobuf/tests/${protoname}.proto
+-- 
+2.51.0.384.g4c02a37b29-goog
+

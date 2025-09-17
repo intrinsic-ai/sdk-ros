@@ -47,6 +47,8 @@ set(exclude_SRCS
   third_party/ros2/ros_interfaces/jazzy/composition_interfaces/srv/load_node.proto
   third_party/ros2/ros_interfaces/jazzy/composition_interfaces/srv/unload_node.proto
   third_party/ros2/ros_interfaces/jazzy/composition_interfaces/srv/list_nodes.proto
+  third_party/ros2/ros_interfaces/jazzy/tf2_msgs/action/lookup_transform.proto
+  third_party/ros2/ros_interfaces/jazzy/tf2_msgs/srv/frame_graph.proto
 )
 
 foreach(file_to_remove IN LISTS exclude_SRCS)
