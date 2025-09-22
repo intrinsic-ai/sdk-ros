@@ -1,0 +1,15 @@
+syntax = "proto3";
+
+package intrinsic;
+
+message FlowstateRosBridgeConfig {
+  string workcell_id = 1;
+  string executive_service_address = 2;
+  string skill_registry_address = 3;
+  string solution_service_address = 4;
+  string world_service_address = 5;
+  string geometry_service_address = 6;
+  string flowstate_zenoh_router_address = 7;
+  optional string external_zenoh_router_address = 8;
+  repeated string bridge_plugins = 9;
+}
