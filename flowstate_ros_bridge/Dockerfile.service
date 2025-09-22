@@ -1,0 +1,89 @@
+# Build up the service with these stages:
+#   - base (ros:jazzy + settings) ->
+#   - underlay (dependencies) ->
+#   - overlay (user code) ->
+#   - result (base + copied install folder of underlay and overlay)
+
+# base stage: ros:jazzy + configs
+FROM ros:jazzy AS base
+
+WORKDIR /opt/ros/underlay
+
+ENV ROS_HOME=/tmp
+ENV RMW_IMPLEMENTATION=rmw_zenoh_cpp
+
+# underlay stage: base + dependencies built
+FROM base AS underlay
+
+ADD src/sdk-ros /opt/ros/underlay/src/sdk-ros
+
+RUN . /opt/ros/jazzy/setup.sh \
+    && apt-get update \
+    && apt install -y ros-jazzy-ament-cmake-vendor-package \
+    && colcon build \
+        --continue-on-error \
+        --event-handlers=console_direct+ \
+        --merge-install \
+        --packages-up-to intrinsic_sdk
+
+# overlay stage: underlay + service code built
+FROM underlay AS overlay
+
+ARG SERVICE_PACKAGE
+
+RUN apt-get update \
+    && apt install -y ros-jazzy-rmw-zenoh-cpp python3-protobuf nlohmann-json3-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+ADD src /opt/ros/overlay/src
+
+RUN . /opt/ros/jazzy/setup.sh \
+    && . /opt/ros/underlay/install/setup.sh \
+    && cd /opt/ros/overlay \
+    && colcon build \
+      --event-handlers=console_direct+ \
+      --merge-install \
+      --packages-up-to=${SERVICE_PACKAGE} \
+      --packages-skip intrinsic_sdk grpc_vendor
+
+# result stage: base + copied install folders from the overlay + service setup
+FROM base
+
+ARG SERVICE_PACKAGE
+ARG SERVICE_NAME
+
+RUN apt-get update \
+    && apt-get install -y ros-jazzy-rmw-zenoh-cpp \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY --from=overlay /opt/ros/underlay/install /opt/ros/underlay/install
+COPY --from=overlay /opt/ros/overlay/install /opt/ros/overlay/install
+
+RUN cp \
+        /opt/ros/overlay/install/share/${SERVICE_PACKAGE}/service_manifest.binarypb \
+        /service_manifest.binarypb \
+    && cp \
+        /opt/ros/overlay/install/share/${SERVICE_PACKAGE}/default_config.binarypb \
+        /default_config.binarypb \
+    && cp \
+        /opt/ros/overlay/install/share/${SERVICE_PACKAGE}/${SERVICE_NAME}_protos.desc \
+        /parameter-descriptor-set.proto.bin \
+    && sed --in-place \
+        --expression '$isource "/opt/ros/overlay/install/setup.bash"' \
+        /ros_entrypoint.sh \
+    && sed --in-place \
+        --expression '$iexport RMW_IMPLEMENTATION=rmw_zenoh_cpp' \
+        /ros_entrypoint.sh \
+    && sed --in-place \
+        --expression '$iexport ENV ROS_HOME=/tmp' \
+        /ros_entrypoint.sh \
+    && sed --in-place \
+        --expression '$iexport ZENOH_CONFIG_OVERRIDE='\'connect/endpoints=[\"tcp/zenoh-router.app-intrinsic-base:7447\"]\''' \
+        /ros_entrypoint.sh
+
+# Build arguments are not substituted in the CMD command and hence we set environemnt variables
+# which can be substituted instead.
+ENV SERVICE_PACKAGE=${SERVICE_PACKAGE}
+ENV SERVICE_NAME=${SERVICE_NAME}
+
+CMD exec /opt/ros/overlay/install/lib/${SERVICE_PACKAGE}/${SERVICE_NAME}_main

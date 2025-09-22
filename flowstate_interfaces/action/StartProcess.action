@@ -1,0 +1,31 @@
+# Request
+
+# The behavior tree to run on Flowstate.
+BehaviorTree behavior_tree
+
+# The execution mode.
+ExecutionMode execution_mode
+
+# The simulation mode
+SimulationMode simulation_mode
+
+# JSON parameters for the behavior_tree serialized as a string.
+string parameters
+
+---
+
+# Response
+# True if the process executed successfully.
+bool success
+
+# [OPTIONAL] message for debugging or indicating cause of success/failure
+string message
+
+# Result of the task
+string result
+
+---
+
+# Feedback
+# todo(Yadunund)
+string message
