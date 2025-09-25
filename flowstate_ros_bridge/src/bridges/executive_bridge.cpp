@@ -202,6 +202,14 @@ bool ExecutiveBridge::initialize(ROSNodeInterfaces ros_node_interfaces,
           auto start_result = data_->executive_->start(
               result.value(), execution_mode, simulation_mode,
               std::move(process_params),
+              [goal_handle](const absl::Status& status) -> void {
+                auto fb = std::make_shared<StartProcess::Feedback>();
+                fb->ok = status.ok();
+                if (!status.ok()) {
+                  fb->error_message = status.ToString();
+                }
+                goal_handle->publish_feedback(std::move(fb));
+              },
               [goal_handle](const bool success,
                             const std::string& message) -> void {
                 auto result = std::make_shared<StartProcess::Result>();
@@ -220,6 +228,7 @@ bool ExecutiveBridge::initialize(ROSNodeInterfaces ros_node_interfaces,
             LOG(ERROR) << "Failed to run process.";
             auto result = std::make_shared<StartProcess::Result>();
             result->success = false;
+            result->message = start_result.status().ToString();
             goal_handle->abort(std::move(result));
           }
         }
