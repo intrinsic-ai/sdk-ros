@@ -85,9 +85,9 @@ class WorldBridge : public BridgeInterface {
     std::shared_ptr<rclcpp::Service<GetResource>> get_resource_srv_;
     absl::flat_hash_map<std::string, std::vector<uint8_t>> renderables_;
     absl::flat_hash_set<std::string> tf_frame_names_;
-    std::optional<std::vector<std::string>> send_object_names_{
-        std::nullopt} ABSL_GUARDED_BY(mutex_);
-    bool send_new_objects_{true} ABSL_GUARDED_BY(mutex_);
+    std::optional<std::vector<std::string>> send_object_names_
+        ABSL_GUARDED_BY(mutex_) = std::nullopt;
+    bool send_new_objects_ ABSL_GUARDED_BY(mutex_) = true;
     std::shared_ptr<std::thread> viz_thread_;
     absl::Mutex mutex_;  // protects send_object_names_, send_new_objects_
     std::string mesh_url_prefix_;
