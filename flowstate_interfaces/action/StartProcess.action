@@ -27,8 +27,6 @@ string result
 ---
 
 # Feedback
-bool ok
-
-string message
+bool done
 
 string error_message
