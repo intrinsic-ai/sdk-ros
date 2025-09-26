@@ -20,6 +20,7 @@
   <buildtool_depend>ament_cmake_vendor_package</buildtool_depend>
 
   <depend>abseil_cpp_vendor</depend>
+  <depend>protobuf-dev</depend>
   <depend>re2_vendor</depend>
 
   <export>
