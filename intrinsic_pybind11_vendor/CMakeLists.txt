@@ -12,7 +12,7 @@ find_package(ament_cmake_vendor_package REQUIRED)
 
 ament_vendor(intrinsic_pybind11_vendor
   VCS_URL https://github.com/pybind/pybind11.git
-  VCS_VERSION v2.12.0
+  VCS_VERSION v2.13.6
   CMAKE_ARGS
     -DCMAKE_CXX_STANDARD=20
 )

@@ -86,6 +86,8 @@ target_link_libraries(${PROJECT_NAME}
     protobuf::libprotobuf
     pybind11::pybind11
     pybind11_abseil::absl_casters
+    pybind11_abseil::import_status_module
+    pybind11_protobuf::pybind11_native_proto_caster
     Python::Python
     # Local targets
     intrinsic_sdk_protos
