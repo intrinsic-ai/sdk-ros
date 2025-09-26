@@ -96,7 +96,8 @@ class Executive : public std::enable_shared_from_this<Executive> {
   // Get a list of behavior trees in the solution.
   absl::StatusOr<std::vector<BehaviorTree>> behavior_trees() const;
 
-  using ProcessFeedbackCallback = std::function<void(bool done, const absl::Status &)>;
+  using ProcessFeedbackCallback =
+      std::function<void(bool done, const absl::Status &)>;
   using ProcessCompletedCallback =
       std::function<void(const bool, const std::string &)>;
   using ProcessCancelCallback = std::function<void()>;

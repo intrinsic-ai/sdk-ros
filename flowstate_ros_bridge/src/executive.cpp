@@ -367,8 +367,13 @@ auto Executive::ProcessHandle::make(
                 ss << "[process thread] Error while getting operation "
                    << handle->current_operation_.name();
                 LOG(INFO) << ss.str();
-                handle->feedback_cb_(absl::UnavailableError(ss.str()));
+                handle->feedback_cb_(false, absl::UnavailableError(ss.str()));
               }
+
+              handle->feedback_cb_(
+                  handle->current_operation_.done(),
+                  intrinsic::ToAbslStatus(status));
+
               if (handle->current_operation_.done()) {
                 // The operation may be done because it succeeded or errored
                 // out.

@@ -202,9 +202,9 @@ bool ExecutiveBridge::initialize(ROSNodeInterfaces ros_node_interfaces,
           auto start_result = data_->executive_->start(
               result.value(), execution_mode, simulation_mode,
               std::move(process_params),
-              [goal_handle](const absl::Status& status) -> void {
+              [goal_handle](bool done, const absl::Status& status) -> void {
                 auto fb = std::make_shared<StartProcess::Feedback>();
-                fb->ok = status.ok();
+                fb->done = done;
                 if (!status.ok()) {
                   fb->error_message = status.ToString();
                 }
