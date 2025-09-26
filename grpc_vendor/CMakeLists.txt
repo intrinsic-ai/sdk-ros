@@ -10,6 +10,7 @@ endif()
 find_package(ament_cmake REQUIRED)
 find_package(ament_cmake_vendor_package REQUIRED)
 find_package(abseil_cpp_vendor REQUIRED)
+find_package(Protobuf REQUIRED)
 find_package(re2_vendor REQUIRED)
 find_package(re2 REQUIRED)
 
@@ -33,6 +34,8 @@ ament_vendor(grpc_vendor
     -DgRPC_BUILD_NODE_PLUGIN:BOOL=OFF
     -DgRPC_BUILD_OBJECTIVEC_PLUGIN:BOOL=OFF
     -DgRPC_BUILD_RUBY_PLUGIN:BOOL=OFF
+    -DgRPC_PROTOBUF_PROVIDER:STRING=module
+    -DPROTOBUF_ROOT_DIR=${PROTOBUF_ROOT_DIR}
 )
 
 if (TARGET grpc_vendor)
