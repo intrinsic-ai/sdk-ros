@@ -323,10 +323,11 @@ auto Executive::behavior_trees() const
 Executive::ProcessHandle::ProcessHandle(
     std::shared_ptr<ExecutiveService::Stub> executive_stub,
     std::size_t deadline_seconds, google::longrunning::Operation operation,
-    ProcessCompletedCallback completed_cb)
+    ProcessFeedbackCallback feedback_cb, ProcessCompletedCallback completed_cb)
     : executive_stub_(std::move(executive_stub)),
       deadline_seconds_(std::move(deadline_seconds)),
       current_operation_(std::move(operation)),
+      feedback_cb_(std::move(feedback_cb)),
       completed_cb_(std::move(completed_cb)) {
   cancelled_ = std::make_shared<bool>(false);
 }
@@ -335,11 +336,13 @@ Executive::ProcessHandle::ProcessHandle(
 auto Executive::ProcessHandle::make(
     std::shared_ptr<ExecutiveService::Stub> executive_stub,
     std::size_t deadline_seconds, google::longrunning::Operation operation,
-    ProcessCompletedCallback completed_cb, std::size_t update_interval_millis)
+    ProcessFeedbackCallback feedback_cb, ProcessCompletedCallback completed_cb,
+    std::size_t update_interval_millis)
     -> ProcessHandlePtr {
   auto handle = std::shared_ptr<ProcessHandle>(
       new ProcessHandle(std::move(executive_stub), std::move(deadline_seconds),
-                        std::move(operation), std::move(completed_cb)));
+                        std::move(operation), std::move(feedback_cb),
+                        std::move(completed_cb)));
 
   // Spawn a thread to monitor lifecycle of the process.
   handle->update_thread_ =
@@ -360,9 +363,17 @@ auto Executive::ProcessHandle::make(
                   client_context.get(), std::move(get_request),
                   &handle->current_operation_);
               if (!status.ok()) {
-                LOG(INFO) << "[process thread] Error while getting operation "
-                          << handle->current_operation_.name();
+                std::stringstream ss;
+                ss << "[process thread] Error while getting operation "
+                   << handle->current_operation_.name();
+                LOG(INFO) << ss.str();
+                handle->feedback_cb_(false, absl::UnavailableError(ss.str()));
               }
+
+              handle->feedback_cb_(
+                  handle->current_operation_.done(),
+                  intrinsic::ToAbslStatus(status));
+
               if (handle->current_operation_.done()) {
                 // The operation may be done because it succeeded or errored
                 // out.
@@ -428,6 +439,7 @@ bool Executive::ProcessHandle::done() const {
 absl::StatusOr<Executive::ProcessHandlePtr> Executive::start(
     const BehaviorTree& bt, const ExecutionMode& execution_mode,
     const SimulationMode& simulation_mode, const nlohmann::json& process_params,
+    Executive::ProcessFeedbackCallback feedback_cb,
     Executive::ProcessCompletedCallback completed_cb) {
   std::lock_guard<std::recursive_mutex> lock(mutex_);
   if (!connected_) {
@@ -477,7 +489,8 @@ absl::StatusOr<Executive::ProcessHandlePtr> Executive::start(
 
   current_process_ = ProcessHandle::make(
       executive_stub_, deadline_seconds_, std::move(current_operation),
-      std::move(completed_cb), this->update_rate_millis_);
+      std::move(feedback_cb), std::move(completed_cb),
+      this->update_rate_millis_);
 
   return current_process_;
 }
