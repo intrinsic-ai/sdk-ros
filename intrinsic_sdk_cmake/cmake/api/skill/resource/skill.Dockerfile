@@ -13,10 +13,6 @@ ARG SKILL_EXECUTABLE
 ARG SKILL_CONFIG
 # The reverse domain name for the organization in the asset-id label.
 ARG SKILL_ASSET_ID_ORG=com.example
-# The relative path for the manifest textproto
-ARG SKILL_MANIFEST_TEXTPROTO
-# The relative path for the file descriptor set for the manifest protos
-ARG SKILL_MANIFEST_FILE_DESCRIPTOR_SET
 
 # Colcon workspace for building the user's packages.
 # Note use the _workspace suffix to prevent accidental collision with other
@@ -92,8 +88,6 @@ FROM ${REPOSITORY}/intrinsic_sdk_cmake_run:${TAG} AS run
 ARG SKILL_EXECUTABLE
 ARG SKILL_CONFIG
 ARG SKILL_ASSET_ID_ORG
-ARG SKILL_MANIFEST_TEXTPROTO
-ARG SKILL_MANIFEST_FILE_DESCRIPTOR_SET
 
 ARG SKILL_NAME
 ENV SKILL_WORKSPACE=/opt/${SKILL_NAME}_workspace
@@ -121,14 +115,6 @@ ENV SKILL_CONFIG_ABS=$SKILL_WORKSPACE/install/$SKILL_CONFIG
 RUN ls $SKILL_CONFIG_ABS \
     || (echo "Skill executable does not exist '$SKILL_CONFIG_ABS'" \
         && false)
-ENV SKILL_MANIFEST_TEXTPROTO_ABS=${SKILL_WORKSPACE}/install/${SKILL_MANIFEST_TEXTPROTO}
-RUN ls $SKILL_MANIFEST_TEXTPROTO_ABS \
-    || (echo "Skill manifest textproto does not exist '$SKILL_MANIFEST_TEXTPROTO_ABS'" \
-        && false)
-ENV SKILL_MANIFEST_FILE_DESCRIPTOR_SET_ABS=${SKILL_WORKSPACE}/install/${SKILL_MANIFEST_FILE_DESCRIPTOR_SET}
-RUN ls $SKILL_MANIFEST_FILE_DESCRIPTOR_SET_ABS \
-    || (echo "Skill manifest file descriptor set does not exist '$SKILL_MANIFEST_FILE_DESCRIPTOR_SET_ABS'" \
-        && false)
 
 # Link skill executable and skill config file into well known locations needed by Flowstate.
 # Also ensure the user's workspace is sourced so the skill main can be run correctly.
@@ -136,8 +122,6 @@ RUN set -x \
     && mkdir -p /skills \
     && ln -sf $SKILL_EXECUTABLE_ABS /skills/skill_service \
     && ln -sf $SKILL_CONFIG_ABS /skills/skill_service_config.proto.bin \
-    && ln -sf $SKILL_MANIFEST_TEXTPROTO_ABS /skills/skill_manifest.textproto \
-    && ln -sf $SKILL_MANIFEST_FILE_DESCRIPTOR_SET_ABS /skills/skill_protos.desc \
     && sed --in-place \
         --expression '$isource "$SKILL_WORKSPACE/install/setup.bash"' \
         /ros_entrypoint.sh

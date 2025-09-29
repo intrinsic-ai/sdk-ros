@@ -1,6 +1,5 @@
 #!/usr/bin/env bash
 set -o errexit
-set -x
 
 if [ ! -d "src/sdk-ros" ]; then
   echo "This script must be run at the top of a Colcon workspace."
@@ -9,6 +8,8 @@ fi
 
 SKILL_ASSET_ID_ORG=com.example
 CONTAINER_TAG_NAME=latest
+MANIFEST=
+MANIFEST_PROTOS=
 
 while [[ $# -gt 0 ]]; do
   case $1 in
@@ -29,6 +30,16 @@ while [[ $# -gt 0 ]]; do
       ;;
     --tag)
       CONTAINER_TAG_NAME="$2"
+      shift # past argument
+      shift # past value
+      ;;
+    --manifest)
+      MANIFEST="$2"
+      shift # past argument
+      shift # past value
+      ;;
+    --manifest_protos)
+      MANIFEST_PROTOS="@2"
       shift # past argument
       shift # past value
       ;;
@@ -53,9 +64,36 @@ elif [[ $(find src -type d -name "$SKILL_PACKAGE" | wc -l) -ne "1" ]]; then
 fi
 
 PACKAGE_DIR=$(find src -type d -name "$SKILL_PACKAGE")
-echo $PACKAGE_DIR
+echo "Package directory: $PACKAGE_DIR"
 if [[ ! -f "${PACKAGE_DIR}/package.xml" ]]; then
   echo "Package directory $PACKAGE_DIR does not have a package.xml file."
+  exit 1
+fi
+
+if [[ -z "$MANIFEST" ]]; then
+  MANIFEST=$(find ${PACKAGE_DIR} -name ${SKILL_NAME}.manifest.textproto)
+  if [[ -z $MANIFEST ]]; then
+    echo "Unable to find a package manifest named ${SKILL_NAME}.manifest.textproto . " \
+         "Try the --manifest parameter if using a different name."
+    exit 1
+  fi
+fi
+if [[ ! -f ${MANIFEST} ]]; then
+  echo "Unable to find a manifest file at ${MANIFEST}"
+  exit 1
+fi
+MANIFEST=$(pwd)/${MANIFEST}
+
+if [[ -z "$MANIFEST_PROTOS" ]]; then
+  MANIFEST_PROTOS=$(find ${PACKAGE_DIR} -name ${SKILL_NAME}.proto)
+  if [[ -z $MANIFEST_PROTOS ]]; then
+    echo "Unable to find a proto file named ${SKILL_NAME}.proto . " \
+         "Try the --manifest_protos parameter if using a different name."
+    exit 1
+  fi
+fi
+if [[ ! -f ${MANIFEST_PROTOS} ]]; then
+  echo "Unable to find a proto file at ${MANIFEST_PROTOS}"
   exit 1
 fi
 
@@ -64,6 +102,15 @@ INBUILD=$(pwd)/install/intrinsic_sdk_cmake/bin/inbuild
 
 IMAGE_DIR=$(pwd)/images/$SKILL_NAME
 mkdir -p ${IMAGE_DIR}
+
+set -x
+
+DESCRIPTOR_SET_PATH=${IMAGE_DIR}/protos.desc
+protoc ${MANIFEST_PROTOS} \
+  --proto_path $(dirname ${MANIFEST_PROTOS}) \
+  --descriptor_set_out=${DESCRIPTOR_SET_PATH} \
+  --include_imports \
+  --include_source_info
 
 cd "$PACKAGE_DIR"
 
@@ -74,8 +121,6 @@ podman build -f "$DOCKERFILE" \
   --build-arg SKILL_EXECUTABLE="lib/${SKILL_PACKAGE}/${SKILL_NAME}_main" \
   --build-arg SKILL_CONFIG="share/${SKILL_PACKAGE}/${SKILL_NAME}_config.pbbin" \
   --build-arg SKILL_ASSET_ID_ORG="$SKILL_ASSET_ID_ORG" \
-  --build-arg SKILL_MANIFEST_TEXTPROTO="share/${SKILL_PACKAGE}/${SKILL_NAME}.manifest.textproto" \
-  --build-arg SKILL_MANIFEST_FILE_DESCRIPTOR_SET="share/${SKILL_PACKAGE}/${SKILL_NAME}_protos.desc" \
   --tag "${SKILL_NAME}:${CONTAINER_TAG_NAME}" \
   .
 
@@ -85,17 +130,8 @@ podman save \
   --output="${IMAGE_DIR}/${SKILL_NAME}.tar" \
   "${SKILL_NAME}:${CONTAINER_TAG_NAME}"
 
-echo "Instantiating image..."
-podman create "${SKILL_NAME}:${CONTAINER_TAG_NAME}" > ${IMAGE_DIR}/container_id.txt
-CONTAINER_ID=$(cat ${IMAGE_DIR}/container_id.txt)
-
-echo "Extracting manifest and file descriptor set..."
-podman cp "${CONTAINER_ID}:/skills/skill_manifest.textproto" ${IMAGE_DIR}/skill_manifest.textproto
-podman cp "${CONTAINER_ID}:/skills/skill_protos.desc" ${IMAGE_DIR}/skill_protos.desc
-podman rm ${CONTAINER_ID}
-
 ${INBUILD} skill bundle \
  --output ${IMAGE_DIR}/../${SKILL_NAME}.bundle.tar \
- --manifest ${IMAGE_DIR}/skill_manifest.textproto \
- --file_descriptor_set ${IMAGE_DIR}/skill_protos.desc \
+ --manifest ${MANIFEST} \
+ --file_descriptor_set ${DESCRIPTOR_SET_PATH} \
  --oci_image ${IMAGE_DIR}/${SKILL_NAME}.tar
