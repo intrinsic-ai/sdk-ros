@@ -27,5 +27,6 @@ string result
 ---
 
 # Feedback
-# todo(Yadunund)
-string message
+bool done
+
+string error_message

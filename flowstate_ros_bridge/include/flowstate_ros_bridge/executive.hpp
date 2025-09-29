@@ -96,6 +96,8 @@ class Executive : public std::enable_shared_from_this<Executive> {
   // Get a list of behavior trees in the solution.
   absl::StatusOr<std::vector<BehaviorTree>> behavior_trees() const;
 
+  using ProcessFeedbackCallback =
+      std::function<void(bool done, const absl::Status &)>;
   using ProcessCompletedCallback =
       std::function<void(const bool, const std::string &)>;
   using ProcessCancelCallback = std::function<void()>;
@@ -109,6 +111,7 @@ class Executive : public std::enable_shared_from_this<Executive> {
     static ProcessHandlePtr make(
         std::shared_ptr<ExecutiveService::Stub> executive_stub,
         std::size_t deadline_seconds, google::longrunning::Operation operation,
+        ProcessFeedbackCallback feedback_cb,
         ProcessCompletedCallback completed_cb,
         std::size_t update_interval_millis);
 
@@ -122,12 +125,14 @@ class Executive : public std::enable_shared_from_this<Executive> {
     ProcessHandle(std::shared_ptr<ExecutiveService::Stub> executive_stub,
                   std::size_t deadline_seconds,
                   google::longrunning::Operation operation,
+                  ProcessFeedbackCallback feedback_cb,
                   ProcessCompletedCallback completed_cb);
 
     mutable std::mutex mutex_;
     std::shared_ptr<ExecutiveService::Stub> executive_stub_;
     size_t deadline_seconds_;
     google::longrunning::Operation current_operation_;
+    ProcessFeedbackCallback feedback_cb_;
     ProcessCompletedCallback completed_cb_;
     std::thread update_thread_;
     std::shared_ptr<bool> cancelled_;
@@ -137,6 +142,7 @@ class Executive : public std::enable_shared_from_this<Executive> {
                                          const ExecutionMode &execution_mode,
                                          const SimulationMode &simulation_mode,
                                          const nlohmann::json &process_params,
+                                         ProcessFeedbackCallback feedback_cb,
                                          ProcessCompletedCallback completed_cb);
 
  private:
