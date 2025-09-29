@@ -76,6 +76,6 @@ podman build -f "$DOCKERFILE" \
 
 echo "Starting podman save..."
 podman save \
-  --format="docker-archive" \
+  --format="oci-archive" \
   --output="${IMAGE_DIR}/${SKILL_NAME}.tar" \
   "$CONTAINER_TAG_NAME"
