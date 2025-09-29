@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+set -o errexit
+set -x
 
 if [ ! -d "src/sdk-ros" ]; then
   echo "This script must be run at the top of a Colcon workspace."
@@ -58,9 +60,10 @@ if [[ ! -f "${PACKAGE_DIR}/package.xml" ]]; then
 fi
 
 DOCKERFILE=$(pwd)/src/sdk-ros/intrinsic_sdk_cmake/cmake/api/skill/resource/skill.Dockerfile
+INBUILD=$(pwd)/install/intrinsic_sdk_cmake/bin/inbuild
 
-mkdir -p "images/$SKILL_NAME"
 IMAGE_DIR=$(pwd)/images/$SKILL_NAME
+mkdir -p ${IMAGE_DIR}
 
 cd "$PACKAGE_DIR"
 
@@ -71,11 +74,28 @@ podman build -f "$DOCKERFILE" \
   --build-arg SKILL_EXECUTABLE="lib/${SKILL_PACKAGE}/${SKILL_NAME}_main" \
   --build-arg SKILL_CONFIG="share/${SKILL_PACKAGE}/${SKILL_NAME}_config.pbbin" \
   --build-arg SKILL_ASSET_ID_ORG="$SKILL_ASSET_ID_ORG" \
-  --tag "$CONTAINER_TAG_NAME" \
+  --build-arg SKILL_MANIFEST_TEXTPROTO="share/${SKILL_PACKAGE}/${SKILL_NAME}.manifest.textproto" \
+  --build-arg SKILL_MANIFEST_FILE_DESCRIPTOR_SET="share/${SKILL_PACKAGE}/${SKILL_NAME}_protos.desc" \
+  --tag "${SKILL_NAME}:${CONTAINER_TAG_NAME}" \
   .
 
 echo "Starting podman save..."
 podman save \
-  --format="docker-archive" \
+  --format="oci-archive" \
   --output="${IMAGE_DIR}/${SKILL_NAME}.tar" \
-  "$CONTAINER_TAG_NAME"
+  "${SKILL_NAME}:${CONTAINER_TAG_NAME}"
+
+echo "Instantiating image..."
+podman create "${SKILL_NAME}:${CONTAINER_TAG_NAME}" > ${IMAGE_DIR}/container_id.txt
+CONTAINER_ID=$(cat ${IMAGE_DIR}/container_id.txt)
+
+echo "Extracting manifest and file descriptor set..."
+podman cp "${CONTAINER_ID}:/skills/skill_manifest.textproto" ${IMAGE_DIR}/skill_manifest.textproto
+podman cp "${CONTAINER_ID}:/skills/skill_protos.desc" ${IMAGE_DIR}/skill_protos.desc
+podman rm ${CONTAINER_ID}
+
+${INBUILD} skill bundle \
+ --output ${IMAGE_DIR}/../${SKILL_NAME}.bundle.tar \
+ --manifest ${IMAGE_DIR}/skill_manifest.textproto \
+ --file_descriptor_set ${IMAGE_DIR}/skill_protos.desc \
+ --oci_image ${IMAGE_DIR}/${SKILL_NAME}.tar
