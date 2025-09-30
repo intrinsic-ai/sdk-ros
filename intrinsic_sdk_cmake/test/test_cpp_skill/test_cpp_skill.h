@@ -26,6 +26,7 @@
 #include <string>
 
 #include "absl/status/statusor.h"
+#include "gz/transport/Node.hh"
 #include "intrinsic/skills/cc/skill_interface.h"
 #include "intrinsic/skills/proto/skill_service.pb.h"
 
