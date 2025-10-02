@@ -191,7 +191,7 @@ absl::Status WorldBridge::Data::SendObjectVisualizationMessages(
               "gltf/%s_%s.glb",
               geometry.geometry_storage_refs().geometry_ref().substr(9),
               geometry.geometry_storage_refs().renderable_ref().substr(9));
-          if (renderables_.contains(gltf_path)) {
+          if (renderables_.contains(std::string("/") + gltf_path)) {
             continue;
           }
 
@@ -265,7 +265,10 @@ absl::Status WorldBridge::Data::SendObjectVisualizationMessages(
   }
   LOG(INFO) << "Total gltf size: " << total_gltf_size << " bytes";
 
-  workcell_markers_pub_->publish(array_msg);
+  if (!array_msg.markers.empty()){
+    workcell_markers_pub_->publish(array_msg);
+  }
+
   return absl::OkStatus();
 }
 
