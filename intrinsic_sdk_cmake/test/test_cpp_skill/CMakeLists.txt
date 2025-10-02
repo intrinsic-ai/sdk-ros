@@ -1,3 +1,6 @@
+find_package(gz_transport_vendor REQUIRED)
+find_package(gz-transport REQUIRED)
+
 # Generate the skill's protobuf files, protobuf library, and descriptor set file.
 intrinsic_sdk_protobuf_generate(
   NAME test_cpp_skill
@@ -49,6 +52,8 @@ target_link_libraries(test_cpp_skill_main
   intrinsic_sdk_cmake::intrinsic_sdk_cmake
   # Target that generates skill's protobuf files and library
   test_cpp_skill_protos
+  # Test that gz-transport can be used in a skill
+  gz-transport::core
 )
 install(TARGETS test_cpp_skill_main DESTINATION lib/${PROJECT_NAME} OPTIONAL)
 add_dependencies(test_cpp_skill_main test_cpp_skill_skill_config)
