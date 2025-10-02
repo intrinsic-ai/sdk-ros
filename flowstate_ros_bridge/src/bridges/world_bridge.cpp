@@ -265,10 +265,10 @@ absl::Status WorldBridge::Data::SendObjectVisualizationMessages(
   }
   LOG(INFO) << "Total gltf size: " << total_gltf_size << " bytes";
 
-  if (!array_msg.empty()){
+  if (!array_msg.markers.empty()){
     workcell_markers_pub_->publish(array_msg);
   }
-  
+
   return absl::OkStatus();
 }
 
