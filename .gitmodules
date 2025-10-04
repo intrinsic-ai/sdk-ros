@@ -1,3 +1,0 @@
-[submodule "intrinsic_sdk/sdk"]
-	path = intrinsic_sdk/sdk
-	url = https://github.com/intrinsic-dev/sdk
