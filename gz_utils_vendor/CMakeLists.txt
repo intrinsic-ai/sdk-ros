@@ -11,6 +11,8 @@ find_package(ament_cmake REQUIRED)
 find_package(ament_cmake_vendor_package REQUIRED)
 find_package(gz_cmake_vendor REQUIRED)
 
+find_package(gz-utils3 COMPONENTS all QUIET)
+
 ament_vendor(gz_utils_vendor
   VCS_URL https://github.com/gazebosim/gz-utils
   # Target Intrinsic SDK version requires Gazebo Ionic packages.

@@ -14,6 +14,8 @@ find_package(gz_cmake_vendor REQUIRED)
 find_package(gz_math_vendor REQUIRED)
 find_package(gz_utils_vendor REQUIRED)
 
+find_package(gz-msgs11 COMPONENTS all QUIET)
+
 ament_vendor(gz_msgs_vendor
   VCS_URL https://github.com/gazebosim/gz-msgs
   # Target Intrinsic SDK version requires Gazebo Ionic packages.
