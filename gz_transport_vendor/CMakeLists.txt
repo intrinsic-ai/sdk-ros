@@ -15,13 +15,11 @@ find_package(gz_math_vendor REQUIRED)
 find_package(gz_msgs_vendor REQUIRED)
 find_package(gz_utils_vendor REQUIRED)
 
-find_package(gz-transport14 COMPONENTS all QUIET)
-
 ament_vendor(gz_transport_vendor
-  SATISFIED ${gz-transport14_FOUND}
   VCS_URL https://github.com/gazebosim/gz-transport
   # Target Intrinsic SDK version requires Gazebo Ionic packages.
   VCS_VERSION gz-transport14_14.1.0
+  GLOBAL_HOOK
 )
 
 ament_package()
