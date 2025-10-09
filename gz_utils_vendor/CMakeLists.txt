@@ -15,6 +15,7 @@ ament_vendor(gz_utils_vendor
   VCS_URL https://github.com/gazebosim/gz-utils
   # Target Intrinsic SDK version requires Gazebo Ionic packages.
   VCS_VERSION gz-utils3_3.1.1
+  GLOBAL_HOOK
 )
 
 ament_package()

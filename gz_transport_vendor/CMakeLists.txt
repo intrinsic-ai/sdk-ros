@@ -19,6 +19,7 @@ ament_vendor(gz_transport_vendor
   VCS_URL https://github.com/gazebosim/gz-transport
   # Target Intrinsic SDK version requires Gazebo Ionic packages.
   VCS_VERSION gz-transport14_14.1.0
+  GLOBAL_HOOK
 )
 
 ament_package()
