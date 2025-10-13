@@ -21,8 +21,9 @@ RUN . /opt/ros/jazzy/setup.sh \
     && apt-get update \
     && rosdep update \
     && rosdep install --from-paths src --ignore-src -r -y \
-    && apt install -y ros-jazzy-ament-cmake-vendor-package \
+    && apt install -y ros-jazzy-ament-cmake-vendor-package libprotobuf-dev libzmq3-dev libbz2-dev clang-19 \
     && colcon build \
+        --cmake-args -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=/usr/bin/clang-19 -DCMAKE_CXX_COMPILER=/usr/bin/clang++-19 \
         --continue-on-error \
         --event-handlers=console_direct+ \
         --merge-install \
@@ -43,6 +44,7 @@ RUN . /opt/ros/jazzy/setup.sh \
     && . /opt/ros/underlay/install/setup.sh \
     && cd /opt/ros/overlay \
     && colcon build \
+      --cmake-args -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=/usr/bin/clang-19 -DCMAKE_CXX_COMPILER=/usr/bin/clang++-19 \
       --event-handlers=console_direct+ \
       --merge-install \
       --packages-up-to=${SERVICE_PACKAGE} \
@@ -55,7 +57,7 @@ ARG SERVICE_PACKAGE
 ARG SERVICE_NAME
 
 RUN apt-get update \
-    && apt-get install -y ros-jazzy-rmw-zenoh-cpp \
+    && apt-get install -y ros-jazzy-rmw-zenoh-cpp libzmq3-dev libbz2-dev \
     && rm -rf /var/lib/apt/lists/*
 
 COPY --from=overlay /opt/ros/underlay/install /opt/ros/underlay/install
