@@ -2,7 +2,6 @@ import argparse
 import asyncio
 import sys
 from functools import partial
-import token
 
 import websockets
 import websockets.client
