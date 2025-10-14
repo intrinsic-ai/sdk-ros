@@ -2,6 +2,7 @@ import argparse
 import asyncio
 import sys
 from functools import partial
+import token
 
 import websockets
 import websockets.client
@@ -14,34 +15,14 @@ from flowstate_credentials_proxy.auth import InvalidOrganizationError
 
 async def proxy(
     downstream: websockets.server.WebSocketServerProtocol,
-    org: str,
+    token_source: auth.TokenSource,
     cluster: str,
-    asset: str,
+    service: str,
 ):
-    """
-    Proxy a single websocket connection to flowstate.
-    """
-    try:
-        api_key = auth.get_api_key(org)
-        project = auth.get_project_from_organization(org)
-        token = auth.get_access_token(project, api_key)
-    except FileNotFoundError:
-        print(
-            f"""Error: Credentials for given organization "{org}" not found.
-Run 'inctl auth login --org {org}' to add it.
+    """Proxy a single websocket connection to flowstate."""
 
-Download inctl here https://github.com/intrinsic-ai/sdk/releases""",
-            file=sys.stderr,
-        )
-        return
-    except InvalidOrganizationError:
-        print("Organization is invalid", file=sys.stderr)
-        return
-    except Exception as e:
-        print(f"Error: {e}", file=sys.stderr)
-        return
-
-    uri = f"wss://www.endpoints.{project}.cloud.goog/onprem/client/{cluster}/api/resourceinstances/{asset}"
+    token = token_source.get_token()
+    uri = f"wss://www.endpoints.{token_source.project}.cloud.goog/onprem/client/{cluster}/api/resourceinstances/{service}"
     headers = {"cookie": f"auth-proxy={token}"}
 
     try:
@@ -76,17 +57,48 @@ def main():
     )
     parser.add_argument("--cluster", required=True, help="Name of the cluster to use.")
     parser.add_argument(
-        "--asset", required=True, help="Name of the flowstate_ros_bridge instance."
+        "--service", required=True, help="Name of the flowstate_ros_bridge instance."
     )
-    parser.add_argument("--port", default=7447, help="Port to listen on.")
+    parser.add_argument("--port", default=7448, help="Port to listen on.")
     args = parser.parse_args()
 
-    proxy_handler = partial(proxy, org=args.org, cluster=args.cluster, asset=args.asset)
+    try:
+        token_source = auth.TokenSource(args.org)
+    except FileNotFoundError:
+        print(
+            f"""Error: Credentials for given organization "{args.org}" not found.
+Run 'inctl auth login --org {args.org}' to add it.
+
+Download inctl here https://github.com/intrinsic-ai/sdk/releases""",
+            file=sys.stderr,
+        )
+        return
+    except InvalidOrganizationError:
+        print("Organization is invalid", file=sys.stderr)
+        return
+    except Exception as e:
+        print(f"Error: {e}", file=sys.stderr)
+        return
+
+    proxy_handler = partial(
+        proxy, token_source=token_source, cluster=args.cluster, service=args.service
+    )
     start_server = websockets.server.serve(proxy_handler, "localhost", args.port)
 
-    print(f"Starting websocket proxy on port {args.port}")
+    print(f"Starting zenoh proxy on port {args.port}.")
     asyncio.get_event_loop().run_until_complete(start_server)
-    asyncio.get_event_loop().run_forever()
+    print(
+        f"""You may now start rmw_zenohd and connect it to the proxy by running:
+```
+export ZENOH_CONFIG_OVERRIDE='connect/endpoints=["ws/localhost:{args.port}"];routing/router/peers_failover_brokering=true'
+ros2 run rmw_zenoh_cpp rmw_zenohd
+```"""
+    )
+
+    try:
+        asyncio.get_event_loop().run_forever()
+    except KeyboardInterrupt:
+        pass
 
 
 if __name__ == "__main__":
