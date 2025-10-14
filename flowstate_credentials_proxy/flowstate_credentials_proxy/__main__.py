@@ -1,47 +1,74 @@
 import argparse
 import asyncio
 import sys
-from functools import partial
 
-import websockets
-import websockets.client
-import websockets.exceptions
-import websockets.server
+import aiohttp
+from aiohttp import web
 
 from flowstate_credentials_proxy import auth
 from flowstate_credentials_proxy.auth import InvalidOrganizationError
 
 
 async def proxy(
-    downstream: websockets.server.WebSocketServerProtocol,
-    token_source: auth.TokenSource,
-    cluster: str,
-    service: str,
-):
+    req: web.Request, token_source: auth.TokenSource, cluster: str, service: str
+) -> web.WebSocketResponse:
     """Proxy a single websocket connection to flowstate."""
 
-    token = token_source.get_token()
+    ws_response = web.WebSocketResponse()
+    await ws_response.prepare(req)
+
+    try:
+        token = await token_source.get_token()
+    except Exception as e:
+        print(f"Error getting token: {e}", file=sys.stderr)
+        await ws_response.close()
+        return ws_response
+
     uri = f"wss://www.endpoints.{token_source.project}.cloud.goog/onprem/client/{cluster}/api/resourceinstances/{service}"
     headers = {"cookie": f"auth-proxy={token}"}
 
     try:
-        async with websockets.client.connect(uri, extra_headers=headers) as upstream:
-            print("Connected to upstream websocket")
+        async with aiohttp.ClientSession() as session:
+            async with session.ws_connect(uri, headers=headers) as upstream:
+                print("Connected to upstream websocket")
 
-            async def forward(src, dst):
-                async for msg in src:
-                    await dst.send(msg)
+                async def forward_to_upstream(
+                    d: web.WebSocketResponse, u: aiohttp.ClientWebSocketResponse
+                ):
+                    async for msg in d:
+                        if msg.type == aiohttp.WSMsgType.TEXT:
+                            await u.send_str(msg.data)
+                        elif msg.type == aiohttp.WSMsgType.BINARY:
+                            await u.send_bytes(msg.data)
+                        elif msg.type == aiohttp.WSMsgType.CLOSE:
+                            await u.close()
+                            break
+                        else:
+                            break
 
-            await asyncio.gather(
-                forward(downstream, upstream),
-                forward(upstream, downstream),
-            )
-    except websockets.exceptions.InvalidStatusCode as e:
-        print(
-            f"Upstream connection failed: {e.status_code} {e.headers.get('www-authenticate')}"
-        )
+                async def forward_to_downstream(
+                    u: aiohttp.ClientWebSocketResponse, d: web.WebSocketResponse
+                ):
+                    async for msg in u:
+                        if msg.type == aiohttp.WSMsgType.TEXT:
+                            await d.send_str(msg.data)
+                        elif msg.type == aiohttp.WSMsgType.BINARY:
+                            await d.send_bytes(msg.data)
+                        elif msg.type in (
+                            aiohttp.WSMsgType.CLOSED,
+                            aiohttp.WSMsgType.ERROR,
+                        ):
+                            await d.close(code=u.close_code or 1000)
+                            break
+
+                await asyncio.gather(
+                    forward_to_upstream(ws_response, upstream),
+                    forward_to_downstream(upstream, ws_response),
+                )
     except Exception as e:
         print(f"Error: {e}", file=sys.stderr)
+    finally:
+        return ws_response
 
 
 def main():
@@ -79,25 +106,20 @@ Download inctl here https://github.com/intrinsic-ai/sdk/releases""",
         print(f"Error: {e}", file=sys.stderr)
         return
 
-    proxy_handler = partial(
-        proxy, token_source=token_source, cluster=args.cluster, service=args.service
+    app = web.Application()
+    app.add_routes(
+        [web.get("/", lambda req: proxy(req, token_source, args.cluster, args.service))]
     )
-    start_server = websockets.server.serve(proxy_handler, "localhost", args.port)
 
     print(f"Starting zenoh proxy on port {args.port}.")
-    asyncio.get_event_loop().run_until_complete(start_server)
     print(
-        f"""You may now start rmw_zenohd and connect it to the proxy by running:
+        f"""Start rmw_zenohd and connect it to the proxy by running:
 ```
 export ZENOH_CONFIG_OVERRIDE='connect/endpoints=["ws/localhost:{args.port}"];routing/router/peers_failover_brokering=true'
 ros2 run rmw_zenoh_cpp rmw_zenohd
 ```"""
     )
-
-    try:
-        asyncio.get_event_loop().run_forever()
-    except KeyboardInterrupt:
-        pass
+    web.run_app(app, port=args.port, handle_signals=True, print=None)
 
 
 if __name__ == "__main__":
