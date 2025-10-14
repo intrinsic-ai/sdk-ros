@@ -1,0 +1,15 @@
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="3">
+  <name>flowstate_credentials_proxy</name>
+  <version>0.0.1</version>
+  <description>websocket proxy to authenticate to flowstate</description>
+  <maintainer email="koonpeng@intrinsic.ai">koonpeng</maintainer>
+  <license>Intrinsic License</license>
+
+  <depend>python3-aiohttp</depend>
+
+  <export>
+    <build_type>ament_python</build_type>
+  </export>
+</package>
