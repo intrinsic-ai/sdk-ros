@@ -5,7 +5,7 @@ import re
 from datetime import datetime, timedelta, timezone
 from os import environ
 
-import requests
+import aiohttp
 
 INTRINSIC_CONFIG_LOCATION = pathlib.Path(environ["HOME"], ".config", "intrinsic")
 ORGANIZATION_PATTERN = re.compile(r"[a-zA-Z][\w-]*@[a-zA-Z][\w-]*")
@@ -47,28 +47,6 @@ def get_api_key(project: str):
 
 
 class TokenSource:
-    @staticmethod
-    def __fetch_token(api_key: str, project: str) -> str:
-        """
-        Exchange the API key for an access token.
-
-        Raises:
-            HTTPError: If the request fails.
-            KeyError: Cannot find the access token in the response.
-        """
-        resp = requests.post(
-            f"{FLOWSTATE_ADDR}/api/v1/accountstokens:idtoken",
-            headers={"content-type": "application/json"},
-            json={
-                "apiKey": api_key,
-                "do_fan_out": False,
-                "api_key_project_hint": project,
-            },
-        )
-        resp.raise_for_status()
-        access_token = resp.json()["idToken"]
-        return access_token
-
     def __init__(self, org: str):
         """
         Create a new instance of TokenSource.
@@ -82,17 +60,42 @@ class TokenSource:
         self.org = org
         self.project = get_project_from_organization(self.org)
         self.api_key = get_api_key(self.project)
-        self.__cached_token = self.__fetch_token(self.api_key, self.project)
+        self.__cached_token: str | None = None
 
-    def __token_expiring(self) -> bool:
-        payload = json.loads(base64.b64decode(self.__cached_token.split(".")[1] + "=="))
+    @staticmethod
+    def __token_expiring(token: str) -> bool:
+        payload = json.loads(base64.b64decode(token.split(".")[1] + "=="))
         return datetime.now(timezone.utc) > (
             datetime.fromtimestamp(payload["exp"], tz=timezone.utc)
             - timedelta(minutes=5)
         )
 
-    def get_token(self) -> str:
-        if self.__token_expiring():
-            self.__cached_token = self.__fetch_token(self.api_key, self.project)
+    async def get_token(self) -> str:
+        """
+        Get an access token.
 
-        return self.__cached_token
+        Raises:
+            aiohttp.ClientError: If the request fails.
+            KeyError: Cannot find the access token in the response.
+        """
+        if self.__cached_token is not None and not self.__token_expiring(
+            self.__cached_token
+        ):
+            return self.__cached_token
+
+        async with aiohttp.ClientSession(
+            base_url=FLOWSTATE_ADDR,
+            headers={"content-type": "application/json"},
+            raise_for_status=True,
+        ) as session:
+            async with session.post(
+                f"/api/v1/accountstokens:idtoken",
+                json={
+                    "apiKey": self.api_key,
+                    "do_fan_out": False,
+                    "api_key_project_hint": self.project,
+                },
+            ) as resp:
+                access_token: str = (await resp.json())["idToken"]
+                self.__cached_token = access_token
+                return self.__cached_token

@@ -1,21 +1,35 @@
 import json
 import unittest
-from unittest.mock import MagicMock, mock_open, patch
+from contextlib import asynccontextmanager
+from unittest.mock import AsyncMock, MagicMock, mock_open, patch
 
-import requests
+import aiohttp
 
 from flowstate_credentials_proxy.auth import InvalidOrganizationError, TokenSource
 
 
-class TestTokenSource(unittest.TestCase):
+class TestTokenSource(unittest.IsolatedAsyncioTestCase):
+    @staticmethod
+    def make_mock_response(json):
+        @asynccontextmanager
+        async def mock_response():
+            try:
+                resp = AsyncMock()
+                resp.json.return_value = json
+                yield resp
+            finally:
+                pass
+
+        return mock_response()
+
     mock_user_token = {
         "name": "test_project",
         "tokens": {"default": {"apiKey": "test-api-key"}},
     }
 
     @patch("pathlib.Path.open", new_callable=mock_open)
-    @patch("flowstate_credentials_proxy.auth.requests.post")
-    def test_get_access_token_success(
+    @patch("flowstate_credentials_proxy.auth.aiohttp.ClientSession.post")
+    async def test_get_access_token_success(
         self, mock_post: MagicMock, mock_open_file: MagicMock
     ) -> None:
         mock_open_file.return_value.read.return_value = json.dumps(self.mock_user_token)
@@ -29,18 +43,23 @@ class TestTokenSource(unittest.TestCase):
         # }
         test_token = "eyJhbGciOiJub25lIiwidHlwIjoiSldUIn0.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiYWRtaW4iOnRydWUsImlhdCI6MCwiZXhwIjoyMTc3NTk2ODAwfQ."
 
-        mock_response = MagicMock()
-        mock_response.json.return_value = {"idToken": test_token}
-        mock_response.raise_for_status.return_value = None
-        mock_post.return_value = mock_response
+        @asynccontextmanager
+        async def mock_response():
+            try:
+                resp = AsyncMock()
+                resp.json.return_value = {"idToken": test_token}
+                yield resp
+            finally:
+                pass
+
+        mock_post.return_value = self.make_mock_response({"idToken": test_token})
 
         ts = TokenSource("user@project")
-        access_token = ts.get_token()
+        access_token = await ts.get_token()
 
         self.assertEqual(access_token, test_token)
         mock_post.assert_called_once_with(
-            "https://flowstate.intrinsic.ai/api/v1/accountstokens:idtoken",
-            headers={"content-type": "application/json"},
+            "/api/v1/accountstokens:idtoken",
             json={
                 "apiKey": "test-api-key",
                 "do_fan_out": False,
@@ -66,31 +85,26 @@ class TestTokenSource(unittest.TestCase):
             TokenSource("user@project")
 
     @patch("pathlib.Path.open", new_callable=mock_open)
-    @patch("flowstate_credentials_proxy.auth.requests.post")
-    def test_get_token_http_error(
+    @patch("flowstate_credentials_proxy.auth.aiohttp.ClientSession.post")
+    async def test_get_token_http_error(
         self, mock_post: MagicMock, mock_open_file: MagicMock
     ) -> None:
         mock_open_file.return_value.read.return_value = json.dumps(self.mock_user_token)
-        mock_response = MagicMock()
-        mock_response.raise_for_status.side_effect = requests.exceptions.HTTPError
-        mock_post.return_value = mock_response
+        mock_post.side_effect = aiohttp.ClientError
 
-        with self.assertRaises(requests.exceptions.HTTPError):
-            TokenSource("user@project").get_token()
+        with self.assertRaises(aiohttp.ClientError):
+            await TokenSource("user@project").get_token()
 
     @patch("pathlib.Path.open", new_callable=mock_open)
-    @patch("flowstate_credentials_proxy.auth.requests.post")
-    def test_get_access_token_missing_key(
+    @patch("flowstate_credentials_proxy.auth.aiohttp.ClientSession.post")
+    async def test_get_access_token_missing_key(
         self, mock_post: MagicMock, mock_open_file: MagicMock
     ) -> None:
         mock_open_file.return_value.read.return_value = json.dumps(self.mock_user_token)
-        mock_response = MagicMock()
-        mock_response.json.return_value = {}
-        mock_response.raise_for_status.return_value = None
-        mock_post.return_value = mock_response
+        mock_post.return_value = self.make_mock_response({})
 
         with self.assertRaises(KeyError):
-            TokenSource("user@project").get_token()
+            await TokenSource("user@project").get_token()
 
 
 if __name__ == "__main__":
