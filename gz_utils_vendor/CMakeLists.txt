@@ -15,6 +15,8 @@ ament_vendor(gz_utils_vendor
   VCS_URL https://github.com/gazebosim/gz-utils
   # Target Intrinsic SDK version requires Gazebo Jetty packages.
   VCS_VERSION gz-utils4_4.0.0
+  CMAKE_ARGS
+    -DGZ_UTILS_VENDOR_CLI11=ON
   GLOBAL_HOOK
 )
 
