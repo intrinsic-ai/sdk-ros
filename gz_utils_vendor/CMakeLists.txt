@@ -13,8 +13,8 @@ find_package(gz_cmake_vendor REQUIRED)
 
 ament_vendor(gz_utils_vendor
   VCS_URL https://github.com/gazebosim/gz-utils
-  # Target Intrinsic SDK version requires Gazebo Ionic packages.
-  VCS_VERSION gz-utils3_3.1.1
+  # Target Intrinsic SDK version requires Gazebo Jetty packages.
+  VCS_VERSION gz-utils4_4.0.0
   GLOBAL_HOOK
 )
 

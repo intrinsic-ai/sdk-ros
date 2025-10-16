@@ -17,8 +17,8 @@ find_package(Eigen3 REQUIRED)
 
 ament_vendor(gz_math_vendor
   VCS_URL https://github.com/gazebosim/gz-math
-  # Target Intrinsic SDK version requires Gazebo Ionic packages.
-  VCS_VERSION gz-math8_8.2.0
+  # Target Intrinsic SDK version requires Gazebo Jetty packages.
+  VCS_VERSION gz-math9_9.0.0
   GLOBAL_HOOK
 )
 
