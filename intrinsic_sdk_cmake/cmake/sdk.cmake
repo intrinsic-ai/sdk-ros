@@ -81,8 +81,8 @@ target_link_libraries(${PROJECT_NAME}
     Eigen3::Eigen
     flatbuffers::flatbuffers
     gRPC::grpc++
-    gz-msgs11::gz-msgs11
-    gz-transport14::gz-transport14
+    gz-msgs::gz-msgs
+    gz-transport::gz-transport
     ortools::ortools
     opencensus-cpp::stats
     protobuf::libprotobuf
