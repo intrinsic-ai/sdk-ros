@@ -39,6 +39,7 @@
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
 #include "absl/synchronization/notification.h"
+#include "flowstate_ros_bridge/channel_factory.hpp"
 #include "intrinsic/executive/proto/run_metadata.pb.h"
 #include "intrinsic/skills/proto/skills.pb.h"
 #include "intrinsic/util/grpc/grpc.h"
@@ -56,29 +57,7 @@ static constexpr std::string PROCESS_PARAMS_KEY = "parameters";
 static constexpr std::string RESOURCE_PARAMS_KEY = "resources";
 
 ///=============================================================================
-Executive::Executive(const std::string& executive_service_address,
-                     const std::string& skill_registry_address,
-                     const std::string& solution_service_address,
-                     std::size_t deadline_seconds,
-                     std::size_t update_rate_millis)
-    : executive_service_address_(std::move(executive_service_address)),
-      skill_registry_address_(std::move(skill_registry_address)),
-      solution_service_address_(std::move(solution_service_address)),
-      deadline_seconds_(deadline_seconds),
-      update_rate_millis_(update_rate_millis),
-      connected_(false),
-      current_process_(nullptr) {
-  // Do nothing.
-}
-
-///=============================================================================
-absl::Status Executive::connect() {
-  if (connected_) {
-    return absl::OkStatus();
-  }
-
-  std::lock_guard<std::recursive_mutex> lock(mutex_);
-
+ChannelFactory default_channel_factory(std::size_t deadline_seconds) {
   grpc::ChannelArguments channel_args = intrinsic::DefaultGrpcChannelArgs();
   // The skill registry may need to call out to one or more skill information
   // services. Those services might not be ready at startup. We configure a
@@ -104,14 +83,41 @@ absl::Status Executive::connect() {
   channel_args.SetMaxReceiveMessageSize(10000000);  // 10 MB
   channel_args.SetMaxSendMessageSize(10000000);     // 10 MB
 
+  return ClientChannelFactory(absl::Seconds(deadline_seconds), std::move(channel_args));
+}
+
+///=============================================================================
+Executive::Executive(const std::string& executive_service_address,
+                     const std::string& skill_registry_address,
+                     const std::string& solution_service_address,
+                     std::size_t deadline_seconds,
+                     std::size_t update_rate_millis,
+                     std::optional<ChannelFactory> channel_factory)
+    : executive_service_address_(std::move(executive_service_address)),
+      skill_registry_address_(std::move(skill_registry_address)),
+      solution_service_address_(std::move(solution_service_address)),
+      deadline_seconds_(deadline_seconds),
+      update_rate_millis_(update_rate_millis),
+      channel_factory_(channel_factory.value_or(default_channel_factory(deadline_seconds))),
+      connected_(false),
+      current_process_(nullptr) {
+  // Do nothing.
+}
+
+///=============================================================================
+absl::Status Executive::connect() {
+  if (connected_) {
+    return absl::OkStatus();
+  }
+
+  std::lock_guard<std::recursive_mutex> lock(mutex_);
+
   // Connect to the executive service.
   LOG(INFO) << "Connecting to executive service at address "
             << executive_service_address_;
   INTR_ASSIGN_OR_RETURN(
       std::shared_ptr<grpc::Channel> executive_channel,
-      intrinsic::CreateClientChannel(
-          executive_service_address_,
-          absl::Now() + absl::Seconds(deadline_seconds_), channel_args));
+      channel_factory_(executive_service_address_));
   INTR_RETURN_IF_ERROR(intrinsic::WaitForChannelConnected(
       executive_service_address_, executive_channel,
       absl::Now() + absl::Seconds(deadline_seconds_)));
@@ -123,9 +129,7 @@ absl::Status Executive::connect() {
             << solution_service_address_;
   INTR_ASSIGN_OR_RETURN(
       std::shared_ptr<grpc::Channel> solution_channel,
-      intrinsic::CreateClientChannel(
-          solution_service_address_,
-          absl::Now() + absl::Seconds(deadline_seconds_), channel_args));
+      channel_factory_(solution_service_address_));
   INTR_RETURN_IF_ERROR(intrinsic::WaitForChannelConnected(
       solution_service_address_, solution_channel,
       absl::Now() + absl::Seconds(deadline_seconds_)));
@@ -137,9 +141,7 @@ absl::Status Executive::connect() {
             << skill_registry_address_;
   INTR_ASSIGN_OR_RETURN(
       std::shared_ptr<grpc::Channel> skill_channel,
-      intrinsic::CreateClientChannel(
-          skill_registry_address_,
-          absl::Now() + absl::Seconds(deadline_seconds_), channel_args));
+      channel_factory_(skill_registry_address_));
   INTR_RETURN_IF_ERROR(intrinsic::WaitForChannelConnected(
       skill_registry_address_, skill_channel,
       absl::Now() + absl::Seconds(deadline_seconds_)));

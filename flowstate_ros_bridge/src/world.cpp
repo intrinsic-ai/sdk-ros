@@ -38,14 +38,27 @@
 
 namespace flowstate_ros_bridge {
 
+ChannelFactory default_channel_factory(std::size_t deadline_seconds) {
+  grpc::ChannelArguments channel_args = intrinsic::DefaultGrpcChannelArgs();
+  // We might eventually need a retry policy here, like in executive (?)
+  // Some of the meshes that we'll receive in the geometry client are large,
+  // like a few 10's of MB.
+  channel_args.SetMaxReceiveMessageSize(-1);     // no limit
+  channel_args.SetMaxSendMessageSize(10000000);  // 10 MB
+
+  return ClientChannelFactory(absl::Seconds(deadline_seconds), std::move(channel_args));
+}
+
 World::World(std::shared_ptr<intrinsic::PubSub> pubsub,
              const std::string& world_service_address,
              const std::string& geometry_service_address,
-             std::size_t deadline_seconds)
+             std::size_t deadline_seconds,
+            std::optional<ChannelFactory> channel_factory)
     : pubsub_(pubsub),
       world_service_address_(world_service_address),
       geometry_service_address_(geometry_service_address),
-      deadline_seconds_(deadline_seconds) {
+      deadline_seconds_(deadline_seconds),
+      channel_factory_(channel_factory.value_or(default_channel_factory(deadline_seconds))) {
   // Do nothing. Connections will happen later.
 }
 
@@ -65,19 +78,10 @@ absl::Status World::connect() {
     return absl::OkStatus();
   }
 
-  grpc::ChannelArguments channel_args = intrinsic::DefaultGrpcChannelArgs();
-  // We might eventually need a retry policy here, like in executive (?)
-  // Some of the meshes that we'll receive in the geometry client are large,
-  // like a few 10's of MB.
-  channel_args.SetMaxReceiveMessageSize(-1);     // no limit
-  channel_args.SetMaxSendMessageSize(10000000);  // 10 MB
-
   LOG(INFO) << "Connecting to world service at " << world_service_address_;
   INTR_ASSIGN_OR_RETURN(
       std::shared_ptr<grpc::Channel> world_channel,
-      intrinsic::CreateClientChannel(
-          world_service_address_,
-          absl::Now() + absl::Seconds(deadline_seconds_), channel_args));
+      channel_factory_(world_service_address_));
   INTR_RETURN_IF_ERROR(intrinsic::WaitForChannelConnected(
       world_service_address_, world_channel,
       absl::Now() + absl::Seconds(deadline_seconds_)));
@@ -91,9 +95,7 @@ absl::Status World::connect() {
             << geometry_service_address_;
   INTR_ASSIGN_OR_RETURN(
       std::shared_ptr<grpc::Channel> geometry_channel,
-      intrinsic::CreateClientChannel(
-          geometry_service_address_,
-          absl::Now() + absl::Seconds(deadline_seconds_), channel_args));
+      channel_factory_(geometry_service_address_));
   INTR_RETURN_IF_ERROR(intrinsic::WaitForChannelConnected(
       geometry_service_address_, geometry_channel,
       absl::Now() + absl::Seconds(deadline_seconds_)));
