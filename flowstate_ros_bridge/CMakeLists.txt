@@ -38,6 +38,7 @@ endforeach()
 # create shared library for executive.
 add_library(executive SHARED
   src/executive.cpp
+  src/channel_factory.cpp
 )
 target_include_directories(executive
   PUBLIC
@@ -59,6 +60,7 @@ target_link_libraries(executive
 # create shared library for world.
 add_library(world SHARED
   src/world.cpp
+  src/channel_factory.cpp
 )
 target_include_directories(world
   PUBLIC
@@ -92,6 +94,7 @@ target_include_directories(flowstate_ros_bridge_interface
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
     $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
 )
+install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/include/ TYPE INCLUDE)
 
 #===============================================================================
 
