@@ -25,10 +25,11 @@
 
 #include "flowstate_ros_bridge/channel_factory.hpp"
 
-#include <absl/status/status.h>
-#include <intrinsic/util/grpc/grpc.h>
+#include <intrinsic/util/grpc/channel.h>
+#include <intrinsic/util/status/status_macros.h>
 
 namespace flowstate_ros_bridge {
+
 absl::StatusOr<std::shared_ptr<::grpc::Channel>>
 ClientChannelFactory::make_channel(absl::string_view address) {
   grpc::ChannelArguments channel_args = intrinsic::DefaultGrpcChannelArgs();
@@ -59,4 +60,5 @@ ClientChannelFactory::make_channel(absl::string_view address) {
   return intrinsic::CreateClientChannel(address, absl::Now() + this->deadline_,
                                         channel_args);
 }
+
 } // namespace flowstate_ros_bridge
