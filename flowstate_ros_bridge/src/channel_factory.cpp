@@ -30,8 +30,7 @@
 
 namespace flowstate_ros_bridge {
 absl::StatusOr<std::shared_ptr<::grpc::Channel>>
-ClientChannelFactory::operator()(
-    absl::string_view address) {
+ClientChannelFactory::make_channel(absl::string_view address) {
   grpc::ChannelArguments channel_args = intrinsic::DefaultGrpcChannelArgs();
   // The skill registry may need to call out to one or more skill information
   // services. Those services might not be ready at startup. We configure a
@@ -57,6 +56,7 @@ ClientChannelFactory::operator()(
   channel_args.SetMaxReceiveMessageSize(10000000); // 10 MB
   channel_args.SetMaxSendMessageSize(10000000);    // 10 MB
 
-  return intrinsic::CreateClientChannel(address, absl::Now() + this->deadline_, channel_args);
+  return intrinsic::CreateClientChannel(address, absl::Now() + this->deadline_,
+                                        channel_args);
 }
 } // namespace flowstate_ros_bridge

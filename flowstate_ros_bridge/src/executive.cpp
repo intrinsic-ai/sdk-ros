@@ -57,7 +57,8 @@ static constexpr std::string PROCESS_PARAMS_KEY = "parameters";
 static constexpr std::string RESOURCE_PARAMS_KEY = "resources";
 
 ///=============================================================================
-ChannelFactory default_channel_factory(std::size_t deadline_seconds) {
+std::unique_ptr<ChannelFactory>
+default_channel_factory(std::size_t deadline_seconds) {
   grpc::ChannelArguments channel_args = intrinsic::DefaultGrpcChannelArgs();
   // The skill registry may need to call out to one or more skill information
   // services. Those services might not be ready at startup. We configure a
@@ -80,27 +81,29 @@ ChannelFactory default_channel_factory(std::size_t deadline_seconds) {
           }
         }]
       })");
-  channel_args.SetMaxReceiveMessageSize(10000000);  // 10 MB
-  channel_args.SetMaxSendMessageSize(10000000);     // 10 MB
+  channel_args.SetMaxReceiveMessageSize(10000000); // 10 MB
+  channel_args.SetMaxSendMessageSize(10000000);    // 10 MB
 
-  return ClientChannelFactory(absl::Seconds(deadline_seconds), std::move(channel_args));
+  return std::make_unique<ClientChannelFactory>(
+    absl::Seconds(deadline_seconds), std::move(channel_args));
 }
 
 ///=============================================================================
-Executive::Executive(const std::string& executive_service_address,
-                     const std::string& skill_registry_address,
-                     const std::string& solution_service_address,
-                     std::size_t deadline_seconds,
-                     std::size_t update_rate_millis,
-                     std::optional<ChannelFactory> channel_factory)
+Executive::Executive(
+    const std::string &executive_service_address,
+    const std::string &skill_registry_address,
+    const std::string &solution_service_address, std::size_t deadline_seconds,
+    std::size_t update_rate_millis,
+    std::optional<std::unique_ptr<ChannelFactory>> channel_factory)
     : executive_service_address_(std::move(executive_service_address)),
       skill_registry_address_(std::move(skill_registry_address)),
       solution_service_address_(std::move(solution_service_address)),
       deadline_seconds_(deadline_seconds),
       update_rate_millis_(update_rate_millis),
-      channel_factory_(channel_factory.value_or(default_channel_factory(deadline_seconds))),
-      connected_(false),
-      current_process_(nullptr) {
+      channel_factory_(channel_factory.has_value()
+        ? std::move(channel_factory).value()
+        : default_channel_factory(deadline_seconds)),
+      connected_(false), current_process_(nullptr) {
   // Do nothing.
 }
 
@@ -117,7 +120,7 @@ absl::Status Executive::connect() {
             << executive_service_address_;
   INTR_ASSIGN_OR_RETURN(
       std::shared_ptr<grpc::Channel> executive_channel,
-      channel_factory_(executive_service_address_));
+      channel_factory_->make_channel(executive_service_address_));
   INTR_RETURN_IF_ERROR(intrinsic::WaitForChannelConnected(
       executive_service_address_, executive_channel,
       absl::Now() + absl::Seconds(deadline_seconds_)));
@@ -129,7 +132,7 @@ absl::Status Executive::connect() {
             << solution_service_address_;
   INTR_ASSIGN_OR_RETURN(
       std::shared_ptr<grpc::Channel> solution_channel,
-      channel_factory_(solution_service_address_));
+      channel_factory_->make_channel(solution_service_address_));
   INTR_RETURN_IF_ERROR(intrinsic::WaitForChannelConnected(
       solution_service_address_, solution_channel,
       absl::Now() + absl::Seconds(deadline_seconds_)));
@@ -141,7 +144,7 @@ absl::Status Executive::connect() {
             << skill_registry_address_;
   INTR_ASSIGN_OR_RETURN(
       std::shared_ptr<grpc::Channel> skill_channel,
-      channel_factory_(skill_registry_address_));
+      channel_factory_->make_channel(skill_registry_address_));
   INTR_RETURN_IF_ERROR(intrinsic::WaitForChannelConnected(
       skill_registry_address_, skill_channel,
       absl::Now() + absl::Seconds(deadline_seconds_)));

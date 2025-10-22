@@ -88,7 +88,7 @@ class Executive : public std::enable_shared_from_this<Executive> {
             const std::string &solution_service_address,
             std::size_t deadline_seconds = 5,
             std::size_t update_rate_millis = 1000,
-            std::optional<ChannelFactory> channel_factory = std::nullopt);
+            std::optional<std::unique_ptr<ChannelFactory>> channel_factory = std::nullopt);
 
   // Establish connections with various services.
   absl::Status connect();
@@ -155,7 +155,7 @@ class Executive : public std::enable_shared_from_this<Executive> {
   std::string solution_service_address_;
   std::size_t deadline_seconds_;
   std::size_t update_rate_millis_;
-  ChannelFactory channel_factory_;
+  std::unique_ptr<ChannelFactory> channel_factory_;
   bool connected_;
   std::shared_ptr<ExecutiveService::Stub> executive_stub_;
   std::unique_ptr<SkillRegistry::Stub> skill_registry_stub_;
