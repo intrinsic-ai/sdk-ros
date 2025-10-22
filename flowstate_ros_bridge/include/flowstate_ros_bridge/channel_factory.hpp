@@ -32,14 +32,14 @@
 #include <absl/status/statusor.h>
 #include <absl/strings/string_view.h>
 
-#include <functional>
-
 namespace flowstate_ros_bridge {
-using ChannelFactory =
-    std::function<absl::StatusOr<std::shared_ptr<::grpc::Channel>>(
-        absl::string_view address)>;
+class ChannelFactory {
+public:
+  virtual absl::StatusOr<std::shared_ptr<::grpc::Channel>>
+  make_channel(absl::string_view address) = 0;
+};
 
-class ClientChannelFactory {
+class ClientChannelFactory : public ChannelFactory {
 public:
   explicit ClientChannelFactory(absl::Duration deadline,
                                 grpc::ChannelArguments channel_args)
@@ -47,7 +47,7 @@ public:
   }
 
   absl::StatusOr<std::shared_ptr<::grpc::Channel>>
-  operator()(absl::string_view address);
+  make_channel(absl::string_view address) override;
 
 private:
   absl::Duration deadline_;

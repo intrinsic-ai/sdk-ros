@@ -55,7 +55,7 @@ class World : public std::enable_shared_from_this<World> {
         const std::string& world_service_address,
         const std::string& geometry_service_address,
         std::size_t deadline_seconds = 10,
-        std::optional<ChannelFactory> channel_factory = std::nullopt);
+        std::optional<std::unique_ptr<ChannelFactory>> channel_factory = std::nullopt);
 
   absl::StatusOr<std::shared_ptr<intrinsic::Subscription>> CreateTfSubscription(
       intrinsic::SubscriptionOkCallback<intrinsic_proto::TFMessage> callback);
@@ -82,7 +82,7 @@ class World : public std::enable_shared_from_this<World> {
   std::string world_service_address_;
   std::string geometry_service_address_;
   size_t deadline_seconds_ = 10;
-  ChannelFactory channel_factory_;
+  std::unique_ptr<ChannelFactory> channel_factory_;
   bool connected_ = false;
   std::shared_ptr<intrinsic::world::ObjectWorldClient> object_world_client_;
   std::shared_ptr<GeometryService::Stub> geometry_stub_;
