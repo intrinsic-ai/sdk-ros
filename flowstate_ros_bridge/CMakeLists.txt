@@ -1,6 +1,8 @@
 cmake_minimum_required(VERSION 3.8)
 project(flowstate_ros_bridge)
 
+include(GNUInstallDirs)
+
 # Default to C++17
 if(NOT CMAKE_CXX_STANDARD)
   set(CMAKE_CXX_STANDARD 17)

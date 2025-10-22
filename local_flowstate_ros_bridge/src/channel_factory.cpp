@@ -23,38 +23,21 @@
 // This copyright notice shall be included in all copies or substantial portions
 // of the software.
 
-#ifndef FLOWSTATE_ROS_BRIDGE__CHANNEL_FACTORY_HPP
-#define FLOWSTATE_ROS_BRIDGE__CHANNEL_FACTORY_HPP
+#include "channel_factory.hpp"
 
-#include <grpcpp/grpcpp.h>
+#include <intrinsic/util/grpc/channel.h>
+#include <intrinsic/util/status/status_macros.h>
 
-#include <absl/status/statusor.h>
-#include <absl/strings/string_view.h>
-#include <absl/time/time.h>
+namespace local_flowstate_ros_bridge {
 
-namespace flowstate_ros_bridge {
+absl::StatusOr<std::shared_ptr<::grpc::Channel>>
+SolutionChannelFactory::make_channel(absl::string_view /* address */) {
+  INTR_ASSIGN_OR_RETURN(auto chan, intrinsic::Channel::MakeFromSolution(
+                                       intrinsic::Channel::OrgInfo{
+                                           .org = std::string(org_),
+                                           .project = std::string(project_)},
+                                       solution_));
+  return chan->GetChannel();
+}
 
-class ChannelFactory {
-public:
-  virtual absl::StatusOr<std::shared_ptr<::grpc::Channel>>
-  make_channel(absl::string_view address) = 0;
-};
-
-class ClientChannelFactory : public ChannelFactory {
-public:
-  explicit ClientChannelFactory(absl::Duration deadline,
-                                grpc::ChannelArguments channel_args)
-      : deadline_(std::move(deadline)), channel_args_(std::move(channel_args)) {
-  }
-
-  absl::StatusOr<std::shared_ptr<::grpc::Channel>>
-  make_channel(absl::string_view address) override;
-
-private:
-  absl::Duration deadline_;
-  grpc::ChannelArguments channel_args_;
-};
-
-} // namespace flowstate_ros_bridge
-
-#endif
+} // namespace local_flowstate_ros_bridge
