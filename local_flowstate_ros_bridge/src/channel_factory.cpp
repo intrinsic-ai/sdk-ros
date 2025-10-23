@@ -28,15 +28,18 @@
 #include <intrinsic/util/grpc/channel.h>
 #include <intrinsic/util/status/status_macros.h>
 
+#include <absl/log/log.h>
+
 namespace local_flowstate_ros_bridge {
 
 absl::StatusOr<std::shared_ptr<::grpc::Channel>>
-SolutionChannelFactory::make_channel(absl::string_view /* address */) {
-  INTR_ASSIGN_OR_RETURN(auto chan, intrinsic::Channel::MakeFromSolution(
-                                       intrinsic::Channel::OrgInfo{
-                                           .org = std::string(org_),
-                                           .project = std::string(project_)},
-                                       solution_));
+ClusterChannelFactory::make_channel(absl::string_view /* address */) {
+  LOG(INFO) << "Creating gRPC channel for cluster [" << cluster_ << "]"
+            << " at [" << org_project_ << "]";
+  INTR_ASSIGN_OR_RETURN(auto org_info,
+                        intrinsic::Channel::OrgInfo::FromString(org_project_));
+  INTR_ASSIGN_OR_RETURN(
+      auto chan, intrinsic::Channel::MakeFromCluster(org_info, cluster_));
   return chan->GetChannel();
 }
 

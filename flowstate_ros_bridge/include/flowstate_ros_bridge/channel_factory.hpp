@@ -36,6 +36,8 @@ namespace flowstate_ros_bridge {
 
 class ChannelFactory {
 public:
+  virtual ~ChannelFactory() = default;
+
   virtual absl::StatusOr<std::shared_ptr<::grpc::Channel>>
   make_channel(absl::string_view address) = 0;
 };

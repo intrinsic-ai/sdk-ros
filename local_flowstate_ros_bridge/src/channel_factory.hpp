@@ -31,19 +31,18 @@
 
 namespace local_flowstate_ros_bridge {
 
-class SolutionChannelFactory : public flowstate_ros_bridge::ChannelFactory {
+class ClusterChannelFactory : public flowstate_ros_bridge::ChannelFactory {
 public:
-  SolutionChannelFactory(absl::string_view org, absl::string_view project,
-                         absl::string_view solution)
-      : org_(org), project_(project), solution_(solution) {}
+  ClusterChannelFactory(absl::string_view org_project,
+                        absl::string_view solution)
+      : org_project_(org_project), cluster_(solution) {}
 
   absl::StatusOr<std::shared_ptr<::grpc::Channel>>
   make_channel(absl::string_view address) override;
 
 private:
-  absl::string_view org_;
-  absl::string_view project_;
-  absl::string_view solution_;
+  absl::string_view org_project_;
+  absl::string_view cluster_;
 };
 
 } // namespace local_flowstate_ros_bridge
