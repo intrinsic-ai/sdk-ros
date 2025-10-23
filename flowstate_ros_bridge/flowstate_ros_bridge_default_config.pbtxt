@@ -4,8 +4,8 @@
 [type.googleapis.com/intrinsic.FlowstateRosBridgeConfig] {
   workcell_id: ""
   executive_service_address: "executive.app-intrinsic-app-chart.svc.cluster.local:8080"
-  skill_registry_address: "frontend.app-intrinsic-base.svc.cluster.local:8082"
-  solution_service_address: "skill-registry.app-intrinsic-app-chart.svc.cluster.local:8080"
+  skill_registry_address: "skill-registry.app-intrinsic-app-chart.svc.cluster.local:8080"
+  solution_service_address: "frontend.app-intrinsic-base.svc.cluster.local:8082"
   world_service_address: "world.app-intrinsic-base.svc.cluster.local:8080"
   geometry_service_address: "geomservice.app-intrinsic-base.svc.cluster.local:8080"
   flowstate_zenoh_router_address: "tcp/zenoh-router.app-intrinsic-base:7447"

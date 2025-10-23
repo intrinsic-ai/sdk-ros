@@ -56,17 +56,16 @@ FlowstateROSBridge::FlowstateROSBridge(const rclcpp::NodeOptions& options)
       service_tunnel.empty()
           ? "executive.app-intrinsic-app-chart.svc.cluster.local:8080"
           : service_tunnel);
-
   this->declare_parameter(
       kSkillAddressParamName,
       service_tunnel.empty()
-          ? "frontend.app-intrinsic-base.svc.cluster.local:8082"
+          ? "skill-registry.app-intrinsic-app-chart.svc.cluster.local:8080"
           : service_tunnel);
 
   this->declare_parameter(
       kSolutionAddressParamName,
       service_tunnel.empty()
-          ? "skill-registry.app-intrinsic-app-chart.svc.cluster.local:8080"
+          ? "frontend.app-intrinsic-base.svc.cluster.local:8082"
           : service_tunnel);
 
   this->declare_parameter(
