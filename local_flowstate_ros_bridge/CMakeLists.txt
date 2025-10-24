@@ -14,7 +14,6 @@ find_package(pluginlib REQUIRED)
 find_package(rclcpp_components REQUIRED)
 
 add_library(local_flowstate_ros_bridge_component SHARED
- src/channel_factory.cpp
  src/local_flowstate_ros_bridge.cpp
  src/local_flowstate_ros_bridge_main.cpp
 )
