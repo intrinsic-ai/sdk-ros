@@ -28,6 +28,7 @@
 #include "absl/flags/flag.h"
 #include "flowstate_ros_bridge/bridge_interface.hpp"
 #include "intrinsic/platform/pubsub/zenoh_util/zenoh_config.h"
+#include <intrinsic/util/grpc/grpc.h>
 
 namespace flowstate_ros_bridge {
 constexpr const char* kExecutiveAddressParamName = "executive_service_address";
@@ -40,6 +41,9 @@ constexpr const char* kWorldAddressParamName = "world_service_address";
 constexpr const char* kGeometryAddressParamName = "geometry_service_address";
 constexpr const char* kServiceTunnelParamName = "service_tunnel";
 constexpr const char* kBridgePluginParamName = "bridge_plugins";
+
+const std::size_t kExecutiveDeadlineSeconds = 5;
+const std::size_t kWorldDeadlineSeconds = 10;
 
 ///=============================================================================
 FlowstateROSBridge::FlowstateROSBridge(const rclcpp::NodeOptions& options)
@@ -90,18 +94,6 @@ FlowstateROSBridge::FlowstateROSBridge(const rclcpp::NodeOptions& options)
                     .get_value<std::string>());
   this->pubsub_ = std::make_shared<intrinsic::PubSub>(this->get_name());
 
-  // Initialize the executive client.
-  this->executive_ = std::make_shared<Executive>(
-      this->get_parameter(kExecutiveAddressParamName).get_value<std::string>(),
-      this->get_parameter(kSkillAddressParamName).get_value<std::string>(),
-      this->get_parameter(kSolutionAddressParamName).get_value<std::string>());
-
-  // Initialize the world client.
-  this->world_ = std::make_shared<World>(
-      this->pubsub_,
-      this->get_parameter(kWorldAddressParamName).get_value<std::string>(),
-      this->get_parameter(kGeometryAddressParamName).get_value<std::string>());
-
   bridge_ids_ = this->get_parameter(kBridgePluginParamName).as_string_array();
 
   for (const auto& id : bridge_ids_) {
@@ -125,6 +117,96 @@ FlowstateROSBridge::FlowstateROSBridge(const rclcpp::NodeOptions& options)
 ///=============================================================================
 auto FlowstateROSBridge::on_configure(
     const rclcpp_lifecycle::State& /*previous_state*/) -> CallbackReturn {
+  grpc::ChannelArguments executive_channel_args = intrinsic::DefaultGrpcChannelArgs();
+  // The skill registry may need to call out to one or more skill information
+  // services. Those services might not be ready at startup. We configure a
+  // retry policy to mitigate b/283020857.
+  // (See
+  // https://github.com/grpc/grpc-go/blob/master/examples/features/retry/README.md
+  //  for an example of this gRPC feature.)
+  executive_channel_args.SetServiceConfigJSON(R"(
+      {
+        "methodConfig": [{
+          "name": [{"service": "intrinsic_proto.skills.SkillRegistry"}],
+          "waitForReady": true,
+          "timeout": "300s",
+          "retryPolicy": {
+              "maxAttempts": 10,
+              "initialBackoff": "0.1s",
+              "maxBackoff": "10s",
+              "backoffMultiplier": 1.5,
+              "retryableStatusCodes": [ "UNAVAILABLE" ]
+          }
+        }]
+      })");
+  executive_channel_args.SetMaxReceiveMessageSize(10000000); // 10 MB
+  executive_channel_args.SetMaxSendMessageSize(10000000);    // 10 MB
+
+  auto executive_address = this->get_parameter(kExecutiveAddressParamName).get_value<std::string>();
+  auto maybe_executive_channel = intrinsic::CreateClientChannel(
+    executive_address, absl::Now() + absl::Seconds(kExecutiveDeadlineSeconds));
+  if (!maybe_executive_channel.ok()) {
+    LOG(ERROR) << maybe_executive_channel;
+    return CallbackReturn::FAILURE;
+  }
+  auto executive_channel = maybe_executive_channel.value();
+  LOG(INFO) << "Executive address: " << executive_address;
+
+  auto skill_registry_address = this->get_parameter(kSkillAddressParamName).get_value<std::string>();
+  auto maybe_skill_registry_channel = intrinsic::CreateClientChannel(
+    skill_registry_address, absl::Now() + absl::Seconds(kExecutiveDeadlineSeconds));
+  if (!maybe_skill_registry_channel.ok()) {
+    LOG(ERROR) << maybe_skill_registry_channel;
+    return CallbackReturn::FAILURE;
+  }
+  auto skill_registry_channel = maybe_skill_registry_channel.value();
+  LOG(INFO) << "Skill registry address: " << skill_registry_address;
+
+  auto solution_address = this->get_parameter(kSolutionAddressParamName).get_value<std::string>();
+  auto maybe_solution_channel = intrinsic::CreateClientChannel(
+    solution_address, absl::Now() + absl::Seconds(kExecutiveDeadlineSeconds));
+  if (!maybe_solution_channel.ok()) {
+    LOG(ERROR) << maybe_solution_channel;
+    return CallbackReturn::FAILURE;
+  }
+  auto solution_channel = maybe_solution_channel.value();
+  LOG(INFO) << "Solution service address: " << solution_address;
+
+  // Initialize the executive client.
+  this->executive_ = std::make_shared<Executive>(
+    executive_channel, skill_registry_channel, solution_channel, kExecutiveDeadlineSeconds);
+
+  grpc::ChannelArguments world_channel_args = intrinsic::DefaultGrpcChannelArgs();
+  // We might eventually need a retry policy here, like in executive (?)
+  // Some of the meshes that we'll receive in the geometry client are large,
+  // like a few 10's of MB.
+  world_channel_args.SetMaxReceiveMessageSize(-1);    // no limit
+  world_channel_args.SetMaxSendMessageSize(10000000); // 10 MB
+
+  auto world_address = this->get_parameter(kWorldAddressParamName).get_value<std::string>();
+  auto maybe_world_channel = intrinsic::CreateClientChannel(
+    world_address, absl::Now() + absl::Seconds(kWorldDeadlineSeconds));
+  if (!maybe_world_channel.ok()) {
+    LOG(ERROR) << maybe_world_channel;
+    return CallbackReturn::FAILURE;
+  }
+  auto world_channel = maybe_world_channel.value();
+  LOG(INFO) << "World address: " << world_address;
+
+  auto geometry_address = this->get_parameter(kGeometryAddressParamName).get_value<std::string>();
+  auto maybe_geometry_channel = intrinsic::CreateClientChannel(
+    geometry_address, absl::Now() + absl::Seconds(kWorldDeadlineSeconds));
+  if (!maybe_geometry_channel.ok()) {
+    LOG(ERROR) << maybe_geometry_channel;
+    return CallbackReturn::FAILURE;
+  }
+  auto geometry_channel = maybe_geometry_channel.value();
+  LOG(INFO) << "Geometry address: " << geometry_address;
+
+  // Initialize the world client.
+  this->world_ = std::make_shared<World>(
+      this->pubsub_, world_channel, geometry_channel, kWorldDeadlineSeconds);
+
   // Configure client services.
   if (!this->executive_->connect().ok()) {
     return CallbackReturn::FAILURE;

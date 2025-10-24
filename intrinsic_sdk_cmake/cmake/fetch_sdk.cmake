@@ -1,6 +1,7 @@
 # Fetch the sdk and make it available for use locally.
 
 set(SDK_VERSION_JSON_FILE "${CMAKE_CURRENT_SOURCE_DIR}/cmake/sdk_version.json")
+set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS ${SDK_VERSION_JSON_FILE})
 file(READ "${SDK_VERSION_JSON_FILE}" sdk_version_json)
 string(JSON sdk_version GET ${sdk_version_json} "sdk_version")
 string(JSON sdk_checksum GET ${sdk_version_json} "sdk_checksum")

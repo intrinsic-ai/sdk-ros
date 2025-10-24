@@ -1,6 +1,8 @@
 cmake_minimum_required(VERSION 3.8)
 project(flowstate_ros_bridge)
 
+include(GNUInstallDirs)
+
 # Default to C++17
 if(NOT CMAKE_CXX_STANDARD)
   set(CMAKE_CXX_STANDARD 17)
@@ -92,6 +94,7 @@ target_include_directories(flowstate_ros_bridge_interface
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
     $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
 )
+install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/include/ TYPE INCLUDE)
 
 #===============================================================================
 
