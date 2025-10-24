@@ -114,6 +114,7 @@ auto LocalFlowstateROSBridge::on_configure(
       grpc_channel, grpc_channel, grpc_channel);
 
   // Initialize the world client.
+  // FIXME(koonpeng): pubsub does not work because flowstate does not expose it atm.
   this->world_ = std::make_shared<flowstate_ros_bridge::World>(
       this->pubsub_, grpc_channel, grpc_channel);
 
