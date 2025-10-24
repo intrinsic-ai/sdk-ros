@@ -25,10 +25,26 @@
 
 #include "local_flowstate_ros_bridge.hpp"
 
-#include "channel_factory.hpp"
+#include <flowstate_ros_bridge/bridge_interface.hpp>
+#include <intrinsic/util/grpc/channel.h>
+#include <rcl_interfaces/msg/parameter_descriptor.hpp>
 
-#include "flowstate_ros_bridge/bridge_interface.hpp"
-#include "rcl_interfaces/msg/parameter_descriptor.hpp"
+#define ASSIGN_OR_RETURN_FAILURE_CONCAT_IMPL(x, y) x##y
+#define ASSIGN_OR_RETURN_FAILURE_CONCAT(x, y)                                  \
+  ASSIGN_OR_RETURN_FAILURE_CONCAT_IMPL(x, y)
+#define ASSIGN_OR_RETURN_FAILURE(lhs, rhs)                                     \
+  auto ASSIGN_OR_RETURN_FAILURE_CONCAT(macro_internal_status_, __LINE__) =     \
+      (rhs);                                                                   \
+  if (!ASSIGN_OR_RETURN_FAILURE_CONCAT(macro_internal_status_, __LINE__)       \
+           .ok()) {                                                            \
+    LOG(ERROR) << ASSIGN_OR_RETURN_FAILURE_CONCAT(macro_internal_status_,      \
+                                                  __LINE__)                    \
+                      .status();                                                \
+    return CallbackReturn::FAILURE;                                            \
+  }                                                                            \
+  lhs = std::move(                                                             \
+      ASSIGN_OR_RETURN_FAILURE_CONCAT(macro_internal_status_, __LINE__)        \
+          .value())
 
 namespace local_flowstate_ros_bridge {
 
@@ -58,23 +74,6 @@ LocalFlowstateROSBridge::LocalFlowstateROSBridge(
 
   this->pubsub_ = std::make_shared<intrinsic::PubSub>(this->get_name());
 
-  auto org_project =
-      this->get_parameter(kOrgProjectParamName).get_value<std::string>();
-  auto cluster =
-      this->get_parameter(kClusterParamName).get_value<std::string>();
-
-  // Initialize the executive client.
-  this->executive_ = std::make_shared<flowstate_ros_bridge::Executive>(
-      "", "", "", // ClusterChannelFactory gets the service addresses from the
-                  // org and cluster
-      5, 1000, std::make_unique<ClusterChannelFactory>(org_project, cluster));
-
-  // Initialize the world client.
-  this->world_ = std::make_shared<flowstate_ros_bridge::World>(
-      this->pubsub_, "", "", // ClusterChannelFactory gets the service
-                             // addresses from the org and cluster
-      10, std::make_unique<ClusterChannelFactory>(org_project, cluster));
-
   bridge_ids_ = this->get_parameter(kBridgePluginParamName).as_string_array();
 
   for (const auto &id : bridge_ids_) {
@@ -97,6 +96,27 @@ LocalFlowstateROSBridge::LocalFlowstateROSBridge(
 
 auto LocalFlowstateROSBridge::on_configure(
     const rclcpp_lifecycle::State & /*previous_state*/) -> CallbackReturn {
+  auto org_project =
+      this->get_parameter(kOrgProjectParamName).get_value<std::string>();
+  ASSIGN_OR_RETURN_FAILURE(
+      auto org_info, intrinsic::Channel::OrgInfo::FromString(org_project));
+
+  auto cluster =
+      this->get_parameter(kClusterParamName).get_value<std::string>();
+
+  ASSIGN_OR_RETURN_FAILURE(
+      auto cluster_channel,
+      intrinsic::Channel::MakeFromCluster(org_info, cluster));
+  auto grpc_channel = cluster_channel->GetChannel();
+
+  // Initialize the executive client.
+  this->executive_ = std::make_shared<flowstate_ros_bridge::Executive>(
+      grpc_channel, grpc_channel, grpc_channel);
+
+  // Initialize the world client.
+  this->world_ = std::make_shared<flowstate_ros_bridge::World>(
+      this->pubsub_, grpc_channel, grpc_channel);
+
   // Configure client services.
   auto connect_result = this->executive_->connect();
   if (!connect_result.ok()) {

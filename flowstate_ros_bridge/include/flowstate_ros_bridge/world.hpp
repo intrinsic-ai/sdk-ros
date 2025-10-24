@@ -32,15 +32,11 @@
 
 #include "absl/status/statusor.h"
 #include "intrinsic/geometry/proto/geometry_service.grpc.pb.h"
-#include "intrinsic/geometry/proto/geometry_service.pb.h"
 #include "intrinsic/math/proto/tf_message.pb.h"
 #include "intrinsic/platform/pubsub/pubsub.h"
-#include "intrinsic/platform/pubsub/zenoh_publisher_data.h"
 #include "intrinsic/world/objects/object_world_client.h"
 #include "intrinsic/world/objects/world_object.h"
 #include "intrinsic/world/proto/object_world_service.grpc.pb.h"
-
-#include "channel_factory.hpp"
 
 namespace flowstate_ros_bridge {
 
@@ -52,10 +48,9 @@ class World : public std::enable_shared_from_this<World> {
 
  public:
   World(std::shared_ptr<intrinsic::PubSub> pubsub,
-        const std::string& world_service_address,
-        const std::string& geometry_service_address,
-        std::size_t deadline_seconds = 10,
-        std::optional<std::unique_ptr<ChannelFactory>> channel_factory = std::nullopt);
+        std::shared_ptr<grpc::Channel> world_channel,
+        std::shared_ptr<grpc::Channel> geometry_channel,
+        std::size_t deadline_seconds = 10);
 
   absl::StatusOr<std::shared_ptr<intrinsic::Subscription>> CreateTfSubscription(
       intrinsic::SubscriptionOkCallback<intrinsic_proto::TFMessage> callback);
@@ -79,10 +74,9 @@ class World : public std::enable_shared_from_this<World> {
 
  private:
   std::shared_ptr<intrinsic::PubSub> pubsub_;
-  std::string world_service_address_;
-  std::string geometry_service_address_;
+  std::shared_ptr<grpc::Channel> world_channel_;
+  std::shared_ptr<grpc::Channel> geometry_channel_;
   size_t deadline_seconds_ = 10;
-  std::unique_ptr<ChannelFactory> channel_factory_;
   bool connected_ = false;
   std::shared_ptr<intrinsic::world::ObjectWorldClient> object_world_client_;
   std::shared_ptr<GeometryService::Stub> geometry_stub_;

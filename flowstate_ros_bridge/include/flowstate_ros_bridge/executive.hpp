@@ -28,10 +28,8 @@
 
 #include <memory>
 #include <mutex>
-#include <optional>
 #include <string>
 #include <thread>
-#include <unordered_map>
 #include <vector>
 
 #include "absl/status/statusor.h"
@@ -40,13 +38,8 @@
 #include "intrinsic/executive/proto/executive_service.grpc.pb.h"
 #include "intrinsic/executive/proto/executive_service.pb.h"
 #include "intrinsic/frontend/solution_service/proto/solution_service.grpc.pb.h"
-#include "intrinsic/frontend/solution_service/proto/solution_service.pb.h"
 #include "intrinsic/skills/proto/skill_registry.grpc.pb.h"
-#include "intrinsic/skills/proto/skill_registry.pb.h"
-#include "intrinsic/util/grpc/grpc.h"
 #include "nlohmann/json.hpp"
-
-#include "channel_factory.hpp"
 
 namespace flowstate_ros_bridge {
 using BehaviorTree = intrinsic_proto::executive::BehaviorTree;
@@ -67,12 +60,9 @@ class Executive : public std::enable_shared_from_this<Executive> {
    * for its required dependent services and setting default timing parameters
    * for its operations.
    *
-   * @param executive_service_address The network address (e.g., "host:port" or
-   * URI) of the main Executive Service to connect to.
-   * @param skill_registry_address The network address (e.g., "host:port" or
-   * URI) of the Skill Registry Service.
-   * @param solution_service_address The network address (e.g., "host:port" or
-   * URI) of the Solution Service.
+   * @param executive_channel The grpc channel for the Executive Service.
+   * @param skill_registry_channel The grpc channel for the Skill Registry Service.
+   * @param solution_channel The grpc channel the Solution Service.
    * @param deadline_seconds The default timeout duration in seconds for
    * operations initiated by this Executive. Defaults to 5 seconds.
    * @param update_rate_millis The frequency in milliseconds at which the
@@ -83,12 +73,11 @@ class Executive : public std::enable_shared_from_this<Executive> {
    * checked upon attempting connection, not necessarily within this
    * constructor.
    */
-  Executive(const std::string &executive_service_address,
-            const std::string &skill_registry_address,
-            const std::string &solution_service_address,
+  Executive(std::shared_ptr<grpc::Channel> executive_channel,
+            std::shared_ptr<grpc::Channel> skill_registry_channel,
+            std::shared_ptr<grpc::Channel> solution_channel,
             std::size_t deadline_seconds = 5,
-            std::size_t update_rate_millis = 1000,
-            std::optional<std::unique_ptr<ChannelFactory>> channel_factory = std::nullopt);
+            std::size_t update_rate_millis = 1000);
 
   // Establish connections with various services.
   absl::Status connect();
@@ -150,12 +139,11 @@ class Executive : public std::enable_shared_from_this<Executive> {
 
  private:
   mutable std::recursive_mutex mutex_;
-  std::string executive_service_address_;
-  std::string skill_registry_address_;
-  std::string solution_service_address_;
+  std::shared_ptr<grpc::Channel> executive_channel_;
+  std::shared_ptr<grpc::Channel> skill_registry_channel_;
+  std::shared_ptr<grpc::Channel> solution_channel_;
   std::size_t deadline_seconds_;
   std::size_t update_rate_millis_;
-  std::unique_ptr<ChannelFactory> channel_factory_;
   bool connected_;
   std::shared_ptr<ExecutiveService::Stub> executive_stub_;
   std::unique_ptr<SkillRegistry::Stub> skill_registry_stub_;
