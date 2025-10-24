@@ -25,6 +25,7 @@
 
 #include "local_flowstate_ros_bridge.hpp"
 
+#include <absl/status/status.h>
 #include <flowstate_ros_bridge/bridge_interface.hpp>
 #include <intrinsic/util/grpc/channel.h>
 #include <rcl_interfaces/msg/parameter_descriptor.hpp>
@@ -39,7 +40,7 @@
            .ok()) {                                                            \
     LOG(ERROR) << ASSIGN_OR_RETURN_FAILURE_CONCAT(macro_internal_status_,      \
                                                   __LINE__)                    \
-                      .status();                                                \
+                      .status();                                               \
     return CallbackReturn::FAILURE;                                            \
   }                                                                            \
   lhs = std::move(                                                             \
@@ -104,17 +105,31 @@ auto LocalFlowstateROSBridge::on_configure(
   auto cluster =
       this->get_parameter(kClusterParamName).get_value<std::string>();
 
-  ASSIGN_OR_RETURN_FAILURE(
-      auto cluster_channel,
-      intrinsic::Channel::MakeFromCluster(org_info, cluster));
-  auto grpc_channel = cluster_channel->GetChannel();
+  auto maybe_cluster_channel =
+      intrinsic::Channel::MakeFromCluster(org_info, cluster);
+  if (!maybe_cluster_channel.ok()) {
+    if (maybe_cluster_channel.status().code() == absl::StatusCode::kNotFound) {
+      std::cerr << "Cannot find authentication information." << std::endl
+                << "Run `inctl auth login --org=" << org_project
+                << "` to authenticate to flowstate." << std::endl
+                << std::endl
+                << "Download inctl from "
+                   "https://github.com/intrinsic-ai/sdk/releases."
+                << std::endl;
+    } else {
+      LOG(ERROR) << maybe_cluster_channel.status();
+    }
+    return CallbackReturn::FAILURE;
+  }
+  auto grpc_channel = maybe_cluster_channel.value()->GetChannel();
 
   // Initialize the executive client.
   this->executive_ = std::make_shared<flowstate_ros_bridge::Executive>(
       grpc_channel, grpc_channel, grpc_channel);
 
   // Initialize the world client.
-  // FIXME(koonpeng): pubsub does not work because flowstate does not expose it atm.
+  // FIXME(koonpeng): pubsub does not work because flowstate does not expose it
+  // atm.
   this->world_ = std::make_shared<flowstate_ros_bridge::World>(
       this->pubsub_, grpc_channel, grpc_channel);
 
