@@ -87,7 +87,6 @@ RUN set -x \
 RUN . /opt/ros/jazzy/setup.sh \
     && set -x \
     && apt-get update \
-    && apt install clang-19 -y \
     && rosdep update --rosdistro jazzy \
     && cd /opt/intrinsic/intrinsic_sdk_cmake \
     && touch src/intrinsic_sdk_ros/intrinsic_sdk/COLCON_IGNORE \
@@ -105,8 +104,7 @@ RUN . /opt/ros/jazzy/setup.sh \
     && touch src/intrinsic_sdk_ros/intrinsic_sdk/COLCON_IGNORE \
     && touch src/intrinsic_sdk_ros/intrinsic_sdk_ros/COLCON_IGNORE \
     && colcon build \
-        --cmake-args -DBUILD_TESTING=ON \
-        -DCMAKE_C_COMPILER=/usr/bin/clang-19 -DCMAKE_CXX_COMPILER=/usr/bin/clang++-19 \
+        --cmake-args -DBUILD_TESTING=OFF \
         --event-handlers console_direct+ console_stderr- \
         --merge-install \
         --executor=sequential
