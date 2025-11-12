@@ -34,6 +34,7 @@
 #include "intrinsic/geometry/proto/geometry_service.grpc.pb.h"
 #include "intrinsic/math/proto/tf_message.pb.h"
 #include "intrinsic/platform/pubsub/pubsub.h"
+#include "intrinsic/platform/pubsub/zenoh_publisher_data.h" // IWYU pragma: keep, required in gcc because it is more strict in forward declaration
 #include "intrinsic/world/objects/object_world_client.h"
 #include "intrinsic/world/objects/world_object.h"
 #include "intrinsic/world/proto/object_world_service.grpc.pb.h"
