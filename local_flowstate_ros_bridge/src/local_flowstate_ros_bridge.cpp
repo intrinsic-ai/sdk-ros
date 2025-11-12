@@ -25,8 +25,10 @@
 
 #include "local_flowstate_ros_bridge.hpp"
 
+
 #include <absl/status/status.h>
 #include <flowstate_ros_bridge/bridge_interface.hpp>
+#include <intrinsic/platform/pubsub/zenoh_publisher_data.h> // required in gcc because it is more strict in forward declaration
 #include <intrinsic/util/grpc/channel.h>
 #include <rcl_interfaces/msg/parameter_descriptor.hpp>
 
