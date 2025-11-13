@@ -16,10 +16,10 @@ set(FIND_LIST
   "from google.type"
 )
 set(REPLACE_LIST
-  "from googleapis.api"
-  "from googleapis.longrunning"
-  "from googleapis.rpc"
-  "from googleapis.type"
+  "from googleapis.google.api"
+  "from googleapis.google.longrunning"
+  "from googleapis.google.rpc"
+  "from googleapis.google.type"
 )
 
 foreach(python_package_source ${python_package_sources})
