@@ -40,7 +40,7 @@ add_custom_target(intrinsic_sdk_protos_python_rename_googleapis
     ${CMAKE_COMMAND}
       -E copy_directory_if_different
       "${python_proto_gen_dir}/google"
-      "${renamed_googleapis_dir}/"
+      "${renamed_googleapis_dir}/google"
   COMMAND
     ${CMAKE_COMMAND}
       -E touch

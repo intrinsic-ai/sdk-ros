@@ -14,6 +14,8 @@
   <author email="mjcarroll@intrinsic.ai">Michael Carroll</author>
   <author email="wjwwood@intrinsic.ai">William Woodall</author>
 
+  <build_depend>python3-venv</build_depend>
+
   <buildtool_depend>cmake</buildtool_depend>
   <buildtool_depend>bazelisk_vendor</buildtool_depend>
 
@@ -29,6 +31,7 @@
   <depend>intrinsic_pybind11_vendor</depend>
   <depend>pybind11_abseil_vendor</depend>
   <depend>pybind11_protobuf_vendor</depend>
+  <depend>python3-retrying</depend>
   <depend>opencensus_cpp_vendor</depend>
   <depend>ortools_vendor</depend>
 

@@ -28,11 +28,10 @@ git clone https://github.com/intrinsic-ai/sdk-ros.git
 Source ROS and build the SDK.
 
 ```bash
-sudo apt update && sudo apt install clang-19
 source /opt/ros/jazzy.setup.bash
 cd ~/intrinsic_ws/
-colcon build --cmake-args -DCMAKE_BUILD_TYPE=Release \
-  -DCMAKE_C_COMPILER=/usr/bin/clang-19 -DCMAKE_CXX_COMPILER=/usr/bin/clang++-19 \
+colcon build \
+  --cmake-args -DCMAKE_BUILD_TYPE=Release \
   --event-handlers=console_direct
 ```
 
