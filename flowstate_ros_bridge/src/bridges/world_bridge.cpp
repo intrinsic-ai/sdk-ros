@@ -191,8 +191,27 @@ absl::Status WorldBridge::Data::SendObjectVisualizationMessages(
               "gltf/%s_%s.glb",
               geometry.geometry_storage_refs().geometry_ref().substr(9),
               geometry.geometry_storage_refs().renderable_ref().substr(9));
-          if (renderables_.contains(std::string("/") + gltf_path)) {
-            continue;
+
+          auto renderables_it = renderables_.find(std::string("/") + gltf_path);
+
+          if (renderables_it == renderables_.end()) {
+            const absl::StatusOr<std::string> gltf = world_->GetGltf(
+                geometry.geometry_storage_refs().geometry_ref(),
+                geometry.geometry_storage_refs().renderable_ref());
+            if (!gltf.ok()) {
+              LOG(ERROR) << "Unable to fetch renderable for " << tf_frame_name
+                         << ": " << gltf.status();
+              continue;
+            }
+            total_gltf_size += gltf->size();
+            std::vector<uint8_t> gltf_data;
+            gltf_data.resize(gltf->size());
+            memcpy(&gltf_data[0], gltf->data(), gltf->size());
+
+            renderables_[std::string("/") + gltf_path] = std::move(gltf_data);
+            LOG(INFO) << "Fetched " << gltf->size() << " bytes for "
+                      << tf_frame_name;
+            renderables_it = renderables_.emplace(std::string("/") + gltf_path, std::move(gltf_data)).first;
           }
 
           const absl::StatusOr<std::string> gltf = world_->GetGltf(
@@ -203,14 +222,6 @@ absl::Status WorldBridge::Data::SendObjectVisualizationMessages(
                        << ": " << gltf.status();
             continue;
           }
-          total_gltf_size += gltf->size();
-          std::vector<uint8_t> gltf_data;
-          gltf_data.resize(gltf->size());
-          memcpy(&gltf_data[0], gltf->data(), gltf->size());
-
-          renderables_[std::string("/") + gltf_path] = std::move(gltf_data);
-          LOG(INFO) << "Fetched " << gltf->size() << " bytes for "
-                    << tf_frame_name;
 
           const absl::StatusOr<intrinsic::eigenmath::MatrixXd> transform_xd =
               intrinsic_proto::FromProto(geometry.ref_t_shape_aff());
