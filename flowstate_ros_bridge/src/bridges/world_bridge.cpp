@@ -214,15 +214,6 @@ absl::Status WorldBridge::Data::SendObjectVisualizationMessages(
             renderables_it = renderables_.emplace(std::string("/") + gltf_path, std::move(gltf_data)).first;
           }
 
-          const absl::StatusOr<std::string> gltf = world_->GetGltf(
-              geometry.geometry_storage_refs().geometry_ref(),
-              geometry.geometry_storage_refs().renderable_ref());
-          if (!gltf.ok()) {
-            LOG(ERROR) << "Unable to fetch renderable for " << tf_frame_name
-                       << ": " << gltf.status();
-            continue;
-          }
-
           const absl::StatusOr<intrinsic::eigenmath::MatrixXd> transform_xd =
               intrinsic_proto::FromProto(geometry.ref_t_shape_aff());
           if (!transform_xd.ok()) continue;
