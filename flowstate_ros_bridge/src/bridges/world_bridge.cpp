@@ -192,7 +192,8 @@ absl::Status WorldBridge::Data::SendObjectVisualizationMessages(
               geometry.geometry_storage_refs().geometry_ref().substr(9),
               geometry.geometry_storage_refs().renderable_ref().substr(9));
 
-          auto renderables_it = renderables_.find(std::string("/") + gltf_path);
+          const auto renderable_name = std::string("/") + gltf_path;
+          auto renderables_it = renderables_.find(renderable_name);
 
           if (renderables_it == renderables_.end()) {
             const absl::StatusOr<std::string> gltf = world_->GetGltf(
@@ -210,7 +211,7 @@ absl::Status WorldBridge::Data::SendObjectVisualizationMessages(
 
             LOG(INFO) << "Fetched " << gltf->size() << " bytes for "
                       << tf_frame_name;
-            renderables_it = renderables_.emplace(std::string("/") + gltf_path, std::move(gltf_data)).first;
+            renderables_it = renderables_.emplace(renderable_name, std::move(gltf_data)).first;
           }
 
           const absl::StatusOr<intrinsic::eigenmath::MatrixXd> transform_xd =
