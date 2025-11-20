@@ -208,7 +208,6 @@ absl::Status WorldBridge::Data::SendObjectVisualizationMessages(
             gltf_data.resize(gltf->size());
             memcpy(&gltf_data[0], gltf->data(), gltf->size());
 
-            renderables_[std::string("/") + gltf_path] = std::move(gltf_data);
             LOG(INFO) << "Fetched " << gltf->size() << " bytes for "
                       << tf_frame_name;
             renderables_it = renderables_.emplace(std::string("/") + gltf_path, std::move(gltf_data)).first;
