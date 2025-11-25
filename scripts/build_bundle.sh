@@ -37,11 +37,29 @@ SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 podman load --input images/$SERVICE_NAME/$SERVICE_NAME.tar
 podman create "$SERVICE_PACKAGE:$SERVICE_NAME" > images/$SERVICE_NAME/container_id.txt
 CONTAINER_ID=$(cat images/$SERVICE_NAME/container_id.txt)
+
 podman cp "$CONTAINER_ID:/service_manifest.binarypb" images/$SERVICE_NAME/service_manifest.binarypb
-podman cp "$CONTAINER_ID:/default_config.binarypb" images/$SERVICE_NAME/default_config.binarypb
-podman cp "$CONTAINER_ID:/parameter-descriptor-set.proto.bin" images/$SERVICE_NAME/parameter-descriptor-set.proto.bin
+
+if podman exec "$CONTAINER_ID" test -f /default_config.binarypb; then
+  podman cp "$CONTAINER_ID:/default_config.binarypb" images/$SERVICE_NAME/default_config.binarypb
+fi
+
+if podman exec "$CONTAINER_ID" test -f /parameter-descriptor-set.proto.bin; then
+  podman cp "$CONTAINER_ID:/parameter-descriptor-set.proto.bin" images/$SERVICE_NAME/parameter-descriptor-set.proto.bin
+fi
+
 podman rm $CONTAINER_ID
 chmod 644 images/$SERVICE_NAME/$SERVICE_NAME.tar
+
+TAR_FILES="service_manifest.binarypb"
+if [ -f images/$SERVICE_NAME/default_config.binarypb ]; then
+  TAR_FILES="$TAR_FILES default_config.binarypb"
+fi
+if [ -f images/$SERVICE_NAME/parameter-descriptor-set.proto.bin ]; then
+  TAR_FILES="$TAR_FILES parameter-descriptor-set.proto.bin"
+fi
+TAR_FILES="$TAR_FILES $SERVICE_NAME.tar"
+
 tar -cvf images/$SERVICE_NAME.bundle.tar \
   --owner=0 \
   --group=0 \
@@ -49,7 +67,4 @@ tar -cvf images/$SERVICE_NAME.bundle.tar \
   --no-same-permissions \
   -C \
   images/$SERVICE_NAME/ \
-  service_manifest.binarypb \
-  default_config.binarypb \
-  parameter-descriptor-set.proto.bin \
-  $SERVICE_NAME.tar
+  $TAR_FILES
