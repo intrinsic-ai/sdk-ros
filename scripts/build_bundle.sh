@@ -54,14 +54,13 @@ podman stop "$CONTAINER_ID"
 podman rm $CONTAINER_ID
 chmod 644 images/$SERVICE_NAME/$SERVICE_NAME.tar
 
-TAR_FILES="service_manifest.binarypb"
+TAR_FILES="$SERVICE_NAME.tar service_manifest.binarypb"
 if [ -f images/$SERVICE_NAME/default_config.binarypb ]; then
   TAR_FILES="$TAR_FILES default_config.binarypb"
 fi
 if [ -f images/$SERVICE_NAME/parameter-descriptor-set.proto.bin ]; then
   TAR_FILES="$TAR_FILES parameter-descriptor-set.proto.bin"
 fi
-TAR_FILES="$TAR_FILES $SERVICE_NAME.tar"
 
 tar -cvf images/$SERVICE_NAME.bundle.tar \
   --owner=0 \
