@@ -40,6 +40,8 @@ CONTAINER_ID=$(cat images/$SERVICE_NAME/container_id.txt)
 
 podman cp "$CONTAINER_ID:/service_manifest.binarypb" images/$SERVICE_NAME/service_manifest.binarypb
 
+podman start "$CONTAINER_ID"
+
 if podman exec "$CONTAINER_ID" test -f /default_config.binarypb; then
   podman cp "$CONTAINER_ID:/default_config.binarypb" images/$SERVICE_NAME/default_config.binarypb
 fi
@@ -48,6 +50,7 @@ if podman exec "$CONTAINER_ID" test -f /parameter-descriptor-set.proto.bin; then
   podman cp "$CONTAINER_ID:/parameter-descriptor-set.proto.bin" images/$SERVICE_NAME/parameter-descriptor-set.proto.bin
 fi
 
+podman stop "$CONTAINER_ID"
 podman rm $CONTAINER_ID
 chmod 644 images/$SERVICE_NAME/$SERVICE_NAME.tar
 
