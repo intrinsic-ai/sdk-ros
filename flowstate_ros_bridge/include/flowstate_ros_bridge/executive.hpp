@@ -76,6 +76,8 @@ class Executive : public std::enable_shared_from_this<Executive> {
    * @param update_rate_millis The frequency in milliseconds at which the
    * Executive performs periodic tasks (e.g., status checks, updates). Defaults
    * to 1000 milliseconds (1 second).
+   * @param page_size The number of items to retrieve per page when listing
+   * resources. Defaults to 100.
    *
    * @note The validity or reachability of the provided addresses is typically
    * checked upon attempting connection, not necessarily within this
@@ -85,7 +87,7 @@ class Executive : public std::enable_shared_from_this<Executive> {
             const std::string &skill_registry_address,
             const std::string &solution_service_address,
             std::size_t deadline_seconds = 5,
-            std::size_t update_rate_millis = 1000);
+            std::size_t update_rate_millis = 1000, std::size_t page_size = 100);
 
   // Establish connections with various services.
   absl::Status connect();
@@ -152,6 +154,7 @@ class Executive : public std::enable_shared_from_this<Executive> {
   std::string solution_service_address_;
   std::size_t deadline_seconds_;
   std::size_t update_rate_millis_;
+  std::size_t page_size_;
   bool connected_;
   std::shared_ptr<ExecutiveService::Stub> executive_stub_;
   std::unique_ptr<SkillRegistry::Stub> skill_registry_stub_;

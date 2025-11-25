@@ -40,6 +40,11 @@ constexpr const char* kWorldAddressParamName = "world_service_address";
 constexpr const char* kGeometryAddressParamName = "geometry_service_address";
 constexpr const char* kServiceTunnelParamName = "service_tunnel";
 constexpr const char* kBridgePluginParamName = "bridge_plugins";
+constexpr const char* kExecutiveDeadlineParamName =
+    "executive_deadline_seconds";
+constexpr const char* kExecutiveUpdateRateMillisParamName =
+    "executive_update_rate_millis";
+constexpr const char* kExecutivePageSizeParamName = "executive_page_size";
 
 ///=============================================================================
 FlowstateROSBridge::FlowstateROSBridge(const rclcpp::NodeOptions& options)
@@ -56,6 +61,10 @@ FlowstateROSBridge::FlowstateROSBridge(const rclcpp::NodeOptions& options)
       service_tunnel.empty()
           ? "executive.app-intrinsic-app-chart.svc.cluster.local:8080"
           : service_tunnel);
+  this->declare_parameter(kExecutiveDeadlineParamName, 5);
+  this->declare_parameter(kExecutiveUpdateRateMillisParamName, 1000);
+  this->declare_parameter(kExecutivePageSizeParamName, 100);
+
   this->declare_parameter(
       kSkillAddressParamName,
       service_tunnel.empty()
@@ -94,7 +103,12 @@ FlowstateROSBridge::FlowstateROSBridge(const rclcpp::NodeOptions& options)
   this->executive_ = std::make_shared<Executive>(
       this->get_parameter(kExecutiveAddressParamName).get_value<std::string>(),
       this->get_parameter(kSkillAddressParamName).get_value<std::string>(),
-      this->get_parameter(kSolutionAddressParamName).get_value<std::string>());
+      this->get_parameter(kSolutionAddressParamName).get_value<std::string>(),
+      this->get_parameter(kExecutiveDeadlineParamName).get_value<std::size_t>(),
+      this->get_parameter(kExecutiveUpdateRateMillisParamName)
+          .get_value<std::size_t>(),
+      this->get_parameter(kExecutivePageSizeParamName)
+          .get_value<std::size_t>());
 
   // Initialize the world client.
   this->world_ = std::make_shared<World>(

@@ -12,4 +12,7 @@ message FlowstateRosBridgeConfig {
   string flowstate_zenoh_router_address = 7;
   optional string external_zenoh_router_address = 8;
   repeated string bridge_plugins = 9;
+  string executive_deadline_seconds = 10;
+  string executive_update_rate_millis = 11;
+  string executive_page_size = 12;
 }
