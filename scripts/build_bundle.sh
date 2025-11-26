@@ -42,25 +42,24 @@ podman cp "$CONTAINER_ID:/service_manifest.binarypb" images/$SERVICE_NAME/servic
 
 podman start "$CONTAINER_ID"
 
-if podman exec "$CONTAINER_ID" test -f /default_config.binarypb; then
-  podman cp "$CONTAINER_ID:/default_config.binarypb" images/$SERVICE_NAME/default_config.binarypb
-fi
-
-if podman exec "$CONTAINER_ID" test -f /parameter-descriptor-set.proto.bin; then
-  podman cp "$CONTAINER_ID:/parameter-descriptor-set.proto.bin" images/$SERVICE_NAME/parameter-descriptor-set.proto.bin
-fi
+for FILE in default_config.binarypb parameter-descriptor-set.proto.bin
+do
+  if podman exec "$CONTAINER_ID" test -f /$FILE; then
+    podman cp "$CONTAINER_ID:/$FILE" images/$SERVICE_NAME/$FILE
+  fi
+done
 
 podman stop "$CONTAINER_ID"
 podman rm $CONTAINER_ID
 chmod 644 images/$SERVICE_NAME/$SERVICE_NAME.tar
 
 TAR_FILES="$SERVICE_NAME.tar service_manifest.binarypb"
-if [ -f default_config.binarypb ]; then
-  TAR_FILES="$TAR_FILES default_config.binarypb"
-fi
-if [ -f parameter-descriptor-set.proto.bin ]; then
-  TAR_FILES="$TAR_FILES parameter-descriptor-set.proto.bin"
-fi
+for FILE in default_config.binarypb parameter-descriptor-set.proto.bin
+do
+  if [ -f $FILE ]; then
+    TAR_FILES="$TAR_FILES $FILE"
+  fi
+done
 
 tar -cvf images/$SERVICE_NAME.bundle.tar \
   --owner=0 \
