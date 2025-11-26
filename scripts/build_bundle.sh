@@ -40,16 +40,12 @@ CONTAINER_ID=$(cat images/$SERVICE_NAME/container_id.txt)
 
 podman cp "$CONTAINER_ID:/service_manifest.binarypb" images/$SERVICE_NAME/service_manifest.binarypb
 
-podman start "$CONTAINER_ID"
 
 for FILE in default_config.binarypb parameter-descriptor-set.proto.bin
 do
-  if podman exec "$CONTAINER_ID" test -f /$FILE; then
-    podman cp "$CONTAINER_ID:/$FILE" images/$SERVICE_NAME/$FILE
-  fi
+  podman cp "$CONTAINER_ID:/$FILE" images/$SERVICE_NAME/$FILE 2>/dev/null || true
 done
 
-podman stop "$CONTAINER_ID"
 podman rm $CONTAINER_ID
 chmod 644 images/$SERVICE_NAME/$SERVICE_NAME.tar
 
