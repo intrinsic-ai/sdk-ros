@@ -27,14 +27,14 @@
 #define FLOWSTATE_ROS_BRIDGE__WORLD_HPP_
 
 #include <memory>
+#include <optional>
 #include <vector>
 
 #include "absl/status/statusor.h"
 #include "intrinsic/geometry/proto/geometry_service.grpc.pb.h"
-#include "intrinsic/geometry/proto/geometry_service.pb.h"
 #include "intrinsic/math/proto/tf_message.pb.h"
 #include "intrinsic/platform/pubsub/pubsub.h"
-#include "intrinsic/platform/pubsub/zenoh_publisher_data.h"
+#include "intrinsic/platform/pubsub/zenoh_publisher_data.h" // IWYU pragma: keep, required in gcc because it is more strict in forward declaration
 #include "intrinsic/world/objects/object_world_client.h"
 #include "intrinsic/world/objects/world_object.h"
 #include "intrinsic/world/proto/object_world_service.grpc.pb.h"
@@ -49,8 +49,8 @@ class World : public std::enable_shared_from_this<World> {
 
  public:
   World(std::shared_ptr<intrinsic::PubSub> pubsub,
-        const std::string& world_service_address,
-        const std::string& geometry_service_address,
+        std::shared_ptr<grpc::Channel> world_channel,
+        std::shared_ptr<grpc::Channel> geometry_channel,
         std::size_t deadline_seconds = 10);
 
   absl::StatusOr<std::shared_ptr<intrinsic::Subscription>> CreateTfSubscription(
@@ -75,8 +75,8 @@ class World : public std::enable_shared_from_this<World> {
 
  private:
   std::shared_ptr<intrinsic::PubSub> pubsub_;
-  std::string world_service_address_;
-  std::string geometry_service_address_;
+  std::shared_ptr<grpc::Channel> world_channel_;
+  std::shared_ptr<grpc::Channel> geometry_channel_;
   size_t deadline_seconds_ = 10;
   bool connected_ = false;
   std::shared_ptr<intrinsic::world::ObjectWorldClient> object_world_client_;

@@ -38,11 +38,9 @@
 #include "absl/log/log.h"
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
-#include "absl/synchronization/notification.h"
 #include "intrinsic/executive/proto/run_metadata.pb.h"
 #include "intrinsic/skills/proto/skills.pb.h"
 #include "intrinsic/util/grpc/grpc.h"
-#include "intrinsic/util/proto/descriptors.h"
 #include "intrinsic/util/status/status_conversion_grpc.h"
 #include "intrinsic/util/status/status_macros.h"
 
@@ -56,18 +54,18 @@ static constexpr std::string PROCESS_PARAMS_KEY = "parameters";
 static constexpr std::string RESOURCE_PARAMS_KEY = "resources";
 
 ///=============================================================================
-Executive::Executive(const std::string& executive_service_address,
-                     const std::string& skill_registry_address,
-                     const std::string& solution_service_address,
-                     std::size_t deadline_seconds,
-                     std::size_t update_rate_millis)
-    : executive_service_address_(std::move(executive_service_address)),
-      skill_registry_address_(std::move(skill_registry_address)),
-      solution_service_address_(std::move(solution_service_address)),
+Executive::Executive(
+    std::shared_ptr<grpc::Channel> executive_channel,
+    std::shared_ptr<grpc::Channel> skill_registry_channel,
+    std::shared_ptr<grpc::Channel> solution_channel,
+    std::size_t deadline_seconds,
+    std::size_t update_rate_millis)
+    : executive_channel_(std::move(executive_channel)),
+      skill_registry_channel_(std::move(skill_registry_channel)),
+      solution_channel_(std::move(solution_channel)),
       deadline_seconds_(deadline_seconds),
       update_rate_millis_(update_rate_millis),
-      connected_(false),
-      current_process_(nullptr) {
+      connected_(false), current_process_(nullptr) {
   // Do nothing.
 }
 
@@ -79,71 +77,28 @@ absl::Status Executive::connect() {
 
   std::lock_guard<std::recursive_mutex> lock(mutex_);
 
-  grpc::ChannelArguments channel_args = intrinsic::DefaultGrpcChannelArgs();
-  // The skill registry may need to call out to one or more skill information
-  // services. Those services might not be ready at startup. We configure a
-  // retry policy to mitigate b/283020857.
-  // (See
-  // https://github.com/grpc/grpc-go/blob/master/examples/features/retry/README.md
-  //  for an example of this gRPC feature.)
-  channel_args.SetServiceConfigJSON(R"(
-      {
-        "methodConfig": [{
-          "name": [{"service": "intrinsic_proto.skills.SkillRegistry"}],
-          "waitForReady": true,
-          "timeout": "300s",
-          "retryPolicy": {
-              "maxAttempts": 10,
-              "initialBackoff": "0.1s",
-              "maxBackoff": "10s",
-              "backoffMultiplier": 1.5,
-              "retryableStatusCodes": [ "UNAVAILABLE" ]
-          }
-        }]
-      })");
-  channel_args.SetMaxReceiveMessageSize(10000000);  // 10 MB
-  channel_args.SetMaxSendMessageSize(10000000);     // 10 MB
-
   // Connect to the executive service.
-  LOG(INFO) << "Connecting to executive service at address "
-            << executive_service_address_;
-  INTR_ASSIGN_OR_RETURN(
-      std::shared_ptr<grpc::Channel> executive_channel,
-      intrinsic::CreateClientChannel(
-          executive_service_address_,
-          absl::Now() + absl::Seconds(deadline_seconds_), channel_args));
+  LOG(INFO) << "Connecting to executive service";
   INTR_RETURN_IF_ERROR(intrinsic::WaitForChannelConnected(
-      executive_service_address_, executive_channel,
+      "executive service", executive_channel_,
       absl::Now() + absl::Seconds(deadline_seconds_)));
-  executive_stub_ = ExecutiveService::NewStub(std::move(executive_channel));
+  executive_stub_ = ExecutiveService::NewStub(executive_channel_);
   LOG(INFO) << "Successfully connected to executive service!";
 
   // Connect to the solution service.
-  LOG(INFO) << "Connecting to solution service at address "
-            << solution_service_address_;
-  INTR_ASSIGN_OR_RETURN(
-      std::shared_ptr<grpc::Channel> solution_channel,
-      intrinsic::CreateClientChannel(
-          solution_service_address_,
-          absl::Now() + absl::Seconds(deadline_seconds_), channel_args));
+  LOG(INFO) << "Connecting to solution service";
   INTR_RETURN_IF_ERROR(intrinsic::WaitForChannelConnected(
-      solution_service_address_, solution_channel,
+      "solution service", solution_channel_,
       absl::Now() + absl::Seconds(deadline_seconds_)));
-  solution_stub_ = SolutionService::NewStub(std::move(solution_channel));
+  solution_stub_ = SolutionService::NewStub(solution_channel_);
   LOG(INFO) << "Successfully connected to solution service!";
 
   // Connect to the skill registry.
-  LOG(INFO) << "Connecting to skill registry at address "
-            << skill_registry_address_;
-  INTR_ASSIGN_OR_RETURN(
-      std::shared_ptr<grpc::Channel> skill_channel,
-      intrinsic::CreateClientChannel(
-          skill_registry_address_,
-          absl::Now() + absl::Seconds(deadline_seconds_), channel_args));
+  LOG(INFO) << "Connecting to skill registry";
   INTR_RETURN_IF_ERROR(intrinsic::WaitForChannelConnected(
-      skill_registry_address_, skill_channel,
+      "skill registry", skill_registry_channel_,
       absl::Now() + absl::Seconds(deadline_seconds_)));
-  skill_registry_stub_ = SkillRegistry::NewStub(std::move(skill_channel));
+  skill_registry_stub_ = SkillRegistry::NewStub(skill_registry_channel_);
   LOG(INFO) << "Successfully connected to the skill registry!";
 
   // TODO(Yadunund): Check if we can add hooks to reconnect if disconnected

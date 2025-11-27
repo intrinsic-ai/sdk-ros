@@ -30,7 +30,6 @@
 #include "absl/container/flat_hash_set.h"
 #include "absl/log/log.h"
 #include "absl/status/status.h"
-#include "intrinsic/geometry/proto/geometry_service.grpc.pb.h"
 #include "intrinsic/util/grpc/grpc.h"
 #include "intrinsic/util/status/status_conversion_grpc.h"
 #include "intrinsic/util/status/status_macros.h"
@@ -39,12 +38,12 @@
 namespace flowstate_ros_bridge {
 
 World::World(std::shared_ptr<intrinsic::PubSub> pubsub,
-             const std::string& world_service_address,
-             const std::string& geometry_service_address,
+             std::shared_ptr<grpc::Channel> world_channel,
+             std::shared_ptr<grpc::Channel> geometry_channel,
              std::size_t deadline_seconds)
     : pubsub_(pubsub),
-      world_service_address_(world_service_address),
-      geometry_service_address_(geometry_service_address),
+      world_channel_(std::move(world_channel)),
+      geometry_channel_(std::move(geometry_channel)),
       deadline_seconds_(deadline_seconds) {
   // Do nothing. Connections will happen later.
 }
@@ -65,39 +64,21 @@ absl::Status World::connect() {
     return absl::OkStatus();
   }
 
-  grpc::ChannelArguments channel_args = intrinsic::DefaultGrpcChannelArgs();
-  // We might eventually need a retry policy here, like in executive (?)
-  // Some of the meshes that we'll receive in the geometry client are large,
-  // like a few 10's of MB.
-  channel_args.SetMaxReceiveMessageSize(-1);     // no limit
-  channel_args.SetMaxSendMessageSize(10000000);  // 10 MB
-
-  LOG(INFO) << "Connecting to world service at " << world_service_address_;
-  INTR_ASSIGN_OR_RETURN(
-      std::shared_ptr<grpc::Channel> world_channel,
-      intrinsic::CreateClientChannel(
-          world_service_address_,
-          absl::Now() + absl::Seconds(deadline_seconds_), channel_args));
+  LOG(INFO) << "Connecting to world service";
   INTR_RETURN_IF_ERROR(intrinsic::WaitForChannelConnected(
-      world_service_address_, world_channel,
+      "world service", world_channel_,
       absl::Now() + absl::Seconds(deadline_seconds_)));
   std::shared_ptr<ObjectWorldService::StubInterface> object_world_stub =
-      ObjectWorldService::NewStub(std::move(world_channel));
+      ObjectWorldService::NewStub(world_channel_);
   object_world_client_ = std::make_shared<intrinsic::world::ObjectWorldClient>(
       "world", std::move(object_world_stub));
   LOG(INFO) << "Successfully connected to world service!";
 
-  LOG(INFO) << "Connecting to geometry service at "
-            << geometry_service_address_;
-  INTR_ASSIGN_OR_RETURN(
-      std::shared_ptr<grpc::Channel> geometry_channel,
-      intrinsic::CreateClientChannel(
-          geometry_service_address_,
-          absl::Now() + absl::Seconds(deadline_seconds_), channel_args));
+  LOG(INFO) << "Connecting to geometry service";
   INTR_RETURN_IF_ERROR(intrinsic::WaitForChannelConnected(
-      geometry_service_address_, geometry_channel,
+      "geometry service", geometry_channel_,
       absl::Now() + absl::Seconds(deadline_seconds_)));
-  geometry_stub_ = GeometryService::NewStub(std::move(geometry_channel));
+  geometry_stub_ = GeometryService::NewStub(std::move(geometry_channel_));
   LOG(INFO) << "Successfully connected to geometry service!";
 
   connected_ = true;
