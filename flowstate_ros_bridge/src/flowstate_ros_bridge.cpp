@@ -44,7 +44,6 @@ constexpr const char* kExecutiveDeadlineParamName =
     "executive_deadline_seconds";
 constexpr const char* kExecutiveUpdateRateMillisParamName =
     "executive_update_rate_millis";
-constexpr const char* kExecutivePageSizeParamName = "executive_page_size";
 
 ///=============================================================================
 FlowstateROSBridge::FlowstateROSBridge(const rclcpp::NodeOptions& options)
@@ -63,7 +62,6 @@ FlowstateROSBridge::FlowstateROSBridge(const rclcpp::NodeOptions& options)
           : service_tunnel);
   this->declare_parameter(kExecutiveDeadlineParamName, 5);
   this->declare_parameter(kExecutiveUpdateRateMillisParamName, 1000);
-  this->declare_parameter(kExecutivePageSizeParamName, 100);
 
   this->declare_parameter(
       kSkillAddressParamName,
@@ -106,8 +104,6 @@ FlowstateROSBridge::FlowstateROSBridge(const rclcpp::NodeOptions& options)
       this->get_parameter(kSolutionAddressParamName).get_value<std::string>(),
       this->get_parameter(kExecutiveDeadlineParamName).get_value<std::size_t>(),
       this->get_parameter(kExecutiveUpdateRateMillisParamName)
-          .get_value<std::size_t>(),
-      this->get_parameter(kExecutivePageSizeParamName)
           .get_value<std::size_t>());
 
   // Initialize the world client.

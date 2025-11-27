@@ -54,19 +54,20 @@ using GetSkillsResponse = intrinsic_proto::skills::GetSkillsResponse;
 
 static constexpr std::string PROCESS_PARAMS_KEY = "parameters";
 static constexpr std::string RESOURCE_PARAMS_KEY = "resources";
+static constexpr std::size_t kListBehaviorTreesPageSize = 50;
+static constexpr std::size_t kListOperationsPageSize = 100;
 
 ///=============================================================================
 Executive::Executive(const std::string& executive_service_address,
                      const std::string& skill_registry_address,
                      const std::string& solution_service_address,
                      std::size_t deadline_seconds,
-                     std::size_t update_rate_millis, std::size_t page_size)
+                     std::size_t update_rate_millis)
     : executive_service_address_(std::move(executive_service_address)),
       skill_registry_address_(std::move(skill_registry_address)),
       solution_service_address_(std::move(solution_service_address)),
       deadline_seconds_(deadline_seconds),
       update_rate_millis_(update_rate_millis),
-      page_size_(page_size),
       connected_(false),
       current_process_(nullptr) {
   // Do nothing.
@@ -262,11 +263,16 @@ void Executive::clear_and_delete_operations() {
   // First list active operations.
   auto client_context = make_client_context(this->deadline_seconds_);
   google::longrunning::ListOperationsRequest list_request;
-  list_request.set_page_size(page_size_);
-  google::longrunning::ListOperationsResponse list_response;
-  auto status = executive_stub_->ListOperations(
-      client_context.get(), std::move(list_request), &list_response);
-  if (status.ok()) {
+  list_request.set_page_size(kListOperationsPageSize);
+  do {
+    google::longrunning::ListOperationsResponse list_response;
+    const auto status = executive_stub_->ListOperations(
+        client_context.get(), list_request, &list_response);
+
+    if (!status.ok()) {
+      LOG(INFO) << "Error while listing operations.";
+      return;
+    }
     for (const auto& operation : list_response.operations()) {
       // TODO(Yadunund): If we want this bridge to not override
       // all the operations started by users from the frontend, we might
@@ -274,7 +280,9 @@ void Executive::clear_and_delete_operations() {
       // state until completion before clearing.
       delete_operation(operation.name(), executive_stub_, deadline_seconds_);
     }
+    list_request.set_page_token(list_response.next_page_token());
   }
+  while (!list_request.page_token().empty());
 }
 
 ///=============================================================================
@@ -309,16 +317,20 @@ auto Executive::behavior_trees() const
   client_context->set_deadline(std::chrono::system_clock::now() +
                                std::chrono::seconds(deadline_seconds_));
   intrinsic_proto::solution::v1::ListBehaviorTreesRequest request;
-  request.set_page_size(page_size_);
-  intrinsic_proto::solution::v1::ListBehaviorTreesResponse response;
-  INTR_RETURN_IF_ERROR(
-      intrinsic::ToAbslStatus(solution_stub_->ListBehaviorTrees(
-          client_context.get(), request, &response)));
-
+  request.set_page_size(kListBehaviorTreesPageSize);
   std::vector<BehaviorTree> bts = {};
-  for (auto& bt : *response.mutable_behavior_trees()) {
-    bts.emplace_back(std::move(bt));
+  do {
+    intrinsic_proto::solution::v1::ListBehaviorTreesResponse response;
+    INTR_RETURN_IF_ERROR(
+        intrinsic::ToAbslStatus(solution_stub_->ListBehaviorTrees(
+            client_context.get(), request, &response)));
+
+    for (auto& bt : *response.mutable_behavior_trees()) {
+      bts.emplace_back(std::move(bt));
+    }
+    request.set_page_token(response.next_page_token());
   }
+  while (!request.page_token().empty());
   return bts;
 }
 
