@@ -135,16 +135,6 @@ target_link_libraries(intrinsic_sdk_services PUBLIC intrinsic_sdk_protos)
 set_property(TARGET intrinsic_sdk_services PROPERTY POSITION_INDEPENDENT_CODE ON)
 
 # Generate Python code from the protos.
-# add_custom_target(intrinsic_sdk_protos_python ALL DEPENDS ${sdk_protos})
-# protobuf_generate(
-#   TARGET intrinsic_sdk_protos_python
-#   PLUGIN protoc-gen-grpc=$<TARGET_FILE:gRPC::grpc_python_plugin>
-#   LANGUAGE python
-#   PROTOS ${sdk_protos}
-#   IMPORT_DIRS ${sdk_proto_import_dirs}
-#   PROTOC_OUT_DIR ${CMAKE_CURRENT_BINARY_DIR}/protos_gen_py
-#   OUT_VAR sdk_protos_python_sources_maybe_hyphens
-# )
 # Use the protoc from the grpcio-tools Python package to generate _pb2.py and _pb2_grpc.py files.
 set(venv_dir "${CMAKE_CURRENT_BINARY_DIR}/grpc_venv")
 if(NOT EXISTS "${venv_dir}")
@@ -272,17 +262,6 @@ foreach(root_directory ${root_directories})
   endif()
 endforeach()
 list(REMOVE_DUPLICATES python_init_py_files)
-
-# add_custom_target(intrinsic_sdk_protos_python_grpc ALL DEPENDS ${sdk_protos})
-# foreach(sdk_protos_python_source ${sdk_protos_python_sources})
-#   string(REPLACE "_pb2.py" "_pb2_grpc.py" grpc_version "${sdk_protos_python_source}")
-#   add_custom_command(
-#     TARGET intrinsic_sdk_protos_python_grpc POST_BUILD
-#     DEPENDS "${sdk_protos_python_source}" intrinsic_sdk_protos_python
-#     COMMAND ${CMAKE_COMMAND} -E copy "${sdk_protos_python_source}" "${grpc_version}"
-#     COMMENT "Duplicating '${sdk_protos_python_source}' as '${grpc_version}'..."
-#   )
-# endforeach()
 
 # Generated Python code is installed with the Python sdk files later.
 

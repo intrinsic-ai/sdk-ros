@@ -1,35 +1,3 @@
-# set(python_proto_output_dir "${CMAKE_CURRENT_BINARY_DIR}/protos_gen_grpc_tools_py")
-
-# set(python_proto_include_flags "")
-# foreach(sdk_proto_import_dir ${sdk_proto_import_dirs})
-#   list(APPEND python_proto_include_flags "-I${sdk_proto_import_dir}")
-# endforeach()
-# list(REMOVE_DUPLICATES python_proto_include_flags)
-
-# set(python_proto_outputs "")
-# foreach(sdk_proto ${sdk_protos})
-
-# endforeach()
-
-# add_custom_command(
-#   COMMAND python3
-#     -m grpc_tools.protoc
-#     ${python_proto_include_flags}
-#     --python_out="${python_proto_output_dir}"
-#     --pyi_out="${python_proto_output_dir}"
-#     --grpc_python_out="${python_proto_output_dir}"
-#     ${sdk_protos}
-# )
-
-# protobuf_generate(
-#   LANGUAGE python
-#   PROTOS ${sdk_protos}
-#   IMPORT_DIRS ${sdk_proto_import_dirs}
-#   PROTOC_OUT_DIR ${CMAKE_CURRENT_BINARY_DIR}/protos_gen_py2
-#   OUT_VAR sdk_protos_python_sources2
-#   PROTOC_EXE python3 -m grpc_tools.protoc
-# )
-
 # Namespace the googleapis in Python to avoid collision with google.protobuf.
 # This does require some rewriting of python files in the sdk.
 set(python_proto_gen_dir "${CMAKE_CURRENT_BINARY_DIR}/protos_gen_py")
