@@ -11,10 +11,7 @@
 
   <maintainer email="shameek@intrinsic.ai">Shameek Ganguly</maintainer>
 
-  <!-- This package has a custom license -->
-  <license>Intrinsic License</license>
-  <!-- Gazebo packages are licensed under Apache-2.0 -->
-  <license>Apache-2.0</license>
+  <license>Apache-2.0</license>  <!-- Gazebo packages are also licensed under Apache-2.0 -->
 
   <author email="shameek@intrinsic.ai">Shameek Ganguly</author>
 

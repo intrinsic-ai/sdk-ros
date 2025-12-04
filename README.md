@@ -8,7 +8,7 @@ solutions from concept to deployment.
 
 The Intrinsic SDK for ROS is compatible with [ROS 2 Jazzy Jalisco](https://docs.ros.org/en/jazzy/index.html).
 
-In addition to the this [Intrinsic SDK for
+In addition to this [Intrinsic SDK for
 ROS repository](https://github.com/intrinsic-dev/intrinsic_sdk_ros), there are
 also:
  * [ROS-based SDK Examples](https://github.com/intrinsic-dev/sdk_examples_ros)
@@ -41,4 +41,3 @@ As Flowstate and the SDK are in beta, the contents of this repository are
 subject to change.
 Use of this repository requires participation in the beta for Intrinsic
 Flowstate, which is accepting [applications](https://intrinsic.ai/beta).
-Access to this repository is subject to the associated [LICENSE](LICENSE).
