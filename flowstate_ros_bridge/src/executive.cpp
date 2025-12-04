@@ -54,6 +54,8 @@ using GetSkillsResponse = intrinsic_proto::skills::GetSkillsResponse;
 
 static constexpr std::string PROCESS_PARAMS_KEY = "parameters";
 static constexpr std::string RESOURCE_PARAMS_KEY = "resources";
+static constexpr std::size_t kListBehaviorTreesPageSize = 50;
+static constexpr std::size_t kListOperationsPageSize = 100;
 
 ///=============================================================================
 Executive::Executive(const std::string& executive_service_address,
@@ -261,10 +263,16 @@ void Executive::clear_and_delete_operations() {
   // First list active operations.
   auto client_context = make_client_context(this->deadline_seconds_);
   google::longrunning::ListOperationsRequest list_request;
-  google::longrunning::ListOperationsResponse list_response;
-  auto status = executive_stub_->ListOperations(
-      client_context.get(), std::move(list_request), &list_response);
-  if (status.ok()) {
+  list_request.set_page_size(kListOperationsPageSize);
+  do {
+    google::longrunning::ListOperationsResponse list_response;
+    const auto status = executive_stub_->ListOperations(
+        client_context.get(), list_request, &list_response);
+
+    if (!status.ok()) {
+      LOG(INFO) << "Error while listing operations.";
+      return;
+    }
     for (const auto& operation : list_response.operations()) {
       // TODO(Yadunund): If we want this bridge to not override
       // all the operations started by users from the frontend, we might
@@ -272,7 +280,9 @@ void Executive::clear_and_delete_operations() {
       // state until completion before clearing.
       delete_operation(operation.name(), executive_stub_, deadline_seconds_);
     }
+    list_request.set_page_token(list_response.next_page_token());
   }
+  while (!list_request.page_token().empty());
 }
 
 ///=============================================================================
@@ -307,15 +317,20 @@ auto Executive::behavior_trees() const
   client_context->set_deadline(std::chrono::system_clock::now() +
                                std::chrono::seconds(deadline_seconds_));
   intrinsic_proto::solution::v1::ListBehaviorTreesRequest request;
-  intrinsic_proto::solution::v1::ListBehaviorTreesResponse response;
-  INTR_RETURN_IF_ERROR(
-      intrinsic::ToAbslStatus(solution_stub_->ListBehaviorTrees(
-          client_context.get(), request, &response)));
-
+  request.set_page_size(kListBehaviorTreesPageSize);
   std::vector<BehaviorTree> bts = {};
-  for (auto& bt : *response.mutable_behavior_trees()) {
-    bts.emplace_back(std::move(bt));
+  do {
+    intrinsic_proto::solution::v1::ListBehaviorTreesResponse response;
+    INTR_RETURN_IF_ERROR(
+        intrinsic::ToAbslStatus(solution_stub_->ListBehaviorTrees(
+            client_context.get(), request, &response)));
+
+    for (auto& bt : *response.mutable_behavior_trees()) {
+      bts.emplace_back(std::move(bt));
+    }
+    request.set_page_token(response.next_page_token());
   }
+  while (!request.page_token().empty());
   return bts;
 }
 
@@ -337,12 +352,10 @@ auto Executive::ProcessHandle::make(
     std::shared_ptr<ExecutiveService::Stub> executive_stub,
     std::size_t deadline_seconds, google::longrunning::Operation operation,
     ProcessFeedbackCallback feedback_cb, ProcessCompletedCallback completed_cb,
-    std::size_t update_interval_millis)
-    -> ProcessHandlePtr {
-  auto handle = std::shared_ptr<ProcessHandle>(
-      new ProcessHandle(std::move(executive_stub), std::move(deadline_seconds),
-                        std::move(operation), std::move(feedback_cb),
-                        std::move(completed_cb)));
+    std::size_t update_interval_millis) -> ProcessHandlePtr {
+  auto handle = std::shared_ptr<ProcessHandle>(new ProcessHandle(
+      std::move(executive_stub), std::move(deadline_seconds),
+      std::move(operation), std::move(feedback_cb), std::move(completed_cb)));
 
   // Spawn a thread to monitor lifecycle of the process.
   handle->update_thread_ =
@@ -370,9 +383,8 @@ auto Executive::ProcessHandle::make(
                 handle->feedback_cb_(false, absl::UnavailableError(ss.str()));
               }
 
-              handle->feedback_cb_(
-                  handle->current_operation_.done(),
-                  intrinsic::ToAbslStatus(status));
+              handle->feedback_cb_(handle->current_operation_.done(),
+                                   intrinsic::ToAbslStatus(status));
 
               if (handle->current_operation_.done()) {
                 // The operation may be done because it succeeded or errored
@@ -487,10 +499,10 @@ absl::StatusOr<Executive::ProcessHandlePtr> Executive::start(
       start_client_context.get(), std::move(start_request),
       &current_operation)));
 
-  current_process_ = ProcessHandle::make(
-      executive_stub_, deadline_seconds_, std::move(current_operation),
-      std::move(feedback_cb), std::move(completed_cb),
-      this->update_rate_millis_);
+  current_process_ =
+      ProcessHandle::make(executive_stub_, deadline_seconds_,
+                          std::move(current_operation), std::move(feedback_cb),
+                          std::move(completed_cb), this->update_rate_millis_);
 
   return current_process_;
 }
