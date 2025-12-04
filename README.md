@@ -34,10 +34,3 @@ colcon build \
   --cmake-args -DCMAKE_BUILD_TYPE=Release \
   --event-handlers=console_direct
 ```
-
-## Disclaimer
-
-As Flowstate and the SDK are in beta, the contents of this repository are
-subject to change.
-Use of this repository requires participation in the beta for Intrinsic
-Flowstate, which is accepting [applications](https://intrinsic.ai/beta).
