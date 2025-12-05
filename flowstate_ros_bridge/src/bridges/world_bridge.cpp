@@ -1,27 +1,16 @@
 // Copyright 2025 Intrinsic Innovation LLC
 //
-// You are hereby granted a non-exclusive, worldwide, royalty-free license to
-// use, copy, modify, and distribute this Intrinsic SDK in source code or binary
-// form for use in connection with the services and APIs provided by Intrinsic
-// Innovation LLC (“Intrinsic”).
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
 //
-// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-// SOFTWARE.
+//     http://www.apache.org/licenses/LICENSE-2.0
 //
-// If you use this Intrinsic SDK with any Intrinsic services, your use is
-// subject to the Intrinsi Platform Terms of Service
-// [https://intrinsic.ai/platform-terms].  If you create works that call
-// Intrinsic APIs, you must agree to the terms of service for those APIs
-// separately. This license does not grant you any special rights to use the
-// services.
-//
-// This copyright notice shall be included in all copies or substantial portions
-// of the software.
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
 #include "world_bridge.hpp"
 
@@ -191,26 +180,28 @@ absl::Status WorldBridge::Data::SendObjectVisualizationMessages(
               "gltf/%s_%s.glb",
               geometry.geometry_storage_refs().geometry_ref().substr(9),
               geometry.geometry_storage_refs().renderable_ref().substr(9));
-          if (renderables_.contains(std::string("/") + gltf_path)) {
-            continue;
-          }
 
-          const absl::StatusOr<std::string> gltf = world_->GetGltf(
-              geometry.geometry_storage_refs().geometry_ref(),
-              geometry.geometry_storage_refs().renderable_ref());
-          if (!gltf.ok()) {
-            LOG(ERROR) << "Unable to fetch renderable for " << tf_frame_name
-                       << ": " << gltf.status();
-            continue;
-          }
-          total_gltf_size += gltf->size();
-          std::vector<uint8_t> gltf_data;
-          gltf_data.resize(gltf->size());
-          memcpy(&gltf_data[0], gltf->data(), gltf->size());
+          const auto renderable_name = std::string("/") + gltf_path;
+          auto renderables_it = renderables_.find(renderable_name);
 
-          renderables_[std::string("/") + gltf_path] = std::move(gltf_data);
-          LOG(INFO) << "Fetched " << gltf->size() << " bytes for "
-                    << tf_frame_name;
+          if (renderables_it == renderables_.end()) {
+            const absl::StatusOr<std::string> gltf = world_->GetGltf(
+                geometry.geometry_storage_refs().geometry_ref(),
+                geometry.geometry_storage_refs().renderable_ref());
+            if (!gltf.ok()) {
+              LOG(ERROR) << "Unable to fetch renderable for " << tf_frame_name
+                         << ": " << gltf.status();
+              continue;
+            }
+            total_gltf_size += gltf->size();
+            std::vector<uint8_t> gltf_data;
+            gltf_data.resize(gltf->size());
+            memcpy(&gltf_data[0], gltf->data(), gltf->size());
+
+            LOG(INFO) << "Fetched " << gltf->size() << " bytes for "
+                      << tf_frame_name;
+            renderables_it = renderables_.emplace(renderable_name, std::move(gltf_data)).first;
+          }
 
           const absl::StatusOr<intrinsic::eigenmath::MatrixXd> transform_xd =
               intrinsic_proto::FromProto(geometry.ref_t_shape_aff());
@@ -265,7 +256,7 @@ absl::Status WorldBridge::Data::SendObjectVisualizationMessages(
   }
   LOG(INFO) << "Total gltf size: " << total_gltf_size << " bytes";
 
-  if (!array_msg.markers.empty()){
+  if (!array_msg.markers.empty()) {
     workcell_markers_pub_->publish(array_msg);
   }
 

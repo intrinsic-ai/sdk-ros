@@ -11,8 +11,7 @@
 
   <maintainer email="wjwwood@intrinsic.ai">William Woodall</maintainer>
 
-  <!-- This package has a custom license -->
-  <license>Intrinsic License</license>
+  <license>Apache-2.0</license>
   <!-- Pybind11 is BSD-3-Clause -->
   <license>BSD-3-Clause</license>
 
