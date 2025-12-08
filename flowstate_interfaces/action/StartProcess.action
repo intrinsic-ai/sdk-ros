@@ -12,6 +12,13 @@ SimulationMode simulation_mode
 # JSON parameters for the behavior_tree serialized as a string.
 string parameters
 
+# [OPTIONAL] The scene ID to be associated with this operation.
+# This specifies the starting state for the world in which this operation
+# will run. If this value is not set, the operation will run in the world in
+# its current state.
+# Note: To reset to the initial world, set scene_id to "init_world".
+string scene_id
+
 ---
 
 # Response
