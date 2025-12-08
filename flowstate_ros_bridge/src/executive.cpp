@@ -270,8 +270,7 @@ void Executive::clear_and_delete_operations() {
       delete_operation(operation.name(), executive_stub_, deadline_seconds_);
     }
     list_request.set_page_token(list_response.next_page_token());
-  }
-  while (!list_request.page_token().empty());
+  } while (!list_request.page_token().empty());
 }
 
 ///=============================================================================
@@ -318,8 +317,7 @@ auto Executive::behavior_trees() const
       bts.emplace_back(std::move(bt));
     }
     request.set_page_token(response.next_page_token());
-  }
-  while (!request.page_token().empty());
+  } while (!request.page_token().empty());
   return bts;
 }
 

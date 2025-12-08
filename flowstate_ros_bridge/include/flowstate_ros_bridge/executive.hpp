@@ -148,19 +148,18 @@ class Executive : public std::enable_shared_from_this<Executive> {
    * @param scene_id An optional identifier for the scene in which the process
    * is to be started.
    * @return absl::StatusOr<ProcessHandlePtr> A status or a shared pointer to a
-   * `ProcessHandle` if the process was successfully started. The `ProcessHandle`
-   * allows for interaction with the running process (e.g., cancellation, status
-   * checks).
+   * `ProcessHandle` if the process was successfully started. The
+   * `ProcessHandle` allows for interaction with the running process (e.g.,
+   * cancellation, status checks).
    * @error absl::Status An error status if the process could not be started,
    * e.g., due to connection issues, invalid parameters, or service errors.
    */
-  absl::StatusOr<ProcessHandlePtr> start(const BehaviorTree &bt,
-                                         const ExecutionMode &execution_mode,
-                                         const SimulationMode &simulation_mode,
-                                         const nlohmann::json &process_params,
-                                         ProcessFeedbackCallback feedback_cb,
-                                         ProcessCompletedCallback completed_cb,
-                                         const std::optional<std::string> scene_id = std::nullopt);
+  absl::StatusOr<ProcessHandlePtr> start(
+      const BehaviorTree &bt, const ExecutionMode &execution_mode,
+      const SimulationMode &simulation_mode,
+      const nlohmann::json &process_params, ProcessFeedbackCallback feedback_cb,
+      ProcessCompletedCallback completed_cb,
+      const std::optional<std::string> scene_id = std::nullopt);
 
  private:
   mutable std::recursive_mutex mutex_;
