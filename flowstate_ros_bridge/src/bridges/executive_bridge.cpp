@@ -187,6 +187,11 @@ bool ExecutiveBridge::initialize(ROSNodeInterfaces ros_node_interfaces,
             goal_handle->abort(std::move(result));
             return;
           }
+          // Set scene_id if provided.
+          std::optional<std::string> scene_id_opt = std::nullopt;
+          if (!goal->scene_id.empty()) {
+            scene_id_opt = goal->scene_id;
+          }
           // Start the process.
           auto start_result = data_->executive_->start(
               result.value(), execution_mode, simulation_mode,
@@ -209,7 +214,8 @@ bool ExecutiveBridge::initialize(ROSNodeInterfaces ros_node_interfaces,
                 } else {
                   goal_handle->abort(std::move(result));
                 }
-              });
+              },
+              std::move(scene_id_opt));
           if (start_result.ok()) {
             LOG(INFO) << "Process started successfully.";
             data_->process_handle_ = start_result.value();

@@ -200,7 +200,9 @@ absl::Status WorldBridge::Data::SendObjectVisualizationMessages(
 
             LOG(INFO) << "Fetched " << gltf->size() << " bytes for "
                       << tf_frame_name;
-            renderables_it = renderables_.emplace(renderable_name, std::move(gltf_data)).first;
+            renderables_it =
+                renderables_.emplace(renderable_name, std::move(gltf_data))
+                    .first;
           }
 
           const absl::StatusOr<intrinsic::eigenmath::MatrixXd> transform_xd =

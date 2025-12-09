@@ -270,8 +270,7 @@ void Executive::clear_and_delete_operations() {
       delete_operation(operation.name(), executive_stub_, deadline_seconds_);
     }
     list_request.set_page_token(list_response.next_page_token());
-  }
-  while (!list_request.page_token().empty());
+  } while (!list_request.page_token().empty());
 }
 
 ///=============================================================================
@@ -318,8 +317,7 @@ auto Executive::behavior_trees() const
       bts.emplace_back(std::move(bt));
     }
     request.set_page_token(response.next_page_token());
-  }
-  while (!request.page_token().empty());
+  } while (!request.page_token().empty());
   return bts;
 }
 
@@ -441,7 +439,8 @@ absl::StatusOr<Executive::ProcessHandlePtr> Executive::start(
     const BehaviorTree& bt, const ExecutionMode& execution_mode,
     const SimulationMode& simulation_mode, const nlohmann::json& process_params,
     Executive::ProcessFeedbackCallback feedback_cb,
-    Executive::ProcessCompletedCallback completed_cb) {
+    Executive::ProcessCompletedCallback completed_cb,
+    const std::optional<std::string> scene_id) {
   std::lock_guard<std::recursive_mutex> lock(mutex_);
   if (!connected_) {
     return absl::InvalidArgumentError("Not connected to executive service.");
@@ -484,6 +483,9 @@ absl::StatusOr<Executive::ProcessHandlePtr> Executive::start(
   start_request.set_name(current_operation.name());
   start_request.set_execution_mode(execution_mode);
   start_request.set_simulation_mode(simulation_mode);
+  if (scene_id.has_value()) {
+    start_request.set_scene_id(scene_id.value());
+  }
   INTR_RETURN_IF_ERROR(intrinsic::ToAbslStatus(executive_stub_->StartOperation(
       start_client_context.get(), std::move(start_request),
       &current_operation)));
