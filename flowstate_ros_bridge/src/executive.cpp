@@ -301,13 +301,14 @@ auto Executive::behavior_trees() const
     return absl::InvalidArgumentError("Not connected to solution service.");
   }
 
-  auto client_context = std::make_unique<grpc::ClientContext>();
-  client_context->set_deadline(std::chrono::system_clock::now() +
-                               std::chrono::seconds(deadline_seconds_));
   intrinsic_proto::solution::v1::ListBehaviorTreesRequest request;
   request.set_page_size(kListBehaviorTreesPageSize);
   std::vector<BehaviorTree> bts = {};
   do {
+    auto client_context = std::make_unique<grpc::ClientContext>();
+    client_context->set_deadline(std::chrono::system_clock::now() +
+                                 std::chrono::seconds(deadline_seconds_));
+    
     intrinsic_proto::solution::v1::ListBehaviorTreesResponse response;
     INTR_RETURN_IF_ERROR(
         intrinsic::ToAbslStatus(solution_stub_->ListBehaviorTrees(
