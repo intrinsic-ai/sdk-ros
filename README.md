@@ -34,3 +34,21 @@ colcon build \
   --cmake-args -DCMAKE_BUILD_TYPE=Release \
   --event-handlers=console_direct
 ```
+
+### Using the SDK in Python
+
+To use the SDK in Python, you must additionally create a virtualenv and install a few dependencies which are not provided by the SDK, nor are the ones available in Ubuntu's apt new enough.
+
+For example, you could:
+
+```bash
+# Setup the venv and activate it
+python3 -m venv --system-site-packages venv
+source ./venv/bin/activate
+# Install the new dependencies
+# (venv)
+pip install -U grpcio protobuf retrying
+# Test that it is working
+# (venv)
+python3 -c 'from intrinsic.world.python.object_world_client import ObjectWorldClient'
+```
