@@ -8,7 +8,7 @@ solutions from concept to deployment.
 
 The Intrinsic SDK for ROS is compatible with [ROS 2 Jazzy Jalisco](https://docs.ros.org/en/jazzy/index.html).
 
-In addition to the this [Intrinsic SDK for
+In addition to this [Intrinsic SDK for
 ROS repository](https://github.com/intrinsic-dev/intrinsic_sdk_ros), there are
 also:
  * [ROS-based SDK Examples](https://github.com/intrinsic-dev/sdk_examples_ros)
@@ -35,10 +35,20 @@ colcon build \
   --event-handlers=console_direct
 ```
 
-## Disclaimer
+### Using the SDK in Python
 
-As Flowstate and the SDK are in beta, the contents of this repository are
-subject to change.
-Use of this repository requires participation in the beta for Intrinsic
-Flowstate, which is accepting [applications](https://intrinsic.ai/beta).
-Access to this repository is subject to the associated [LICENSE](LICENSE).
+To use the SDK in Python, you must additionally create a virtualenv and install a few dependencies which are not provided by the SDK, nor are the ones available in Ubuntu's apt new enough.
+
+For example, you could:
+
+```bash
+# Setup the venv and activate it
+python3 -m venv --system-site-packages venv
+source ./venv/bin/activate
+# Install the new dependencies
+# (venv)
+pip install -U grpcio protobuf retrying
+# Test that it is working
+# (venv)
+python3 -c 'from intrinsic.world.python.object_world_client import ObjectWorldClient'
+```

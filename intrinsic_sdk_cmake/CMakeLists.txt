@@ -34,6 +34,9 @@ include(cmake/sdk_imw_zenoh.cmake)
 # Build the sdk C++ sources into a library.
 include(cmake/sdk.cmake)
 
+# Collect and install the sdk Python sources.
+include(cmake/sdk_python.cmake)
+
 # Extract tool binaries from bazel build of sdk.
 include(cmake/sdk_tools.cmake)
 
