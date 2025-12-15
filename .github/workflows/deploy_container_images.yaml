@@ -9,7 +9,7 @@ jobs:
   build-test:
     uses: ./.github/workflows/test_container_images.yaml
   push:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04-4core
     needs: [build-test]
     steps:
       - run: echo "The job was automatically triggered by a ${{ github.event_name }} event."

@@ -3,7 +3,7 @@ run-name: ${{ github.actor }}'s changes have triggered a build of the sdk contai
 on: [workflow_call]
 jobs:
   build-container-images:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04-4core
     services:
       # This local container registry is used to temporarily hold intermediate
       # docker images until they can be tested without pushing to the remote
