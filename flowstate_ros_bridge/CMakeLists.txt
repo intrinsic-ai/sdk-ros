@@ -75,6 +75,25 @@ target_link_libraries(world
   ${flowstate_interfaces_TARGETS}
 )
 
+# create shared library for diagnostics.
+add_library(diagnostics SHARED
+  src/diagnostics.cpp
+)
+target_include_directories(diagnostics
+  PUBLIC
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+    $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
+)
+target_link_libraries(diagnostics
+  absl::flags
+  absl::log
+  absl::time
+  absl::strings
+  intrinsic_sdk_cmake::intrinsic_sdk_cmake
+  nlohmann_json::nlohmann_json
+  ${flowstate_interfaces_TARGETS}
+)
+
 ament_export_targets(executive HAS_LIBRARY_TARGET)
 ament_export_dependencies(${dep_pkgs})
 
@@ -86,6 +105,7 @@ target_link_libraries(flowstate_ros_bridge_interface
     rclcpp::rclcpp
     world
     executive
+    diagnostics
 )
 target_include_directories(flowstate_ros_bridge_interface
   INTERFACE
@@ -143,6 +163,7 @@ target_link_libraries(flowstate_ros_bridge_component
   absl::flat_hash_map
   executive
   world
+  diagnostics
   flowstate_ros_bridge_interface
   intrinsic_sdk_cmake::intrinsic_sdk_cmake
   pluginlib::pluginlib
@@ -191,6 +212,7 @@ target_link_libraries(flowstate_ros_bridge_main
 install(TARGETS
   executive
   world
+  diagnostics
   flowstate_ros_bridge_component
   flowstate_ros_bridge_interface
   flowstate_ros_builtin_bridges
