@@ -33,6 +33,8 @@ constexpr const char* kExecutiveDeadlineParamName =
     "executive_deadline_seconds";
 constexpr const char* kExecutiveUpdateRateMillisParamName =
     "executive_update_rate_millis";
+constexpr const char* kDiagnosticsAddressParamName = "diagnostics_service_address";
+constexpr const char* kDiagnosticsDeadlineParamName = "diagnostics_deadline_seconds";
 
 ///=============================================================================
 FlowstateROSBridge::FlowstateROSBridge(const rclcpp::NodeOptions& options)
@@ -65,15 +67,22 @@ FlowstateROSBridge::FlowstateROSBridge(const rclcpp::NodeOptions& options)
           : service_tunnel);
 
   this->declare_parameter(
-      kWorldAddressParamName,
-      service_tunnel.empty() ? "world.app-intrinsic-base.svc.cluster.local:8080"
+      kDiagnosticsAddressParamName,
+      service_tunnel.empty() ? "diagnostics.app-intrinsic-base.svc.cluster.local:8080" // It should be revised
                              : service_tunnel);
+  
+  this->declare_parameter(kDiagnosticsDeadlineParamName, 5);
 
   this->declare_parameter(
       kGeometryAddressParamName,
       service_tunnel.empty()
           ? "geomservice.app-intrinsic-base.svc.cluster.local:8080"
           : service_tunnel);
+
+  this->declare_parameter(
+      kWorldAddressParamName,
+      service_tunnel.empty() ? "world.app-intrinsic-base.svc.cluster.local:8080"
+                             : service_tunnel);
 
   this->declare_parameter(kBridgePluginParamName, std::vector<std::string>{});
 
@@ -100,6 +109,11 @@ FlowstateROSBridge::FlowstateROSBridge(const rclcpp::NodeOptions& options)
       this->pubsub_,
       this->get_parameter(kWorldAddressParamName).get_value<std::string>(),
       this->get_parameter(kGeometryAddressParamName).get_value<std::string>());
+
+  // Initialize the diagnostics client.
+  this->diagnostics_ = std::make_shared<Diagnostics>(
+      this->get_parameter(kDiagnosticsAddressParamName).get_value<std::string>(),
+      this->get_parameter(kDiagnosticsDeadlineParamName).get_value<std::size_t>());
 
   bridge_ids_ = this->get_parameter(kBridgePluginParamName).as_string_array();
 
@@ -131,6 +145,9 @@ auto FlowstateROSBridge::on_configure(
   if (!this->world_->connect().ok()) {
     return CallbackReturn::FAILURE;
   }
+  if (!this->diagnostics_->connect().ok()) {
+    return CallbackReturn::FAILURE;
+  }
 
   return CallbackReturn::SUCCESS;
 }
@@ -142,7 +159,7 @@ auto FlowstateROSBridge::on_activate(
   std::vector<pluginlib::UniquePtr<BridgeInterface>>::iterator iter;
   for (iter = bridges_.begin(); iter != bridges_.end(); ++iter) {
     try {
-      if (!(*iter)->initialize(*this, this->executive_, this->world_)) {
+      if (!(*iter)->initialize(*this, this->executive_, this->world_, this->diagnostics_)) {
         return CallbackReturn::FAILURE;
       }
     } catch (const std::exception& e) {
@@ -167,6 +184,7 @@ auto FlowstateROSBridge::on_cleanup(
   bridges_.clear();
   executive_.reset();
   world_.reset();
+  diagnostics_.reset();
   LOG(INFO) << "Closing PubSub session...";
   pubsub_.reset();
   LOG(INFO) << "Done.";
