@@ -118,6 +118,7 @@ target_include_directories(flowstate_ros_bridge_interface
 add_library(flowstate_ros_builtin_bridges SHARED
   src/bridges/executive_bridge.cpp
   src/bridges/world_bridge.cpp
+  src/bridges/diagnostics_bridge.cpp
 )
 target_include_directories(flowstate_ros_builtin_bridges
   PUBLIC
