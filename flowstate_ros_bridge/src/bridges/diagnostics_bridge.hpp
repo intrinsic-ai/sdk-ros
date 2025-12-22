@@ -17,13 +17,13 @@ class DiagnosticsBridge : public BridgeInterface {
   ~DiagnosticsBridge() override = default;
 
   void declare_ros_parameters(
-      rclcpp_lifecycle::LifecycleNode& node) override;
+      ROSNodeInterfaces ros_node_interfaces) final;
 
   bool initialize(
-      rclcpp_lifecycle::LifecycleNode& node,
-      std::shared_ptr<Executive> /*executive_client*/,
-      std::shared_ptr<World> /*world_client*/,
-      std::shared_ptr<Diagnostics> diagnostics_client) override;
+      ROSNodeInterfaces ros_node_interfaces,
+      std::shared_ptr<Executive> executive_client,
+      std::shared_ptr<World> world_client,
+      std::shared_ptr<Diagnostics> diagnostics_client) final;
 
  private:
   std::shared_ptr<Diagnostics> diagnostics_;
