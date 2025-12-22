@@ -16,6 +16,7 @@ find_package(ament_cmake REQUIRED)
 # other dependencies
 set(dep_pkgs
   absl
+  diagnostic_msgs
   flowstate_interfaces
   std_msgs
   tf2_msgs
@@ -137,6 +138,7 @@ target_link_libraries(flowstate_ros_builtin_bridges
     intrinsic_sdk_cmake::intrinsic_sdk_cmake
     nlohmann_json::nlohmann_json
     pluginlib::pluginlib
+    ${diagnostic_msgs_TARGETS}
     ${std_msgs_TARGETS}
     ${std_srvs_TARGETS}
     ${tf2_msgs_TARGETS}
