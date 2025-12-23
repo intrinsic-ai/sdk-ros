@@ -133,6 +133,7 @@ target_link_libraries(flowstate_ros_builtin_bridges
   PUBLIC
     world
     executive
+    diagnostics
     ${flowstate_interfaces_TARGETS}
     flowstate_ros_bridge_interface
     intrinsic_sdk_cmake::intrinsic_sdk_cmake
