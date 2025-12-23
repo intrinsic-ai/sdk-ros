@@ -70,7 +70,7 @@ FlowstateROSBridge::FlowstateROSBridge(const rclcpp::NodeOptions& options)
       kDiagnosticsAddressParamName,
       service_tunnel.empty() ? "diagnostics.app-intrinsic-base.svc.cluster.local:8080" // It should be revised
                              : service_tunnel);
-  
+
   this->declare_parameter(kDiagnosticsDeadlineParamName, 5);
 
   this->declare_parameter(

@@ -40,7 +40,7 @@ class ExecutiveBridge : public BridgeInterface {
 
   /// Documentation inherited.
   void declare_ros_parameters(ROSNodeInterfaces ros_node_interfaces) final;
-  
+
   /// Documentation inherited.
   bool initialize(ROSNodeInterfaces ros_node_interfaces,
                   std::shared_ptr<Executive> executive_client,
