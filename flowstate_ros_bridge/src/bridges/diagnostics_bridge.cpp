@@ -1,17 +1,11 @@
 #include "diagnostics_bridge.hpp"
 
-#include <chrono>
-#include <memory>
-#include <string>
 #include <vector>
+#include <functional>
 
 #include "diagnostic_msgs/msg/diagnostic_status.hpp"
 #include "diagnostic_msgs/msg/key_value.hpp"
-#include "intrinsic/util/grpc/grpc.h"
-#include "intrinsic/util/status/status_conversion_grpc.h"
 #include "pluginlib/class_list_macros.hpp"
-#include "rclcpp/create_publisher.hpp"
-#include "rclcpp/create_timer.hpp"
 
 PLUGINLIB_EXPORT_CLASS(flowstate_ros_bridge::DiagnosticsBridge,
                        flowstate_ros_bridge::BridgeInterface)

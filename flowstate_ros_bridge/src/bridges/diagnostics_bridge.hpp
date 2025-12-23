@@ -1,13 +1,12 @@
 #ifndef DIAGNOSTICS_BRIDGE_HPP_
 #define DIAGNOSTICS_BRIDGE_HPP_
 
-#include <memory>
+#include <chrono>
 #include <string>
 
 #include "diagnostic_msgs/msg/diagnostic_array.hpp"
 #include "flowstate_ros_bridge/bridge_interface.hpp"
 #include "rclcpp/rclcpp.hpp"
-#include "flowstate_ros_bridge/diagnostics.hpp"
 
 namespace flowstate_ros_bridge {
 
