@@ -15,7 +15,7 @@
 #ifndef FLOWSTATE_ROS_BRIDGE__DIAGNOSTICS_HPP_
 #define FLOWSTATE_ROS_BRIDGE__DIAGNOSTICS_HPP_
 
-#include <memory>
+#include <cstddef>
 #include <string>
 #include <vector>
 

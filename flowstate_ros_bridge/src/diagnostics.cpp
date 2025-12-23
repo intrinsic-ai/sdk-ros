@@ -15,10 +15,8 @@
 #include "flowstate_ros_bridge/diagnostics.hpp"
 
 #include <utility>
-#include <vector>
 
 #include "absl/log/log.h"
-#include "absl/status/status.h"
 #include "intrinsic/util/grpc/grpc.h"
 #include "intrinsic/util/status/status_conversion_grpc.h"
 #include "intrinsic/util/status/status_macros.h"
@@ -38,7 +36,6 @@ absl::Status Diagnostics::connect() {
   }
 
   grpc::ChannelArguments channel_args = intrinsic::DefaultGrpcChannelArgs();
-  // We might eventually need a retry policy here, like in executive (?)
   channel_args.SetMaxReceiveMessageSize(-1);     // no limit
   channel_args.SetMaxSendMessageSize(10000000);  // 10 MB
 
