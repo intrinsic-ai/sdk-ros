@@ -20,6 +20,7 @@
 #include "absl/log/log.h"
 #include "absl/status/status.h"
 #include "intrinsic/util/grpc/grpc.h"
+#include "intrinsic/util/status/status_conversion_grpc.h"
 #include "intrinsic/util/status/status_macros.h"
 
 namespace flowstate_ros_bridge {
@@ -32,14 +33,52 @@ Diagnostics::Diagnostics(const std::string& diagnostics_service_address,
 }
 
 absl::Status Diagnostics::connect() {
-  // TODO(user): Implement connection to diagnostics service.
+  if (connected_) {
+    return absl::OkStatus();
+  }
+
+  grpc::ChannelArguments channel_args = intrinsic::DefaultGrpcChannelArgs();
+  // We might eventually need a retry policy here, like in executive (?)
+  channel_args.SetMaxReceiveMessageSize(-1);     // no limit
+  channel_args.SetMaxSendMessageSize(10000000);  // 10 MB
+
+  LOG(INFO) << "Connecting to diagnostics service at "
+            << diagnostics_service_address_;
+  INTR_ASSIGN_OR_RETURN(
+      std::shared_ptr<grpc::Channel> diagnostics_channel,
+      intrinsic::CreateClientChannel(
+          diagnostics_service_address_,
+          absl::Now() + absl::Seconds(deadline_seconds_), channel_args));
+  INTR_RETURN_IF_ERROR(intrinsic::WaitForChannelConnected(
+      diagnostics_service_address_, diagnostics_channel,
+      absl::Now() + absl::Seconds(deadline_seconds_)));
+  diagnostics_stub_ = SystemServiceState::NewStub(std::move(diagnostics_channel));
+  LOG(INFO) << "Successfully connected to diagnostics service!";
+
+  connected_ = true;
   return absl::OkStatus();
 }
 
 absl::StatusOr<std::vector<intrinsic_proto::services::v1::InstanceState>>
 Diagnostics::get_diagnostics() {
-  // TODO(user): Implement retrieval of diagnostics.
-  return absl::UnimplementedError("get_diagnostics not implemented");
+  if (!connected_ || !diagnostics_stub_) {
+    return absl::FailedPreconditionError(
+        "Not connected to the diagnostics service.");
+  }
+
+  auto client_context = std::make_unique<grpc::ClientContext>();
+  client_context->set_deadline(std::chrono::system_clock::now() +
+                               std::chrono::seconds(deadline_seconds_));
+
+  intrinsic_proto::services::v1::ListInstanceStatesRequest request;
+  intrinsic_proto::services::v1::ListInstanceStatesResponse response;
+
+  INTR_RETURN_IF_ERROR(intrinsic::ToAbslStatus(
+      diagnostics_stub_->ListInstanceStates(client_context.get(), request,
+                                            &response)));
+
+  return std::vector<intrinsic_proto::services::v1::InstanceState>(
+      response.states().begin(), response.states().end());
 }
 
 
