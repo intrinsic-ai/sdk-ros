@@ -32,6 +32,9 @@ class DiagnosticsBridge : public BridgeInterface {
   rclcpp::Publisher<diagnostic_msgs::msg::DiagnosticArray>::SharedPtr
       diagnostics_pub_;
 
+  // Logger.
+  rclcpp::Logger logger_{rclcpp::get_logger("DiagnosticsBridge")};
+
   // ROS timer to periodically poll for diagnostics.
   rclcpp::TimerBase::SharedPtr timer_;
 

@@ -13,7 +13,6 @@
 #include "rclcpp/create_publisher.hpp"
 #include "rclcpp/create_timer.hpp"
 
-// This is the magic macro that registers this class with pluginlib.
 PLUGINLIB_EXPORT_CLASS(flowstate_ros_bridge::DiagnosticsBridge,
                        flowstate_ros_bridge::BridgeInterface)
 
@@ -38,7 +37,8 @@ bool DiagnosticsBridge::initialize(
     std::shared_ptr<World> /*world_client*/,
     std::shared_ptr<Diagnostics> diagnostics_client) {
   diagnostics_ = diagnostics_client;
-  // Get parameters.
+  logger_ =
+      ros_node_interfaces.get<rclcpp::node_interfaces::NodeLoggingInterface>()->get_logger();
   const double update_rate_hz =
       ros_node_interfaces.get<rclcpp::node_interfaces::NodeParametersInterface>()->get_parameter(kDiagnosticsUpdateRateParamName).as_double();
   update_period_ =
@@ -53,9 +53,6 @@ bool DiagnosticsBridge::initialize(
       "/diagnostics", rclcpp::SystemDefaultsQoS());
 
   // Create the ROS timer to trigger updates.
-  // The call to create_wall_timer on the interface is failing to compile.
-  // Using the free function `rclcpp::create_timer` is a more robust
-  // alternative that should resolve this.
   timer_ = rclcpp::create_timer(
       ros_node_interfaces.get<rclcpp::node_interfaces::NodeBaseInterface>(),
       ros_node_interfaces.get<rclcpp::node_interfaces::NodeTimersInterface>(),
@@ -75,8 +72,7 @@ void DiagnosticsBridge::update_diagnostics() {
       response_or = diagnostics_->get_diagnostics();
 
   if (!response_or.ok()) {
-    RCLCPP_WARN(rclcpp::get_logger("DiagnosticsBridge"),
-                "Failed to get instance states: %s",
+    RCLCPP_WARN(logger_, "Failed to get instance states: %s",
                 response_or.status().ToString().c_str());
     return;
   }
@@ -102,7 +98,8 @@ void DiagnosticsBridge::update_diagnostics() {
     if (instance_state.state().has_extended_status()) {
       status_msg.message = instance_state.state().extended_status().DebugString();
     } else {
-      status_msg.message = "OK";
+      status_msg.message = intrinsic_proto::services::v1::State::StateCode_Name(
+          instance_state.state().state_code());
     }
 
     diag_array_msg->status.push_back(status_msg);
@@ -117,8 +114,6 @@ int8_t DiagnosticsBridge::to_diagnostic_level(
   using DiagLevel = diagnostic_msgs::msg::DiagnosticStatus;
   using State = intrinsic_proto::services::v1::State;
 
-  // The C++ values for nested protobuf enums are scoped within the parent
-  // message's generated class.
   if (state_code == State::STATE_CODE_ENABLED) {
     return DiagLevel::OK;
   } else if (state_code == State::STATE_CODE_DISABLED ||
