@@ -28,6 +28,7 @@
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
 #include "absl/synchronization/notification.h"
+#include "intrinsic/connect/cc/grpc/channel.h"
 #include "intrinsic/executive/proto/run_metadata.pb.h"
 #include "intrinsic/skills/proto/skills.pb.h"
 #include "intrinsic/util/grpc/grpc.h"
@@ -70,7 +71,7 @@ absl::Status Executive::connect() {
 
   std::lock_guard<std::recursive_mutex> lock(mutex_);
 
-  grpc::ChannelArguments channel_args = intrinsic::DefaultGrpcChannelArgs();
+  grpc::ChannelArguments channel_args = intrinsic::connect::DefaultGrpcChannelArgs();
   // The skill registry may need to call out to one or more skill information
   // services. Those services might not be ready at startup. We configure a
   // retry policy to mitigate b/283020857.
@@ -100,10 +101,10 @@ absl::Status Executive::connect() {
             << executive_service_address_;
   INTR_ASSIGN_OR_RETURN(
       std::shared_ptr<grpc::Channel> executive_channel,
-      intrinsic::CreateClientChannel(
+      intrinsic::connect::CreateClientChannel(
           executive_service_address_,
           absl::Now() + absl::Seconds(deadline_seconds_), channel_args));
-  INTR_RETURN_IF_ERROR(intrinsic::WaitForChannelConnected(
+  INTR_RETURN_IF_ERROR(intrinsic::connect::WaitForChannelConnected(
       executive_service_address_, executive_channel,
       absl::Now() + absl::Seconds(deadline_seconds_)));
   executive_stub_ = ExecutiveService::NewStub(std::move(executive_channel));
@@ -114,10 +115,10 @@ absl::Status Executive::connect() {
             << solution_service_address_;
   INTR_ASSIGN_OR_RETURN(
       std::shared_ptr<grpc::Channel> solution_channel,
-      intrinsic::CreateClientChannel(
+      intrinsic::connect::CreateClientChannel(
           solution_service_address_,
           absl::Now() + absl::Seconds(deadline_seconds_), channel_args));
-  INTR_RETURN_IF_ERROR(intrinsic::WaitForChannelConnected(
+  INTR_RETURN_IF_ERROR(intrinsic::connect::WaitForChannelConnected(
       solution_service_address_, solution_channel,
       absl::Now() + absl::Seconds(deadline_seconds_)));
   solution_stub_ = SolutionService::NewStub(std::move(solution_channel));
@@ -128,10 +129,10 @@ absl::Status Executive::connect() {
             << skill_registry_address_;
   INTR_ASSIGN_OR_RETURN(
       std::shared_ptr<grpc::Channel> skill_channel,
-      intrinsic::CreateClientChannel(
+      intrinsic::connect::CreateClientChannel(
           skill_registry_address_,
           absl::Now() + absl::Seconds(deadline_seconds_), channel_args));
-  INTR_RETURN_IF_ERROR(intrinsic::WaitForChannelConnected(
+  INTR_RETURN_IF_ERROR(intrinsic::connect::WaitForChannelConnected(
       skill_registry_address_, skill_channel,
       absl::Now() + absl::Seconds(deadline_seconds_)));
   skill_registry_stub_ = SkillRegistry::NewStub(std::move(skill_channel));
