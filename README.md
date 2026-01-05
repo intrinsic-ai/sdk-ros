@@ -28,7 +28,7 @@ git clone https://github.com/intrinsic-ai/sdk-ros.git
 Source ROS and build the SDK.
 
 ```bash
-source /opt/ros/jazzy.setup.bash
+source /opt/ros/jazzy/setup.bash
 cd ~/intrinsic_ws/
 colcon build \
   --cmake-args -DCMAKE_BUILD_TYPE=Release \
