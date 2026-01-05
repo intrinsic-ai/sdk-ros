@@ -19,6 +19,7 @@
 #include "absl/container/flat_hash_set.h"
 #include "absl/log/log.h"
 #include "absl/status/status.h"
+#include "intrinsic/connect/cc/grpc/channel.h"
 #include "intrinsic/geometry/proto/geometry_service.grpc.pb.h"
 #include "intrinsic/util/grpc/grpc.h"
 #include "intrinsic/util/status/status_conversion_grpc.h"
@@ -54,7 +55,7 @@ absl::Status World::connect() {
     return absl::OkStatus();
   }
 
-  grpc::ChannelArguments channel_args = intrinsic::DefaultGrpcChannelArgs();
+  grpc::ChannelArguments channel_args = intrinsic::connect::DefaultGrpcChannelArgs();
   // We might eventually need a retry policy here, like in executive (?)
   // Some of the meshes that we'll receive in the geometry client are large,
   // like a few 10's of MB.
@@ -64,10 +65,10 @@ absl::Status World::connect() {
   LOG(INFO) << "Connecting to world service at " << world_service_address_;
   INTR_ASSIGN_OR_RETURN(
       std::shared_ptr<grpc::Channel> world_channel,
-      intrinsic::CreateClientChannel(
+      intrinsic::connect::CreateClientChannel(
           world_service_address_,
           absl::Now() + absl::Seconds(deadline_seconds_), channel_args));
-  INTR_RETURN_IF_ERROR(intrinsic::WaitForChannelConnected(
+  INTR_RETURN_IF_ERROR(intrinsic::connect::WaitForChannelConnected(
       world_service_address_, world_channel,
       absl::Now() + absl::Seconds(deadline_seconds_)));
   std::shared_ptr<ObjectWorldService::StubInterface> object_world_stub =
@@ -80,10 +81,10 @@ absl::Status World::connect() {
             << geometry_service_address_;
   INTR_ASSIGN_OR_RETURN(
       std::shared_ptr<grpc::Channel> geometry_channel,
-      intrinsic::CreateClientChannel(
+      intrinsic::connect::CreateClientChannel(
           geometry_service_address_,
           absl::Now() + absl::Seconds(deadline_seconds_), channel_args));
-  INTR_RETURN_IF_ERROR(intrinsic::WaitForChannelConnected(
+  INTR_RETURN_IF_ERROR(intrinsic::connect::WaitForChannelConnected(
       geometry_service_address_, geometry_channel,
       absl::Now() + absl::Seconds(deadline_seconds_)));
   geometry_stub_ = GeometryService::NewStub(std::move(geometry_channel));
@@ -130,9 +131,9 @@ absl::StatusOr<std::vector<intrinsic::world::WorldObject>> World::GetObjects(
 absl::StatusOr<std::string> World::GetGltf(const std::string& geometry_ref,
                                            const std::string& renderable_ref) {
   intrinsic_proto::geometry::GetRenderableRequest request;
-  *(request.mutable_geometry_storage_refs()->mutable_geometry_ref()) =
+  *(request.mutable_geometry_storage_refs_v0()->mutable_geometry_ref()) =
       geometry_ref;
-  *(request.mutable_geometry_storage_refs()->mutable_renderable_ref()) =
+  *(request.mutable_geometry_storage_refs_v0()->mutable_renderable_ref()) =
       renderable_ref;
 
   auto client_context = std::make_unique<grpc::ClientContext>();
@@ -144,7 +145,7 @@ absl::StatusOr<std::string> World::GetGltf(const std::string& geometry_ref,
   INTR_RETURN_IF_ERROR(intrinsic::ToAbslStatus(
       geometry_stub_->GetRenderable(client_context.get(), request, &response)));
 
-  return response.renderable().gltf_string();
+  return response.renderable_v0().gltf_string();
 }
 
 }  // namespace flowstate_ros_bridge

@@ -32,7 +32,7 @@ source /opt/ros/jazzy/setup.bash
 cd ~/intrinsic_ws/
 colcon build \
   --cmake-args -DCMAKE_BUILD_TYPE=Release \
-  --event-handlers=console_direct
+  --event-handlers=console_direct+
 ```
 
 ### Using the SDK in Python
