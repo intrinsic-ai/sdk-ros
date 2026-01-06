@@ -17,6 +17,7 @@
 #include <utility>
 
 #include "absl/log/log.h"
+#include "intrinsic/connect/cc/grpc/channel.h"
 #include "intrinsic/util/grpc/grpc.h"
 #include "intrinsic/util/status/status_conversion_grpc.h"
 #include "intrinsic/util/status/status_macros.h"
