@@ -35,18 +35,19 @@ absl::Status Diagnostics::connect() {
     return absl::OkStatus();
   }
 
-  grpc::ChannelArguments channel_args = intrinsic::DefaultGrpcChannelArgs();
+  grpc::ChannelArguments channel_args =
+      intrinsic::connect::DefaultGrpcChannelArgs();
   channel_args.SetMaxReceiveMessageSize(-1);     // no limit
   channel_args.SetMaxSendMessageSize(10000000);  // 10 MB
 
   LOG(INFO) << "Connecting to diagnostics service at "
             << diagnostics_service_address_;
-  INTR_ASSIGN_OR_RETURN(
-      std::shared_ptr<grpc::Channel> diagnostics_channel,
-      intrinsic::CreateClientChannel(
-          diagnostics_service_address_,
-          absl::Now() + absl::Seconds(deadline_seconds_), channel_args));
-  INTR_RETURN_IF_ERROR(intrinsic::WaitForChannelConnected(
+  INTR_ASSIGN_OR_RETURN(std::shared_ptr<grpc::Channel> diagnostics_channel,
+                        intrinsic::connect::CreateClientChannel(
+                            diagnostics_service_address_,
+                            absl::Now() + absl::Seconds(deadline_seconds_),
+                            channel_args));
+  INTR_RETURN_IF_ERROR(intrinsic::connect::WaitForChannelConnected(
       diagnostics_service_address_, diagnostics_channel,
       absl::Now() + absl::Seconds(deadline_seconds_)));
   diagnostics_stub_ = SystemServiceState::NewStub(std::move(diagnostics_channel));
