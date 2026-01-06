@@ -53,7 +53,7 @@ pip install -U grpcio protobuf retrying
 python3 -c 'from intrinsic.world.python.object_world_client import ObjectWorldClient'
 ```
 
-## Building the flowstate_ros_bridge and uploading it to FlowState
+## Building the flowstate_ros_bridge bundle
 
 Similar to how a Flowstate service that uses ROS is built, a couple of scripts are provided to build and bundle the flowstate_ros_bridge. The following steps will assume the `sdk-ros` repository is in the `src` folder of your workspace.
 
