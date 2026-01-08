@@ -47,7 +47,8 @@ class WorldBridge : public BridgeInterface {
   /// Documentation inherited.
   bool initialize(ROSNodeInterfaces ros_node_interfaces,
                   std::shared_ptr<Executive> executive_client,
-                  std::shared_ptr<World> world_client) final;
+                  std::shared_ptr<World> world_client,
+                  std::shared_ptr<Diagnostics> diagnostics_client) final;
 
  private:
   void TfCallback(const intrinsic_proto::TFMessage&);

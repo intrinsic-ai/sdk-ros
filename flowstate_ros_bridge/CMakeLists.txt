@@ -16,6 +16,7 @@ find_package(ament_cmake REQUIRED)
 # other dependencies
 set(dep_pkgs
   absl
+  diagnostic_msgs
   flowstate_interfaces
   std_msgs
   tf2_msgs
@@ -75,6 +76,25 @@ target_link_libraries(world
   ${flowstate_interfaces_TARGETS}
 )
 
+# create shared library for diagnostics.
+add_library(diagnostics SHARED
+  src/diagnostics.cpp
+)
+target_include_directories(diagnostics
+  PUBLIC
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+    $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
+)
+target_link_libraries(diagnostics
+  absl::flags
+  absl::log
+  absl::time
+  absl::strings
+  intrinsic_sdk_cmake::intrinsic_sdk_cmake
+  nlohmann_json::nlohmann_json
+  ${flowstate_interfaces_TARGETS}
+)
+
 ament_export_targets(executive HAS_LIBRARY_TARGET)
 ament_export_dependencies(${dep_pkgs})
 
@@ -86,6 +106,7 @@ target_link_libraries(flowstate_ros_bridge_interface
     rclcpp::rclcpp
     world
     executive
+    diagnostics
 )
 target_include_directories(flowstate_ros_bridge_interface
   INTERFACE
@@ -98,6 +119,7 @@ target_include_directories(flowstate_ros_bridge_interface
 add_library(flowstate_ros_builtin_bridges SHARED
   src/bridges/executive_bridge.cpp
   src/bridges/world_bridge.cpp
+  src/bridges/diagnostics_bridge.cpp
 )
 target_include_directories(flowstate_ros_builtin_bridges
   PUBLIC
@@ -111,11 +133,13 @@ target_link_libraries(flowstate_ros_builtin_bridges
   PUBLIC
     world
     executive
+    diagnostics
     ${flowstate_interfaces_TARGETS}
     flowstate_ros_bridge_interface
     intrinsic_sdk_cmake::intrinsic_sdk_cmake
     nlohmann_json::nlohmann_json
     pluginlib::pluginlib
+    ${diagnostic_msgs_TARGETS}
     ${std_msgs_TARGETS}
     ${std_srvs_TARGETS}
     ${tf2_msgs_TARGETS}
@@ -143,6 +167,7 @@ target_link_libraries(flowstate_ros_bridge_component
   absl::flat_hash_map
   executive
   world
+  diagnostics
   flowstate_ros_bridge_interface
   intrinsic_sdk_cmake::intrinsic_sdk_cmake
   pluginlib::pluginlib
@@ -191,6 +216,7 @@ target_link_libraries(flowstate_ros_bridge_main
 install(TARGETS
   executive
   world
+  diagnostics
   flowstate_ros_bridge_component
   flowstate_ros_bridge_interface
   flowstate_ros_builtin_bridges
