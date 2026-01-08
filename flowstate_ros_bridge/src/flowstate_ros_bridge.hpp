@@ -22,6 +22,7 @@
 #include "flowstate_ros_bridge/bridge_interface.hpp"
 #include "flowstate_ros_bridge/executive.hpp"
 #include "flowstate_ros_bridge/world.hpp"
+#include "flowstate_ros_bridge/diagnostics.hpp"
 #include "intrinsic/platform/pubsub/pubsub.h"
 #include "intrinsic/platform/pubsub/zenoh_publisher_data.h"
 #include "pluginlib/class_loader.hpp"
@@ -54,6 +55,7 @@ class FlowstateROSBridge : public rclcpp_lifecycle::LifecycleNode {
   std::vector<pluginlib::UniquePtr<BridgeInterface>> bridges_;
   std::shared_ptr<Executive> executive_;
   std::shared_ptr<World> world_;
+  std::shared_ptr<Diagnostics> diagnostics_;
   std::shared_ptr<intrinsic::PubSub> pubsub_;
   std::vector<std::string> bridge_ids_;
 };

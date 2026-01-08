@@ -21,6 +21,7 @@
 #include "rclcpp/node_interfaces/node_interfaces.hpp"
 #include "rclcpp/rclcpp.hpp"
 #include "world.hpp"
+#include "diagnostics.hpp"
 
 namespace flowstate_ros_bridge {
 
@@ -43,9 +44,12 @@ class BridgeInterface {
   /// @brief Initialize the Bridge.
   /// @param ros_node_interfaces ROS node interfaces.
   /// @param executive_client A client to the Flowstate Executive service.
+  /// @param world_client A client to the Flowstate World service.
+  /// @param diagnostics_client A client to the Flowstate Diagnostics service.
   virtual bool initialize(ROSNodeInterfaces ros_node_interfaces,
                           std::shared_ptr<Executive> executive_client,
-                          std::shared_ptr<World> world_client) = 0;
+                          std::shared_ptr<World> world_client,
+                          std::shared_ptr<Diagnostics> diagnostics_client) = 0;
 
   /// @brief Virtual destructor.
   virtual ~BridgeInterface() = default;
