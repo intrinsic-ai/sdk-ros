@@ -42,12 +42,10 @@ class ExecutiveBridge : public BridgeInterface {
   void declare_ros_parameters(ROSNodeInterfaces ros_node_interfaces) final;
 
   /// Documentation inherited.
-  bool initialize(ROSNodeInterfaces ros_node_interfaces,
-                  std::shared_ptr<Executive> executive_client,
-                  std::shared_ptr<World> world_client,
-                  std::shared_ptr<Diagnostics> diagnostics_client) final;
+  bool initialize(ROSNodeInterfaces ros_node_interfaces, std::shared_ptr<Executive> executive_client,
+                  std::shared_ptr<World> world_client) final;
 
- private:
+private:
   struct Data : public std::enable_shared_from_this<Data> {
     ROSNodeInterfaces node_interfaces_;
     std::thread task_thread_;

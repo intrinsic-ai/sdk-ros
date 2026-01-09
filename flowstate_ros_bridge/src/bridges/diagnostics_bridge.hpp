@@ -18,13 +18,10 @@ class DiagnosticsBridge : public BridgeInterface {
   void declare_ros_parameters(
       ROSNodeInterfaces ros_node_interfaces) final;
 
-  bool initialize(
-      ROSNodeInterfaces ros_node_interfaces,
-      std::shared_ptr<Executive> executive_client,
-      std::shared_ptr<World> world_client,
-      std::shared_ptr<Diagnostics> diagnostics_client) final;
+  bool initialize(ROSNodeInterfaces ros_node_interfaces, std::shared_ptr<Executive> executive_client,
+                  std::shared_ptr<World> world_client) final;
 
- private:
+private:
   std::shared_ptr<Diagnostics> diagnostics_;
 
   // ROS publisher for the diagnostics messages.
