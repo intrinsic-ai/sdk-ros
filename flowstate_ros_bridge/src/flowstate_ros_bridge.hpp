@@ -22,6 +22,7 @@
 #include "flowstate_ros_bridge/bridge_interface.hpp"
 #include "flowstate_ros_bridge/executive.hpp"
 #include "flowstate_ros_bridge/world.hpp"
+#include "flowstate_ros_bridge/diagnostics.hpp"
 #include "intrinsic/platform/pubsub/pubsub.h"
 #include "intrinsic/platform/pubsub/zenoh_publisher_data.h"
 #include "pluginlib/class_loader.hpp"
