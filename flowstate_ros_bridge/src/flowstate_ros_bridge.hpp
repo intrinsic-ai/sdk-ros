@@ -55,7 +55,6 @@ class FlowstateROSBridge : public rclcpp_lifecycle::LifecycleNode {
   std::vector<pluginlib::UniquePtr<BridgeInterface>> bridges_;
   std::shared_ptr<Executive> executive_;
   std::shared_ptr<World> world_;
-  std::shared_ptr<Diagnostics> diagnostics_;
   std::shared_ptr<intrinsic::PubSub> pubsub_;
   std::vector<std::string> bridge_ids_;
 };

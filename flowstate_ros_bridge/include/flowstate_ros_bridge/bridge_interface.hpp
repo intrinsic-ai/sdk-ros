@@ -45,11 +45,8 @@ class BridgeInterface {
   /// @param ros_node_interfaces ROS node interfaces.
   /// @param executive_client A client to the Flowstate Executive service.
   /// @param world_client A client to the Flowstate World service.
-  /// @param diagnostics_client A client to the Flowstate Diagnostics service.
-  virtual bool initialize(ROSNodeInterfaces ros_node_interfaces,
-                          std::shared_ptr<Executive> executive_client,
-                          std::shared_ptr<World> world_client,
-                          std::shared_ptr<Diagnostics> diagnostics_client) = 0;
+  virtual bool initialize(ROSNodeInterfaces ros_node_interfaces, std::shared_ptr<Executive> executive_client,
+                          std::shared_ptr<World> world_client) = 0;
 
   /// @brief Virtual destructor.
   virtual ~BridgeInterface() = default;
