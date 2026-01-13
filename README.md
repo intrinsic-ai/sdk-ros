@@ -52,3 +52,7 @@ pip install -U grpcio protobuf retrying
 # (venv)
 python3 -c 'from intrinsic.world.python.object_world_client import ObjectWorldClient'
 ```
+
+## Building and packaging the flowstate_ros_bridge
+
+See [Building the flowstate_ros_bridge bundle](flowstate_ros_bridge/README.md) for more details on how to build and package the bridge.

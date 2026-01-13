@@ -19,6 +19,8 @@ ADD src/sdk-ros /opt/ros/underlay/src/sdk-ros
 
 RUN . /opt/ros/jazzy/setup.sh \
     && apt-get update \
+    && rosdep update \
+    && rosdep install --from-paths src --ignore-src -r -y \
     && apt install -y ros-jazzy-ament-cmake-vendor-package \
     && colcon build \
         --continue-on-error \
