@@ -25,10 +25,9 @@ void DiagnosticsBridge::declare_ros_parameters(
 
   param_interface->declare_parameter(kDiagnosticsUpdateRateParamName, rclcpp::ParameterValue(1.0));
 
-  // TODO: Diagnostics address needs to be confirmed
-  param_interface->declare_parameter(kDiagnosticsAddressParamName, rclcpp::ParameterValue("diagnostics.app-intrinsic-"
-                                                                                          "base.svc.cluster.local:"
-                                                                                          "8080"));
+  param_interface->declare_parameter(kDiagnosticsAddressParamName, rclcpp::ParameterValue("istio-ingressgateway.app-"
+                                                                                          "ingress.svc.cluster.local:"
+                                                                                          "80"));
 
   param_interface->declare_parameter(kDiagnosticsDeadlineParamName, rclcpp::ParameterValue(5));
 }
