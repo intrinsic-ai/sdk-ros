@@ -2,6 +2,10 @@ name: Build and Test Container Images
 run-name: ${{ github.actor }}'s changes have triggered a build, test, and push of the sdk container images.
 on:
   workflow_call:
+    outputs:
+      intrinsic_ai_sdk_version:
+        description: "The intrinsic-ai/sdk version being used"
+        value: ${{ jobs.test-container-images.outputs.intrinsic_ai_sdk_version }}
   pull_request:
     types: [opened, reopened, synchronize, edited]
 jobs:
@@ -11,7 +15,7 @@ jobs:
     runs-on: ubuntu-24.04-8core
     needs: [build-container-images]
     outputs:
-      intrinsic_ai_sdk_version: ${{ needs.build-container-images.build-container-images.outputs.intrinsic_ai_sdk_version }}
+      intrinsic_ai_sdk_version: ${{ needs.build-container-images.outputs.intrinsic_ai_sdk_version }}
     steps:
       - run: echo "The job was automatically triggered by a ${{ github.event_name }} event."
       - run: echo "This job is now running on a ${{ runner.os }} server."
@@ -23,7 +27,7 @@ jobs:
 
       # Extract the intrinsic sdk version being used.
       - name: Get intrinsic-ai/sdk Version
-        run: echo "INTRINSIC_AI_SDK_VERSION=${{ needs.build-container-images.build-container-images.outputs.intrinsic_ai_sdk_version }}" >> $GITHUB_ENV
+        run: echo "INTRINSIC_AI_SDK_VERSION=${{ needs.build-container-images.outputs.intrinsic_ai_sdk_version }}" >> $GITHUB_ENV
       - run: echo "The Intrinsic SDK version being used is ${{ env.INTRINSIC_AI_SDK_VERSION }}"
 
       # Download images from build workflow and load them into the local docker for testing.
