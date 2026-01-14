@@ -1,10 +1,17 @@
 name: Deploy the Container Images
 run-name: ${{ github.actor }}'s changes have triggered a deploy of the container images.
 on:
+  # Deploy can happen on demand, with workflow_dispatch, or...
   workflow_dispatch:
+  # Whenever code is pushed to the main branch.
   push:
     branches:
       - main
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  # Cancel all but the latest run of this workflow, because only the latest run of this
+  # workflow matters, as it overwrites the latest tag of the container images.
+  cancel-in-progress: true
 jobs:
   build-test:
     uses: ./.github/workflows/test_container_images.yaml
