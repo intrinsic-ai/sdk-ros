@@ -29,59 +29,59 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      # # Download images from build workflow and load them into the local docker for tagging and pushing.
-      # - name: Download intrinsic_sdk_cmake_base container image
-      #   uses: actions/download-artifact@v4
-      #   with:
-      #     name: intrinsic_sdk_cmake_base_image
-      #     path: ${{ runner.temp }}
-      # - name: Load intrinsic_sdk_cmake_base container image into docker
-      #   run: docker load --input ${{ runner.temp }}/intrinsic_sdk_cmake_base.tar
-      # - name: Download intrinsic_sdk_cmake container image
-      #   uses: actions/download-artifact@v4
-      #   with:
-      #     name: intrinsic_sdk_cmake_image
-      #     path: ${{ runner.temp }}
-      # - name: Load intrinsic_sdk_cmake container image into docker
-      #   run: docker load --input ${{ runner.temp }}/intrinsic_sdk_cmake.tar
-      # - name: Download intrinsic_sdk_cmake_run container image
-      #   uses: actions/download-artifact@v4
-      #   with:
-      #     name: intrinsic_sdk_cmake_run_image
-      #     path: ${{ runner.temp }}
-      # - name: Load intrinsic_sdk_cmake_run container image into docker
-      #   run: docker load --input ${{ runner.temp }}/intrinsic_sdk_cmake_run.tar
+      # Download images from build workflow and load them into the local docker for tagging and pushing.
+      - name: Download intrinsic_sdk_cmake_base container image
+        uses: actions/download-artifact@v4
+        with:
+          name: intrinsic_sdk_cmake_base_image
+          path: ${{ runner.temp }}
+      - name: Load intrinsic_sdk_cmake_base container image into docker
+        run: docker load --input ${{ runner.temp }}/intrinsic_sdk_cmake_base.tar
+      - name: Download intrinsic_sdk_cmake container image
+        uses: actions/download-artifact@v4
+        with:
+          name: intrinsic_sdk_cmake_image
+          path: ${{ runner.temp }}
+      - name: Load intrinsic_sdk_cmake container image into docker
+        run: docker load --input ${{ runner.temp }}/intrinsic_sdk_cmake.tar
+      - name: Download intrinsic_sdk_cmake_run container image
+        uses: actions/download-artifact@v4
+        with:
+          name: intrinsic_sdk_cmake_run_image
+          path: ${{ runner.temp }}
+      - name: Load intrinsic_sdk_cmake_run container image into docker
+        run: docker load --input ${{ runner.temp }}/intrinsic_sdk_cmake_run.tar
 
-      # # Tag the images and deploy them.
-      # - name: Tag intrinsic_sdk_cmake_base Container Image
-      #   run: |
-      #     docker image tag \
-      #       host.docker.internal/intrinsic_sdk_cmake_base:temp \
-      #       ghcr.io/intrinsic-ai/intrinsic_sdk_cmake_base:${{ needs.build-test.outputs.intrinsic_ai_sdk_version }}
-      #     docker image tag \
-      #       host.docker.internal/intrinsic_sdk_cmake_base:temp \
-      #       ghcr.io/intrinsic-ai/intrinsic_sdk_cmake_base:latest
-      #     docker push ghcr.io/intrinsic-ai/intrinsic_sdk_cmake_base:${{ needs.build-test.outputs.intrinsic_ai_sdk_version }}
-      #     docker push ghcr.io/intrinsic-ai/intrinsic_sdk_cmake_base:latest
-      # - name: Tag intrinsic_sdk_cmake Container Image
-      #   run: |
-      #     docker image tag \
-      #       host.docker.internal/intrinsic_sdk_cmake:temp \
-      #       ghcr.io/intrinsic-ai/intrinsic_sdk_cmake:${{ needs.build-test.outputs.intrinsic_ai_sdk_version }}
-      #     docker image tag \
-      #       host.docker.internal/intrinsic_sdk_cmake:temp \
-      #       ghcr.io/intrinsic-ai/intrinsic_sdk_cmake:latest
-      #     docker push ghcr.io/intrinsic-ai/intrinsic_sdk_cmake:${{ needs.build-test.outputs.intrinsic_ai_sdk_version }}
-      #     docker push ghcr.io/intrinsic-ai/intrinsic_sdk_cmake:latest
-      # - name: Tag intrinsic_sdk_cmake_run Container Image
-      #   run: |
-      #     docker image tag \
-      #       host.docker.internal/intrinsic_sdk_cmake_run:temp \
-      #       ghcr.io/intrinsic-ai/intrinsic_sdk_cmake_run:${{ needs.build-test.outputs.intrinsic_ai_sdk_version }}
-      #     docker image tag \
-      #       host.docker.internal/intrinsic_sdk_cmake_run:temp \
-      #       ghcr.io/intrinsic-ai/intrinsic_sdk_cmake_run:latest
-      #     docker push ghcr.io/intrinsic-ai/intrinsic_sdk_cmake_run:${{ needs.build-test.outputs.intrinsic_ai_sdk_version }}
-      #     docker push ghcr.io/intrinsic-ai/intrinsic_sdk_cmake_run:latest
+      # Tag the images and deploy them.
+      - name: Tag intrinsic_sdk_cmake_base Container Image
+        run: |
+          docker image tag \
+            host.docker.internal/intrinsic_sdk_cmake_base:temp \
+            ghcr.io/intrinsic-ai/intrinsic_sdk_cmake_base:${{ needs.build-test.outputs.intrinsic_ai_sdk_version }}
+          docker image tag \
+            host.docker.internal/intrinsic_sdk_cmake_base:temp \
+            ghcr.io/intrinsic-ai/intrinsic_sdk_cmake_base:latest
+          docker push ghcr.io/intrinsic-ai/intrinsic_sdk_cmake_base:${{ needs.build-test.outputs.intrinsic_ai_sdk_version }}
+          docker push ghcr.io/intrinsic-ai/intrinsic_sdk_cmake_base:latest
+      - name: Tag intrinsic_sdk_cmake Container Image
+        run: |
+          docker image tag \
+            host.docker.internal/intrinsic_sdk_cmake:temp \
+            ghcr.io/intrinsic-ai/intrinsic_sdk_cmake:${{ needs.build-test.outputs.intrinsic_ai_sdk_version }}
+          docker image tag \
+            host.docker.internal/intrinsic_sdk_cmake:temp \
+            ghcr.io/intrinsic-ai/intrinsic_sdk_cmake:latest
+          docker push ghcr.io/intrinsic-ai/intrinsic_sdk_cmake:${{ needs.build-test.outputs.intrinsic_ai_sdk_version }}
+          docker push ghcr.io/intrinsic-ai/intrinsic_sdk_cmake:latest
+      - name: Tag intrinsic_sdk_cmake_run Container Image
+        run: |
+          docker image tag \
+            host.docker.internal/intrinsic_sdk_cmake_run:temp \
+            ghcr.io/intrinsic-ai/intrinsic_sdk_cmake_run:${{ needs.build-test.outputs.intrinsic_ai_sdk_version }}
+          docker image tag \
+            host.docker.internal/intrinsic_sdk_cmake_run:temp \
+            ghcr.io/intrinsic-ai/intrinsic_sdk_cmake_run:latest
+          docker push ghcr.io/intrinsic-ai/intrinsic_sdk_cmake_run:${{ needs.build-test.outputs.intrinsic_ai_sdk_version }}
+          docker push ghcr.io/intrinsic-ai/intrinsic_sdk_cmake_run:latest
 
       - run: echo "🍏 This job's status is ${{ job.status }}."
