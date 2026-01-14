@@ -50,6 +50,49 @@ World::CreateTfSubscription(
   return std::make_shared<intrinsic::Subscription>(std::move(*sub));
 }
 
+absl::StatusOr<std::shared_ptr<intrinsic::Subscription>>
+World::CreateJointStateSubscription(
+    intrinsic::SubscriptionOkCallback<intrinsic_proto::JointStateMessage> callback) {
+  auto sub =
+      pubsub_->CreateSubscription("joint_states", intrinsic::TopicConfig(), callback);
+  if (!sub.ok()) {
+    return sub.status();
+  }
+  return std::make_shared<intrinsic::Subscription>(std::move(*sub));
+}
+
+absl::StatusOr<std::shared_ptr<intrinsic::Subscription>>
+World::CreateGripperStateSubscription(
+    intrinsic::SubscriptionOkCallback<intrinsic_proto::GripperStateMessage> callback) {
+  auto sub =
+      pubsub_->CreateSubscription("gripper_states", intrinsic::TopicConfig(), callback);
+  if (!sub.ok()) {
+    return sub.status();
+  }
+  return std::make_shared<intrinsic::Subscription>(std::move(*sub));
+}
+
+absl::StatusOr<std::shared_ptr<intrinsic::Subscription>>
+World::CreateForceTorqueSubscription(
+    intrinsic::SubscriptionOkCallback<intrinsic_proto::ForceTorqueMessage> callback) {
+  auto sub = pubsub_->CreateSubscription("force_torque_sensors", intrinsic::TopicConfig(), callback);
+  if (!sub.ok()) {
+    return sub.status();
+  }
+  return std::make_shared<intrinsic::Subscription>(std::move(*sub));
+}
+
+absl::StatusOr<std::shared_ptr<intrinsic::Subscription>>
+World::CreateCameraSubscription(
+    intrinsic::SubscriptionOkCallback<intrinsic_proto::CameraMessage> callback) {
+  auto sub =
+      pubsub_->CreateSubscription("camera_stream", intrinsic::TopicConfig(), callback);
+  if (!sub.ok()) {
+    return sub.status();
+  }
+  return std::make_shared<intrinsic::Subscription>(std::move(*sub));
+}
+
 absl::Status World::connect() {
   if (connected_) {
     return absl::OkStatus();
