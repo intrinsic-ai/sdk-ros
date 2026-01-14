@@ -2,6 +2,13 @@ syntax = "proto3";
 
 package intrinsic;
 
+message SensorConfig {
+  bool enable_joint_states = 1;
+  bool enable_gripper_states = 2;
+  bool enable_force_torque = 3;
+  bool enable_camera_stream = 4;
+}
+
 message FlowstateRosBridgeConfig {
   string workcell_id = 1;
   string executive_service_address = 2;
@@ -16,4 +23,5 @@ message FlowstateRosBridgeConfig {
   int64 executive_update_rate_millis = 11;
   string diagnostics_service_address = 12;
   int64 diagnostics_deadline_seconds = 13;
+  SensorConfig sensors = 14;
 }

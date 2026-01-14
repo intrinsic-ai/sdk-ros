@@ -19,4 +19,10 @@
   executive_update_rate_millis: 1000
   diagnostics_service_address: "istio-ingressgateway.app-ingress.svc.cluster.local:80"
   diagnostics_deadline_seconds: 5
+  sensors {
+    enable_joint_states: true
+    enable_gripper_states: true
+    enable_force_torque: false
+    enable_camera_stream: false
+  }
 }
