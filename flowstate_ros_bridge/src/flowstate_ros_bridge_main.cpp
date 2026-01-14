@@ -97,6 +97,16 @@ int main(int argc, char* argv[]) {
   rclcpp::Parameter bridge_plugins_param("bridge_plugins", plugin_list);
   params.push_back(std::move(bridge_plugins_param));
 
+  const auto& s = ros_config.sensors();
+  params.emplace_back("sensors.enable_joint_states",
+                      s.enable_joint_states());
+  params.emplace_back("sensors.enable_gripper_states",
+                      s.enable_gripper_states());
+  params.emplace_back("sensors.enable_force_torque",
+                      s.enable_force_torque());
+  params.emplace_back("sensors.enable_camera_stream",
+                      s.enable_camera_stream());
+
   options.parameter_overrides(params);
 
   // Get namespace from config

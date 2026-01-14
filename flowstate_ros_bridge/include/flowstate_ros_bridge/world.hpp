@@ -22,6 +22,11 @@
 #include "intrinsic/geometry/proto/geometry_service.grpc.pb.h"
 #include "intrinsic/geometry/proto/geometry_service.pb.h"
 #include "intrinsic/math/proto/tf_message.pb.h"
+// Placeholder for new proto messages
+// #include "intrinsic/robot/proto/joint_state_message.pb.h"
+// #include "intrinsic/robot/proto/gripper_state_message.pb.h"
+// #include "intrinsic/sensor/proto/force_torque_message.pb.h"
+// #include "intrinsic/sensor/proto/camera_message.pb.h"
 #include "intrinsic/platform/pubsub/pubsub.h"
 #include "intrinsic/platform/pubsub/zenoh_publisher_data.h"
 #include "intrinsic/world/objects/object_world_client.h"
@@ -44,6 +49,24 @@ class World : public std::enable_shared_from_this<World> {
 
   absl::StatusOr<std::shared_ptr<intrinsic::Subscription>> CreateTfSubscription(
       intrinsic::SubscriptionOkCallback<intrinsic_proto::TFMessage> callback);
+
+  // Skeleton for Robot Joint States subscription
+  absl::StatusOr<std::shared_ptr<intrinsic::Subscription>>
+  CreateJointStateSubscription(
+      intrinsic::SubscriptionOkCallback<intrinsic_proto::JointStateMessage> callback);
+
+  // Skeleton for Gripper States subscription
+  absl::StatusOr<std::shared_ptr<intrinsic::Subscription>>
+  CreateGripperStateSubscription(
+      intrinsic::SubscriptionOkCallback<intrinsic_proto::GripperStateMessage> callback);
+
+  // Skeleton for Force Torque Sensor Values subscription
+  absl::StatusOr<std::shared_ptr<intrinsic::Subscription>> CreateForceTorqueSubscription(
+      intrinsic::SubscriptionOkCallback<intrinsic_proto::ForceTorqueMessage> callback);
+
+  // Skeleton for Camera Stream subscription
+  absl::StatusOr<std::shared_ptr<intrinsic::Subscription>> CreateCameraSubscription(
+      intrinsic::SubscriptionOkCallback<intrinsic_proto::CameraMessage> callback);
 
   // Establish connections with various services.
   absl::Status connect();
