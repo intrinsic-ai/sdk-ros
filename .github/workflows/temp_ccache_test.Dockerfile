@@ -4,7 +4,8 @@ FROM ubuntu:24.04
 ENV CCACHE_DIR=/ccache
 
 RUN apt update ; apt install -yq \
-    build-essential
+    build-essential \
+    ccache
 
 ENV PATH="/usr/lib/ccache:/usr/local/opt/ccache/libexec:$PATH"
 
