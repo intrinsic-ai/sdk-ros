@@ -2,6 +2,7 @@ FROM ros:jazzy
 
 ENV CCACHE_DIR=/ccache
 ENV DEBIAN_FRONTEND=noninteractive
+ENV RTI_NC_LICENSE_ACCEPTED=yes
 
 RUN \
     --mount=type=cache,target=/var/cache/apt,sharing=locked \
