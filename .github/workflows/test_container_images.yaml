@@ -26,43 +26,76 @@ jobs:
         run: echo "INTRINSIC_AI_SDK_VERSION=${{ needs.build-container-images.outputs.intrinsic_ai_sdk_version }}" >> $GITHUB_ENV
       - run: echo "The Intrinsic SDK version being used is ${{ env.INTRINSIC_AI_SDK_VERSION }}"
 
-      # # Download images from build workflow and load them into the local docker for testing.
-      # - name: Download intrinsic_sdk_cmake_base container image
-      #   uses: actions/download-artifact@v4
-      #   with:
-      #     name: intrinsic_sdk_cmake_base_image
-      #     path: ${{ runner.temp }}
-      # - name: Load intrinsic_sdk_cmake_base container image into docker
-      #   run: docker load --input ${{ runner.temp }}/intrinsic_sdk_cmake_base.tar
-      # - name: Download intrinsic_sdk_cmake container image
-      #   uses: actions/download-artifact@v4
-      #   with:
-      #     name: intrinsic_sdk_cmake_image
-      #     path: ${{ runner.temp }}
-      # - name: Load intrinsic_sdk_cmake container image into docker
-      #   run: docker load --input ${{ runner.temp }}/intrinsic_sdk_cmake.tar
-      # - name: Download intrinsic_sdk_cmake_run container image
-      #   uses: actions/download-artifact@v4
-      #   with:
-      #     name: intrinsic_sdk_cmake_run_image
-      #     path: ${{ runner.temp }}
-      # - name: Load intrinsic_sdk_cmake_run container image into docker
-      #   run: docker load --input ${{ runner.temp }}/intrinsic_sdk_cmake_run.tar
+      # Download images from build workflow and load them into the local docker for testing.
+      - name: Download intrinsic_sdk_cmake_base container image
+        uses: actions/download-artifact@v4
+        with:
+          name: intrinsic_sdk_cmake_base_image
+          path: ${{ runner.temp }}
+      - name: Load intrinsic_sdk_cmake_base container image into docker
+        run: docker load --input ${{ runner.temp }}/intrinsic_sdk_cmake_base.tar
+      - name: Download intrinsic_sdk_cmake container image
+        uses: actions/download-artifact@v4
+        with:
+          name: intrinsic_sdk_cmake_image
+          path: ${{ runner.temp }}
+      - name: Load intrinsic_sdk_cmake container image into docker
+        run: docker load --input ${{ runner.temp }}/intrinsic_sdk_cmake.tar
+      - name: Download intrinsic_sdk_cmake_run container image
+        uses: actions/download-artifact@v4
+        with:
+          name: intrinsic_sdk_cmake_run_image
+          path: ${{ runner.temp }}
+      - name: Load intrinsic_sdk_cmake_run container image into docker
+        run: docker load --input ${{ runner.temp }}/intrinsic_sdk_cmake_run.tar
 
-      # # Build the test case using the temporary images.
-      # - name: Test intrinsic_sdk_cmake Docker Images
-      #   uses: docker/build-push-action@v5
-      #   with:
-      #     context: intrinsic_sdk_cmake
-      #     file: intrinsic_sdk_cmake/cmake/api/skill/resource/skill.Dockerfile
-      #     build-args: |
-      #       REPOSITORY=localhost:5000
-      #       TAG=temp
-      #       SKILL_NAME=test_cpp_skill
-      #       SKILL_PACKAGE=intrinsic_sdk_cmake
-      #       SKILL_EXECUTABLE=lib/intrinsic_sdk_cmake/test_cpp_skill_main
-      #       SKILL_CONFIG=share/intrinsic_sdk_cmake/test_cpp_skill_config.pbbin
-      #     tags: |
-      #       test_intrinsic_sdk_cmake_images:temp
+      # Set up the GitHub Action Caches to use the cached docker cache-mount volumes.
+      - name: GitHub Action Cache for var-cache-apt
+        uses: actions/cache@v4
+        id: cache-for-var-cache-apt
+        with:
+          path: var-cache-apt
+          key: buildx-cache-mount-for-var-cache-apt
+      - name: GitHub Action Cache for var-lib-apt
+        uses: actions/cache@v4
+        id: cache-for-var-lib-apt
+        with:
+          path: var-lib-apt
+          key: buildx-cache-mount-for-var-lib-apt
+      - name: GitHub Action Cache for ccache
+        uses: actions/cache@v4
+        id: cache-for-ccache
+        with:
+          path: ccache
+          key: buildx-cache-mount-for-ccache
+
+      # Set up the caching of docker cache-mount volumes which normally live
+      # inside a .db file that the buildx container keeps.
+      - name: Restore Docker cache mounts
+        uses: reproducible-containers/buildkit-cache-dance@v3
+        with:
+          builder: ${{ steps.setup-buildx.outputs.name }}
+          cache-map: |
+            {
+              "var-cache-apt": "/var/cache/apt",
+              "var-lib-apt": "/var/lib/apt",
+              "ccache": "/ccache"
+            }
+
+      # Build the test case using the temporary images.
+      - name: Test intrinsic_sdk_cmake Docker Images
+        uses: docker/build-push-action@v5
+        with:
+          context: intrinsic_sdk_cmake
+          file: intrinsic_sdk_cmake/cmake/api/skill/resource/skill.Dockerfile
+          build-args: |
+            REPOSITORY=localhost:5000
+            TAG=temp
+            SKILL_NAME=test_cpp_skill
+            SKILL_PACKAGE=intrinsic_sdk_cmake
+            SKILL_EXECUTABLE=lib/intrinsic_sdk_cmake/test_cpp_skill_main
+            SKILL_CONFIG=share/intrinsic_sdk_cmake/test_cpp_skill_config.pbbin
+          tags: |
+            test_intrinsic_sdk_cmake_images:temp
 
       - run: echo "🍏 This job's status is ${{ job.status }}."

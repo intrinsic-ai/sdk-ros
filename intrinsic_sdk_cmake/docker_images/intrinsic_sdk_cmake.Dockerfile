@@ -20,11 +20,15 @@ RUN cd /opt/intrinsic/intrinsic_sdk_cmake/src/intrinsic_sdk_ros \
 FROM source AS build_export
 
 # Setup rosdep
-RUN set -x \
+RUN \
+    --mount=type=cache,target=/var/cache/apt,sharing=locked \
+    --mount=type=cache,target=/var/lib/apt,sharing=locked \
+    set -x \
+    && rm -f /etc/apt/apt.conf.d/docker-clean \
+    && echo 'Binary::apt::APT::Keep-Downloaded-Packages "true";' >/etc/apt/apt.conf.d/keep-cache \
     && apt-get update \
     && apt-get install -y --no-install-recommends \
-        python3-rosdep \
-    && rm -rf /var/lib/apt/lists/*
+        python3-rosdep
 
 # Bootstrap rosdep
 RUN set -x \
@@ -36,8 +40,13 @@ RUN set -x \
 # Exclude intrinsic_sdk_ros and intrinsic_sdk for now.
 # TODO(wjwwood): it would be nice to get the list of packages from rosdep
 #   without installing them, but I couldn't figure out how to do that easily.
-RUN . /opt/ros/jazzy/setup.sh \
+RUN \
+    --mount=type=cache,target=/var/cache/apt,sharing=locked \
+    --mount=type=cache,target=/var/lib/apt,sharing=locked \
+    . /opt/ros/jazzy/setup.sh \
     && set -x \
+    && rm -f /etc/apt/apt.conf.d/docker-clean \
+    && echo 'Binary::apt::APT::Keep-Downloaded-Packages "true";' >/etc/apt/apt.conf.d/keep-cache \
     && apt-get update \
     && rosdep update --rosdistro jazzy \
     && cd /opt/intrinsic/intrinsic_sdk_cmake \
@@ -56,22 +65,29 @@ RUN . /opt/ros/jazzy/setup.sh \
         --dependency-types buildtool_export \
         --dependency-types build_export \
         --dependency-types exec \
-    && dpkg --get-selections > /build_export_apt_packages.txt \
-    && rm -rf /var/lib/apt/lists/*
+    && dpkg --get-selections > /build_export_apt_packages.txt
 
 # build stage: build_export + rosdep install all depends + packages up to intrinsic_sdk_cmake built
 FROM build_export AS build
 
 # Install other development tools.
-RUN set -x \
+RUN \
+    --mount=type=cache,target=/var/cache/apt,sharing=locked \
+    --mount=type=cache,target=/var/lib/apt,sharing=locked \
+    set -x \
+    && rm -f /etc/apt/apt.conf.d/docker-clean \
+    && echo 'Binary::apt::APT::Keep-Downloaded-Packages "true";' >/etc/apt/apt.conf.d/keep-cache \
     && apt-get update \
     && apt-get install -y --no-install-recommends \
         build-essential \
+        ccache \
         git \
         python3-colcon-common-extensions \
         python3-colcon-mixin \
-        python3-vcstool \
-    && rm -rf /var/lib/apt/lists/*
+        python3-vcstool
+
+# Enable ccache with by adjusting the PATH.
+ENV PATH="/usr/lib/ccache:/usr/local/opt/ccache/libexec:$PATH"
 
 # Setup colcon mixin and metadata.
 RUN set -x \
@@ -84,8 +100,13 @@ RUN set -x \
 
 # Install the rest of the standard dependencies for the packages in intrinsic_sdk_ros.
 # Exclude intrinsic_sdk_ros and intrinsic_sdk for now.
-RUN . /opt/ros/jazzy/setup.sh \
+RUN \
+    --mount=type=cache,target=/var/cache/apt,sharing=locked \
+    --mount=type=cache,target=/var/lib/apt,sharing=locked \
+    . /opt/ros/jazzy/setup.sh \
     && set -x \
+    && rm -f /etc/apt/apt.conf.d/docker-clean \
+    && echo 'Binary::apt::APT::Keep-Downloaded-Packages "true";' >/etc/apt/apt.conf.d/keep-cache \
     && apt-get update \
     && rosdep update --rosdistro jazzy \
     && cd /opt/intrinsic/intrinsic_sdk_cmake \
@@ -94,11 +115,12 @@ RUN . /opt/ros/jazzy/setup.sh \
     && rosdep install \
         --from-paths src \
         --ignore-src \
-        --default-yes \
-    && rm -rf /var/lib/apt/lists/*
+        --default-yes
 
 # Build intrinsic_sdk_cmake and all of its dependencies.
-RUN . /opt/ros/jazzy/setup.sh \
+RUN \
+    --mount=type=cache,target=/ccache/ \
+    . /opt/ros/jazzy/setup.sh \
     && set -x \
     && cd /opt/intrinsic/intrinsic_sdk_cmake \
     && touch src/intrinsic_sdk_ros/intrinsic_sdk/COLCON_IGNORE \
@@ -107,7 +129,8 @@ RUN . /opt/ros/jazzy/setup.sh \
         --cmake-args -DBUILD_TESTING=OFF \
         --event-handlers console_direct+ console_stderr- \
         --merge-install \
-        --executor=sequential
+        --executor=sequential \
+    && ccache -s
 
 # result stage: base + copy install artifacts + re-installed build_export depends + dev tools
 FROM base AS result
@@ -128,15 +151,24 @@ COPY --from=build_export \
 
 # Re-install the packages from the run_deps stage.
 # This avoids having the source code in the final image.
-RUN set -x \
+RUN \
+    --mount=type=cache,target=/var/cache/apt,sharing=locked \
+    --mount=type=cache,target=/var/lib/apt,sharing=locked \
+    set -x \
+    && rm -f /etc/apt/apt.conf.d/docker-clean \
+    && echo 'Binary::apt::APT::Keep-Downloaded-Packages "true";' >/etc/apt/apt.conf.d/keep-cache \
     && apt-get update \
     && apt-cache dumpavail | dpkg --merge-avail \
     && dpkg --set-selections < /build_export_apt_packages.txt \
-    && apt-get dselect-upgrade -y \
-    && rm -rf /var/lib/apt/lists/*
+    && apt-get dselect-upgrade -y
 
 # Install other development tools.
-RUN set -x \
+RUN \
+    --mount=type=cache,target=/var/cache/apt,sharing=locked \
+    --mount=type=cache,target=/var/lib/apt,sharing=locked \
+    set -x \
+    && rm -f /etc/apt/apt.conf.d/docker-clean \
+    && echo 'Binary::apt::APT::Keep-Downloaded-Packages "true";' >/etc/apt/apt.conf.d/keep-cache \
     && apt-get update \
     && apt-get install -y --no-install-recommends \
         build-essential \
@@ -144,8 +176,7 @@ RUN set -x \
         python3-colcon-common-extensions \
         python3-colcon-mixin \
         python3-rosdep \
-        python3-vcstool \
-    && rm -rf /var/lib/apt/lists/*
+        python3-vcstool
 
 # Bootstrap rosdep
 RUN set -x \
