@@ -1,16 +1,16 @@
-# syntax = docker/dockerfile:experimental
-FROM ubuntu:24.04
+FROM ros:jazzy
 
 ENV CCACHE_DIR=/ccache
 
 RUN apt update ; apt install -yq \
-    build-essential \
     ccache
 
 ENV PATH="/usr/lib/ccache:/usr/local/opt/ccache/libexec:$PATH"
 
 RUN --mount=type=cache,target=/ccache/ ccache -s
 RUN --mount=type=cache,target=/ccache/ \
-    echo '#include <iostream>\n int main() { std::cout << "Test Success"; }' | g++ -x c++ - && \
-    ./a.out
+    mkdir -p src && \
+    rosinstall_generator rcpputils --rosdistro jazzy rcpputils.rosinstall && \
+    vcs import src < rcpputils.rosinstall && \
+    colcon build
 RUN --mount=type=cache,target=/ccache/ ccache -s
