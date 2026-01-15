@@ -3,7 +3,7 @@ FROM ros:jazzy
 ENV CCACHE_DIR=/ccache
 
 RUN apt update ; apt install -yq \
-    python3-roinstall-generator \
+    python3-rosinstall-generator \
     ccache
 
 ENV PATH="/usr/lib/ccache:/usr/local/opt/ccache/libexec:$PATH"
