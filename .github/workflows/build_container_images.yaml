@@ -34,9 +34,9 @@ jobs:
       # cache type mounts: https://github.com/moby/buildkit/issues/1512
       # Consider using something like: https://github.com/dashevo/gh-action-cache-buildkit-state
       # Or this: https://github.com/reproducible-containers/buildkit-cache-dance
-      # # Set up ccache.
-      # - name: ccache
-      #   uses: hendrikmuhs/ccache-action@v1.2
+      # Set up ccache.
+      - name: ccache
+        uses: hendrikmuhs/ccache-action@v1.2
 
       # Set up buildx.
       - name: Set up QEMU
@@ -46,6 +46,15 @@ jobs:
         with:
           # This is needed in order to let buildx push to the local repository.
           driver-opts: network=host
+
+      - name: Build test ccache dockerfile
+        uses: docker/build-push-action@v5
+        with:
+          file: .github/workflows/temp_ccache_test.Dockerfile
+          push: false
+
+      - name: Intentional stop
+        run: echo $CCACHE_DIR; ls ./.ccache; exit 1
 
       # Build the base, normal, and run images.
       # They are tagged and pushed into the local container registry service so
@@ -60,8 +69,8 @@ jobs:
           # TODO(wjwwood): The cache for gha (GitHub Actions) is limited,
           # consider trying the registry cache type that caches to an image, see:
           # https://www.blacksmith.sh/blog/cache-is-king-a-guide-for-docker-layer-caching-in-github-actions
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          # cache-from: type=gha
+          # cache-to: type=gha,mode=max
           outputs: type=docker,dest=${{ runner.temp }}/intrinsic_sdk_cmake_base.tar
           tags: |
             localhost:5000/intrinsic_sdk_cmake_base:temp
@@ -71,8 +80,8 @@ jobs:
           context: .
           file: intrinsic_sdk_cmake/docker_images/intrinsic_sdk_cmake.Dockerfile
           push: true
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          # cache-from: type=gha
+          # cache-to: type=gha,mode=max
           outputs: type=docker,dest=${{ runner.temp }}/intrinsic_sdk_cmake.tar
           build-args: |
             REPOSITORY=localhost:5000
@@ -86,8 +95,8 @@ jobs:
           file: intrinsic_sdk_cmake/docker_images/intrinsic_sdk_cmake_run.Dockerfile
           # No push for the last one since there is no subsequent image that needs it.
           # push: true
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          # cache-from: type=gha
+          # cache-to: type=gha,mode=max
           outputs: type=docker,dest=${{ runner.temp }}/intrinsic_sdk_cmake_run.tar
           build-args: |
             REPOSITORY=localhost:5000
