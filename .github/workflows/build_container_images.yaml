@@ -81,75 +81,75 @@ jobs:
           file: .github/workflows/temp_ccache_test.Dockerfile
           push: false
 
-      - name: Intentional stop
-        run: echo $CCACHE_DIR; ls ./.ccache; exit 1
+      # - name: Intentional stop
+      #   run: echo $CCACHE_DIR; ls ./.ccache; exit 1
 
-      # Build the base, normal, and run images.
-      # They are tagged and pushed into the local container registry service so
-      # subsequent images can use them to build, and they are output to tar
-      # files so they can be uploaded as artifacts at the end.
-      - name: Build intrinsic_sdk_cmake_base Docker Image
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          file: intrinsic_sdk_cmake/docker_images/intrinsic_sdk_cmake_base.Dockerfile
-          push: true
-          # TODO(wjwwood): The cache for gha (GitHub Actions) is limited,
-          # consider trying the registry cache type that caches to an image, see:
-          # https://www.blacksmith.sh/blog/cache-is-king-a-guide-for-docker-layer-caching-in-github-actions
-          # cache-from: type=gha
-          # cache-to: type=gha,mode=max
-          outputs: type=docker,dest=${{ runner.temp }}/intrinsic_sdk_cmake_base.tar
-          tags: |
-            localhost:5000/intrinsic_sdk_cmake_base:temp
-      - name: Build intrinsic_sdk_cmake Docker Image
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          file: intrinsic_sdk_cmake/docker_images/intrinsic_sdk_cmake.Dockerfile
-          push: true
-          # cache-from: type=gha
-          # cache-to: type=gha,mode=max
-          outputs: type=docker,dest=${{ runner.temp }}/intrinsic_sdk_cmake.tar
-          build-args: |
-            REPOSITORY=localhost:5000
-            TAG=temp
-          tags: |
-            localhost:5000/intrinsic_sdk_cmake:temp
-      - name: Build intrinsic_sdk_cmake_run Docker Image
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          file: intrinsic_sdk_cmake/docker_images/intrinsic_sdk_cmake_run.Dockerfile
-          # No push for the last one since there is no subsequent image that needs it.
-          # push: true
-          # cache-from: type=gha
-          # cache-to: type=gha,mode=max
-          outputs: type=docker,dest=${{ runner.temp }}/intrinsic_sdk_cmake_run.tar
-          build-args: |
-            REPOSITORY=localhost:5000
-            TAG=temp
-          tags: |
-            localhost:5000/intrinsic_sdk_cmake_run:temp
+      # # Build the base, normal, and run images.
+      # # They are tagged and pushed into the local container registry service so
+      # # subsequent images can use them to build, and they are output to tar
+      # # files so they can be uploaded as artifacts at the end.
+      # - name: Build intrinsic_sdk_cmake_base Docker Image
+      #   uses: docker/build-push-action@v5
+      #   with:
+      #     context: .
+      #     file: intrinsic_sdk_cmake/docker_images/intrinsic_sdk_cmake_base.Dockerfile
+      #     push: true
+      #     # TODO(wjwwood): The cache for gha (GitHub Actions) is limited,
+      #     # consider trying the registry cache type that caches to an image, see:
+      #     # https://www.blacksmith.sh/blog/cache-is-king-a-guide-for-docker-layer-caching-in-github-actions
+      #     # cache-from: type=gha
+      #     # cache-to: type=gha,mode=max
+      #     outputs: type=docker,dest=${{ runner.temp }}/intrinsic_sdk_cmake_base.tar
+      #     tags: |
+      #       localhost:5000/intrinsic_sdk_cmake_base:temp
+      # - name: Build intrinsic_sdk_cmake Docker Image
+      #   uses: docker/build-push-action@v5
+      #   with:
+      #     context: .
+      #     file: intrinsic_sdk_cmake/docker_images/intrinsic_sdk_cmake.Dockerfile
+      #     push: true
+      #     # cache-from: type=gha
+      #     # cache-to: type=gha,mode=max
+      #     outputs: type=docker,dest=${{ runner.temp }}/intrinsic_sdk_cmake.tar
+      #     build-args: |
+      #       REPOSITORY=localhost:5000
+      #       TAG=temp
+      #     tags: |
+      #       localhost:5000/intrinsic_sdk_cmake:temp
+      # - name: Build intrinsic_sdk_cmake_run Docker Image
+      #   uses: docker/build-push-action@v5
+      #   with:
+      #     context: .
+      #     file: intrinsic_sdk_cmake/docker_images/intrinsic_sdk_cmake_run.Dockerfile
+      #     # No push for the last one since there is no subsequent image that needs it.
+      #     # push: true
+      #     # cache-from: type=gha
+      #     # cache-to: type=gha,mode=max
+      #     outputs: type=docker,dest=${{ runner.temp }}/intrinsic_sdk_cmake_run.tar
+      #     build-args: |
+      #       REPOSITORY=localhost:5000
+      #       TAG=temp
+      #     tags: |
+      #       localhost:5000/intrinsic_sdk_cmake_run:temp
 
-      # Upload images as temporary build artifacts for use in other jobs.
-      - name: Upload intrinsic_sdk_cmake_base image
-        uses: actions/upload-artifact@v4
-        with:
-          name: intrinsic_sdk_cmake_base_image
-          path: ${{ runner.temp }}/intrinsic_sdk_cmake_base.tar
-          retention-days: "1"
-      - name: Upload intrinsic_sdk_cmake image
-        uses: actions/upload-artifact@v4
-        with:
-          name: intrinsic_sdk_cmake_image
-          path: ${{ runner.temp }}/intrinsic_sdk_cmake.tar
-          retention-days: "1"
-      - name: Upload intrinsic_sdk_cmake_run image
-        uses: actions/upload-artifact@v4
-        with:
-          name: intrinsic_sdk_cmake_run_image
-          path: ${{ runner.temp }}/intrinsic_sdk_cmake_run.tar
-          retention-days: "1"
+      # # Upload images as temporary build artifacts for use in other jobs.
+      # - name: Upload intrinsic_sdk_cmake_base image
+      #   uses: actions/upload-artifact@v4
+      #   with:
+      #     name: intrinsic_sdk_cmake_base_image
+      #     path: ${{ runner.temp }}/intrinsic_sdk_cmake_base.tar
+      #     retention-days: "1"
+      # - name: Upload intrinsic_sdk_cmake image
+      #   uses: actions/upload-artifact@v4
+      #   with:
+      #     name: intrinsic_sdk_cmake_image
+      #     path: ${{ runner.temp }}/intrinsic_sdk_cmake.tar
+      #     retention-days: "1"
+      # - name: Upload intrinsic_sdk_cmake_run image
+      #   uses: actions/upload-artifact@v4
+      #   with:
+      #     name: intrinsic_sdk_cmake_run_image
+      #     path: ${{ runner.temp }}/intrinsic_sdk_cmake_run.tar
+      #     retention-days: "1"
 
       - run: echo "🍏 This job's status is ${{ job.status }}."
