@@ -18,5 +18,6 @@ RUN --mount=type=cache,target=/ccache/ \
     cd ws && \
     rosinstall_generator rclcpp --rosdistro jazzy --deps --tar > ./rclcpp.rosinstall && \
     vcs import --input ./rclcpp.rosinstall src && \
+    rosdep install --from-paths src --ignore-src --rosdistro jazzy -y && \
     colcon build
 RUN --mount=type=cache,target=/ccache/ ccache -s
