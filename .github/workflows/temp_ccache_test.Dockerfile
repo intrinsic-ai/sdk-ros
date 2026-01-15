@@ -29,5 +29,5 @@ RUN \
     echo 'Binary::apt::APT::Keep-Downloaded-Packages "true";' >/etc/apt/apt.conf.d/keep-cache && \
     apt update && \
     rosdep install --from-paths src --ignore-src --rosdistro jazzy -y && \
-    colcon build
+    colcon build --packages-up-to rclcpp
 RUN --mount=type=cache,target=/ccache/ ccache -s
