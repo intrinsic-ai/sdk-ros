@@ -2,7 +2,6 @@ FROM ros:jazzy
 
 ENV CCACHE_DIR=/ccache
 ENV DEBIAN_FRONTEND=noninteractive
-ENV RTI_NC_LICENSE_ACCEPTED=yes
 
 RUN \
     --mount=type=cache,target=/var/cache/apt,sharing=locked \
@@ -25,6 +24,7 @@ RUN \
     cd ws && \
     rosinstall_generator rclcpp --rosdistro jazzy --deps --tar > ./rclcpp.rosinstall && \
     vcs import --input ./rclcpp.rosinstall src && \
+    rm -rf src/cyclonedds src/iceoryx src/rmw_connextdds src/rmw_cyclonedds_cpp && \
     rm -f /etc/apt/apt.conf.d/docker-clean && \
     echo 'Binary::apt::APT::Keep-Downloaded-Packages "true";' >/etc/apt/apt.conf.d/keep-cache && \
     apt update && \
