@@ -34,18 +34,46 @@ jobs:
       # cache type mounts: https://github.com/moby/buildkit/issues/1512
       # Consider using something like: https://github.com/dashevo/gh-action-cache-buildkit-state
       # Or this: https://github.com/reproducible-containers/buildkit-cache-dance
-      # Set up ccache.
-      - name: ccache
-        uses: hendrikmuhs/ccache-action@v1.2
+      # # Set up ccache.
+      # - name: ccache
+      #   uses: hendrikmuhs/ccache-action@v1.2
 
       # Set up buildx.
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
+        id: setup-buildx
         with:
           # This is needed in order to let buildx push to the local repository.
           driver-opts: network=host
+
+      # Set up the GitHub Action Cache where we'll store the docker cache-mount volumes.
+      - name: GitHub Action Cache
+        uses: actions/cache@v4
+        id: cache
+        with:
+          path: cache-mount
+          # The key ensures these cached volumes (for apt and ccache) are reused
+          # for all workflows/jobs that build docker files and/or build C++ code.
+          # Changes to the Dockerfile's and/or the C++ code or build logic
+          # or dependencies should not invalidate the apt packages
+          # or ccache database.
+          key: cache-mount-docker-buildx-cache-mount-volumes
+      # Set up the caching of docker cache-mount volumes which normally live inside a .db file
+      # that the buildx container keeps.
+      - name: Restore Docker cache mounts
+        uses: reproducible-containers/buildkit-cache-dance@v3
+        with:
+          builder: ${{ steps.setup-buildx.outputs.name }}
+          cache-dir: cache-mount
+          cache-map: |
+            {
+              "var-cache-apt": "/var/cache/apt",
+              "var-lib-apt": "/var/lib/apt",
+              "ccache": "/ccache"
+            }
+          skip-extraction: ${{ steps.cache.outputs.cache-hit }}
 
       - name: Build test ccache dockerfile
         uses: docker/build-push-action@v5
