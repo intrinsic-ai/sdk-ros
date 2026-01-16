@@ -45,11 +45,10 @@ class WorldBridge : public BridgeInterface {
   void declare_ros_parameters(ROSNodeInterfaces ros_node_interfaces) final;
 
   /// Documentation inherited.
-  bool initialize(ROSNodeInterfaces ros_node_interfaces,
-                  std::shared_ptr<Executive> executive_client,
+  bool initialize(ROSNodeInterfaces ros_node_interfaces, std::shared_ptr<Executive> executive_client,
                   std::shared_ptr<World> world_client) final;
 
- private:
+private:
   void TfCallback(const intrinsic_proto::TFMessage&);
 
   struct Data : public std::enable_shared_from_this<Data> {
