@@ -86,9 +86,6 @@ RUN \
         python3-colcon-mixin \
         python3-vcstool
 
-# Enable ccache with by adjusting the PATH.
-ENV PATH="/usr/lib/ccache:/usr/local/opt/ccache/libexec:$PATH"
-
 # Setup colcon mixin and metadata.
 RUN set -x \
     && colcon mixin add default \
@@ -122,14 +119,13 @@ RUN \
     --mount=type=cache,target=/ccache/ \
     . /opt/ros/jazzy/setup.sh \
     && set -x \
+    && export PATH="/usr/lib/ccache:/usr/local/opt/ccache/libexec:$PATH" \
     && cd /opt/intrinsic/intrinsic_sdk_cmake \
     && touch src/intrinsic_sdk_ros/intrinsic_sdk/COLCON_IGNORE \
     && touch src/intrinsic_sdk_ros/intrinsic_sdk_ros/COLCON_IGNORE \
     && colcon build \
         --cmake-args -DBUILD_TESTING=OFF \
-        --event-handlers console_direct+ console_stderr- \
         --merge-install \
-        --executor=sequential \
     && ccache -s
 
 # result stage: base + copy install artifacts + re-installed build_export depends + dev tools
