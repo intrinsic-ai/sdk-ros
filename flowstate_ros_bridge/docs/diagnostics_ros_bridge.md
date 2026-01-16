@@ -1,30 +1,23 @@
 # Flowstate Diagnostics ROS Bridge
 
-## 1. Executive Summary & Architecture
+## 1. Overview
 
-**Scope:** Adds a new bridge plugin that polls the Flowstate System Service via gRPC and publishes system health statuses to the standard ROS `/diagnostics` topic.
+This feature introduces a bridge plugin that exposes Flowstate system health to the ROS ecosystem. Instead of complex event handling, it uses a simple polling loop to fetch status updates and publish them to the standard `/diagnostics` topic.
 
-**Architecture & Data Flow:** The system follows a **Polling Bridge** pattern designed to translate internal system states into standard ROS messages:
+**How it works:**
 
-* **Source (Flowstate):** The `Diagnostics` class connects to the `SystemServiceState` gRPC service (default: `istio-ingressgateway.app-ingress.svc.cluster.local:80`).
+* **Connection:** The bridge connects to the Flowstate gRPC service (defaulting to `istio-ingressgateway.app-ingress.svc.cluster.local:80`).
 
-* **Bridge (ROS Node):** The `DiagnosticsBridge` plugin is loaded by the main node. It holds a timer that triggers an update loop at a configurable rate (default 1Hz).
+* **Polling:** A timer triggers the bridge to fetch the latest system state at a configurable rate (default 1Hz).
 
-* **Translation:** The system retrieves `InstanceState` protobufs and converts them into `diagnostic_msgs::msg::DiagnosticArray` messages.
-
-* **Output:** The aggregated data is published to the `/diagnostics` topic.
+* **Translation:** It automatically converts the internal [`InstanceState`](https://github.com/intrinsic-ai/sdk/blob/main/intrinsic/assets/services/proto/v1/system_service_state.proto#L84) (Protobuf) into standard ROS `DiagnosticArray` messages and publishes them.
 
 
+The architecture described above is accomplished through the following files:
 
-**Implementation Manifest (New Components):** The architecture described above is realized through the following new files:
+* [`src/diagnostics.cpp`](../src/diagnostics.cpp) & [`.hpp`](../include/flowstate_ros_bridge/diagnostics.hpp): Contains the **Source** logic (the gRPC client).
 
-
-* `src/diagnostics.cpp` & `.hpp`: Contains the **Source** logic (the gRPC client).
-
-
-* `src/bridges/diagnostics_bridge.cpp`: Contains the **Bridge** and **Translation** logic (the ROS plugin).
-
----
+* [`src/bridges/diagnostics_bridge.cpp`](../src/bridges/diagnostics_bridge.cpp) & [`.hpp`](../src/bridges/diagnostics_bridge.hpp): Contains the **Bridge** and **Translation** logic (the ROS plugin).
 
 
 ## 2. Interface Updates
@@ -36,8 +29,7 @@
 | `/diagnostics` | `diagnostic_msgs/DiagnosticArray` | Publisher | Aggregated system status messages. |
 
 ### 2.2 Logic Mapping (Proto → ROS)
-A helper function `to_diagnostic_level` maps Flowstate enums to ROS diagnostic levels:
-
+A helper function `to_diagnostic_level` maps Flowstate enums, derived from [`InstanceState`](https://github.com/intrinsic-ai/sdk/blob/main/intrinsic/assets/services/proto/v1/system_service_state.proto#L84) protobuf messages, to ROS diagnostic levels:
 | Flowstate State Code | ROS Diagnostic Level | Meaning |
 | :--- | :--- | :--- |
 | `STATE_CODE_ENABLED` | **OK** (0) | System is healthy. |
@@ -48,7 +40,7 @@ A helper function `to_diagnostic_level` maps Flowstate enums to ROS diagnostic l
 
 
 ### 2.3 Configuration Parameters
-New parameters were added to `flowstate_ros_bridge_default_config.pbtxt` and handled in `flowstate_ros_bridge_main.cpp`:
+The following parameters are defined in `flowstate_ros_bridge_default_config.pbtxt` and processed by the main node:
 
 | Parameter Name | Default Value | Description |
 | :--- | :--- | :--- |
