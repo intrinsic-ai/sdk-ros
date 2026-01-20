@@ -20,9 +20,10 @@
   diagnostics_service_address: "istio-ingressgateway.app-ingress.svc.cluster.local:80"
   diagnostics_deadline_seconds: 5
   sensors {
-    enable_joint_states: true
-    enable_gripper_states: true
+    enable_robot_state: true
+    enable_gripper_states: false
     enable_force_torque: false
     enable_camera_stream: false
   }
+  robot_status_topic_name: "robot_state_*_throttle"
 }

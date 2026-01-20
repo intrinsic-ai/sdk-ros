@@ -31,9 +31,10 @@
 #include "visualization_msgs/msg/marker_array.hpp"
 
 // Placeholder for new ROS messages
-// #include "sensor_msgs/msg/joint_state.hpp"
+#include "sensor_msgs/msg/joint_state.hpp"
 // #include "sensor_msgs/msg/image.hpp"
 // #include "geometry_msgs/msg/wrench_stamped.hpp"
+
 namespace flowstate_ros_bridge {
 
 ///=============================================================================
@@ -54,10 +55,10 @@ class WorldBridge : public BridgeInterface {
 
 private:
   void TfCallback(const intrinsic_proto::TFMessage&);
-  void JointStateCallback(const intrinsic_proto::JointStateMessage&);
-  void GripperStateCallback(const intrinsic_proto::GripperStateMessage&);
-  void ForceTorqueCallback(const intrinsic_proto::ForceTorqueMessage&);
-  void CameraCallback(const intrinsic_proto::CameraMessage&);
+  void RobotStateCallback(const intrinsic_proto::icon::RobotStatus&);
+  // void GripperStateCallback(const intrinsic_proto::GripperStateMessage&);
+  // void ForceTorqueCallback(const intrinsic_proto::ForceTorqueMessage&);
+  // void CameraCallback(const intrinsic_proto::CameraMessage&);
 
   struct Data : public std::enable_shared_from_this<Data> {
     /**
@@ -74,15 +75,15 @@ private:
     ROSNodeInterfaces node_interfaces_;
     std::shared_ptr<World> world_;
     std::shared_ptr<intrinsic::Subscription> tf_sub_;
-    std::shared_ptr<intrinsic::Subscription> joint_state_sub_;
-    std::shared_ptr<intrinsic::Subscription> gripper_state_sub_;
-    std::shared_ptr<intrinsic::Subscription> force_torque_sub_;
-    std::shared_ptr<intrinsic::Subscription> camera_sub_;
+    std::shared_ptr<intrinsic::Subscription> robot_state_sub_;
+    // std::shared_ptr<intrinsic::Subscription> gripper_state_sub_;
+    // std::shared_ptr<intrinsic::Subscription> force_torque_sub_;
+    // std::shared_ptr<intrinsic::Subscription> camera_sub_;
     std::shared_ptr<rclcpp::Publisher<tf2_msgs::msg::TFMessage>> tf_pub_;
-    std::shared_ptr<rclcpp::Publisher<sensor_msgs::msg::JointState>> joint_state_pub_;
-    std::shared_ptr<rclcpp::Publisher<sensor_msgs::msg::JointState>> gripper_state_pub_;
-    std::shared_ptr<rclcpp::Publisher<geometry_msgs::msg::WrenchStamped>> force_torque_pub_;
-    std::shared_ptr<rclcpp::Publisher<sensor_msgs::msg::Image>> camera_pub_;
+    std::shared_ptr<rclcpp::Publisher<sensor_msgs::msg::JointState>> robot_state_pub_;
+    // std::shared_ptr<rclcpp::Publisher<sensor_msgs::msg::JointState>> gripper_state_pub_;
+    // std::shared_ptr<rclcpp::Publisher<geometry_msgs::msg::WrenchStamped>> force_torque_pub_;
+    // std::shared_ptr<rclcpp::Publisher<sensor_msgs::msg::Image>> camera_pub_;
     std::shared_ptr<rclcpp::Publisher<visualization_msgs::msg::MarkerArray>>
         workcell_markers_pub_;
     std::string tf_prefix_;
@@ -94,6 +95,7 @@ private:
     bool send_new_objects_ ABSL_GUARDED_BY(mutex_) = true;
     std::shared_ptr<std::thread> viz_thread_;
     absl::Mutex mutex_;  // protects send_object_names_, send_new_objects_
+    std::string robot_status_topic_name_;
     std::string mesh_url_prefix_;
     ~Data();
   };

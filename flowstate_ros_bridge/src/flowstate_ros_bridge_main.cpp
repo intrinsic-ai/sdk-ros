@@ -98,14 +98,18 @@ int main(int argc, char* argv[]) {
   params.push_back(std::move(bridge_plugins_param));
 
   const auto& s = ros_config.sensors();
-  params.emplace_back("sensors.enable_joint_states",
-                      s.enable_joint_states());
+  params.emplace_back("sensors.enable_robot_state",
+                      s.enable_robot_state());
   params.emplace_back("sensors.enable_gripper_states",
                       s.enable_gripper_states());
   params.emplace_back("sensors.enable_force_torque",
                       s.enable_force_torque());
   params.emplace_back("sensors.enable_camera_stream",
                       s.enable_camera_stream());
+
+  // Temporary: add robot status topic name param
+  params.emplace_back("robot_status_topic_name",
+                      ros_config.robot_status_topic_name());
 
   options.parameter_overrides(params);
 

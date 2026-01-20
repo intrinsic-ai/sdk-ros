@@ -3,7 +3,7 @@ syntax = "proto3";
 package intrinsic;
 
 message SensorConfig {
-  bool enable_joint_states = 1;
+  bool enable_robot_state = 1;
   bool enable_gripper_states = 2;
   bool enable_force_torque = 3;
   bool enable_camera_stream = 4;
@@ -24,4 +24,5 @@ message FlowstateRosBridgeConfig {
   string diagnostics_service_address = 12;
   int64 diagnostics_deadline_seconds = 13;
   SensorConfig sensors = 14;
+  string robot_status_topic_name = 15;
 }
