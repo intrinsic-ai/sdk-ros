@@ -29,10 +29,10 @@ namespace flowstate_ros_bridge {
 constexpr const char* kTfPrefixParamName = "world_tf_prefix";
 constexpr const char* kResourceServiceName = "flowstate_get_resource";
 constexpr const char* kMeshUrlPrefixParamName = "mesh_url_prefix";
-constexpr const char* kEnableRobotStateBridgeParamName = "sensors.enable_robot_state";
-constexpr const char* kEnableGripperStateBridgeParamName = "sensors.enable_gripper_states";
-constexpr const char* kEnableForceTorqueBridgeParamName = "sensors.enable_force_torque";
-constexpr const char* kEnableCameraStreamBridgeParamName = "sensors.enable_camera_stream";
+constexpr const char* kEnableRobotStateBridgeParamName = "enable_robot_state_topic";
+constexpr const char* kEnableGripperStateBridgeParamName = "enable_gripper_state_topic";
+constexpr const char* kEnableForceTorqueBridgeParamName = "enable_force_torque_topic";
+constexpr const char* kEnableCameraStreamBridgeParamName = "enable_camera_stream_topic";
 constexpr const char* kRobotStatusTopicName = "robot_status_topic_name";
 
 ///=============================================================================
@@ -47,16 +47,11 @@ void WorldBridge::declare_ros_parameters(
   param_interface->declare_parameter(
       kMeshUrlPrefixParamName,
       rclcpp::ParameterValue{"http://localhost:8123/"});
-  param_interface->declare_parameter(
-      kEnableRobotStateBridgeParamName, rclcpp::ParameterValue(false));
-  param_interface->declare_parameter(
-      kEnableGripperStateBridgeParamName, rclcpp::ParameterValue(false));
-  param_interface->declare_parameter(
-      kEnableForceTorqueBridgeParamName, rclcpp::ParameterValue(false));
-  param_interface->declare_parameter(
-      kEnableCameraStreamBridgeParamName, rclcpp::ParameterValue(false));
-  param_interface->declare_parameter(kRobotStatusTopicName,
-                                     rclcpp::ParameterValue("robot_state_*_throttle"));
+  param_interface->declare_parameter(kEnableRobotStateBridgeParamName, rclcpp::ParameterValue(true));
+  param_interface->declare_parameter(kEnableGripperStateBridgeParamName, rclcpp::ParameterValue(true));
+  param_interface->declare_parameter(kEnableForceTorqueBridgeParamName, rclcpp::ParameterValue(true));
+  param_interface->declare_parameter(kEnableCameraStreamBridgeParamName, rclcpp::ParameterValue(false));
+  param_interface->declare_parameter(kRobotStatusTopicName, rclcpp::ParameterValue("robot_state_throttle"));
 }
 
 ///=============================================================================
@@ -122,70 +117,48 @@ bool WorldBridge::initialize(ROSNodeInterfaces ros_node_interfaces, std::shared_
   data_->tf_sub_ = std::move(*tf_sub_);
 
   // Robot States Bridge
-  if (param_interface->get_parameter(kEnableRobotStateBridgeParamName).as_bool()) {
-    data_->robot_state_pub_ = rclcpp::create_publisher<sensor_msgs::msg::JointState>(
-        param_interface, topics_interface, "robot_state", rclcpp::SystemDefaultsQoS());
-    data_->robot_status_topic_name_ = param_interface->get_parameter(kRobotStatusTopicName).get_value<std::string>();
-    LOG(INFO) << "Robot Status Topic Name: " << data_->robot_status_topic_name_;
-    auto robot_state_sub_ = data_->world_->CreateRobotStateSubscription(data_->robot_status_topic_name_,
-        [this](const intrinsic_proto::icon::RobotStatus& msg) { this->RobotStateCallback(msg); });
-    if (!robot_state_sub_.ok()) {
-      LOG(ERROR) << "Unable to create Robot State Subscription: " << robot_state_sub_.status();
-      return false;
-    }
-    LOG(INFO) << "Subscribed to Flowstate Robot State topic";
-    data_->robot_state_sub_ = std::move(*robot_state_sub_);
-  } else {
-    LOG(INFO) << "Robot State bridge is disabled by parameter.";
+  data_->robot_state_topic_enabled_ = param_interface->get_parameter(kEnableRobotStateBridgeParamName).as_bool();
+  data_->gripper_states_topic_enabled_ = param_interface->get_parameter(kEnableGripperStateBridgeParamName).as_bool();
+  data_->force_torque_topic_enabled_ = param_interface->get_parameter(kEnableForceTorqueBridgeParamName).as_bool();
+  data_->camera_stream_topic_enabled_ = param_interface->get_parameter(kEnableCameraStreamBridgeParamName).as_bool();
+  LOG(INFO) << "Robot State Bridge Enabled: " << data_->robot_state_topic_enabled_;
+  LOG(INFO) << "Gripper States Bridge Enabled: " << data_->gripper_states_topic_enabled_;
+  LOG(INFO) << "Force Torque Bridge Enabled: " << data_->force_torque_topic_enabled_;
+  LOG(INFO) << "Camera Stream Bridge Enabled: " << data_->camera_stream_topic_enabled_;
+
+  // Create ROS publisheres
+  data_->robot_state_pub_ = rclcpp::create_publisher<sensor_msgs::msg::JointState>(
+      param_interface, topics_interface, "robot_state", rclcpp::SystemDefaultsQoS());
+  data_->gripper_state_pub_ = rclcpp::create_publisher<sensor_msgs::msg::JointState>(
+      param_interface, topics_interface, "gripper_states", rclcpp::SystemDefaultsQoS());
+  data_->force_torque_pub_ = rclcpp::create_publisher<geometry_msgs::msg::WrenchStamped>(
+      param_interface, topics_interface, "force_torque_sensors", rclcpp::SystemDefaultsQoS());
+  data_->camera_pub_ = rclcpp::create_publisher<sensor_msgs::msg::Image>(param_interface, topics_interface,
+                                                                         "camera_stream", rclcpp::SystemDefaultsQoS());
+
+  // Create Flowstate subscriptions
+  std::string robot_state_topic_name = param_interface->get_parameter(kRobotStatusTopicName).get_value<std::string>();
+  LOG(INFO) << "Robot Status Topic Name: " << robot_state_topic_name;
+  auto robot_state_sub = data_->world_->CreateRobotStateSubscription(
+      robot_state_topic_name, [this](const intrinsic_proto::icon::RobotStatus& msg) { this->RobotStateCallback(msg); });
+  if (!robot_state_sub.ok())
+  {
+    LOG(ERROR) << "Unable to create Robot State Subscription: " << robot_state_sub.status();
+    return false;
   }
+  LOG(INFO) << "Subscribed to Flowstate Robot State topic";
+  data_->robot_state_sub_ = std::move(*robot_state_sub);
 
-  // // Gripper States Bridge
-  // if (param_interface->get_parameter(kEnableGripperStateBridgeParamName).as_bool()) {
-  //   data_->gripper_state_pub_ = rclcpp::create_publisher<sensor_msgs::msg::JointState>(
-  //       param_interface, topics_interface, "gripper_states", rclcpp::SystemDefaultsQoS());
-  //   auto gripper_state_sub_ = data_->world_->CreateGripperStateSubscription(
-  //       [this](const intrinsic_proto::GripperStateMessage& msg) { this->GripperStateCallback(msg); });
-  //   if (!gripper_state_sub_.ok()) {
-  //     LOG(ERROR) << "Unable to create Gripper State Subscription: " << gripper_state_sub_.status();
-  //     return false;
-  //   }
-  //   LOG(INFO) << "Subscribed to Flowstate Gripper State topic";
-  //   data_->gripper_state_sub_ = std::move(*gripper_state_sub_);
-  // } else {
-  //   LOG(INFO) << "Gripper State bridge is disabled by parameter.";
-  // }
-
-  // // Force Torque Sensor Values Bridge
-  // if (param_interface->get_parameter(kEnableForceTorqueBridgeParamName).as_bool()) {
-  //   data_->force_torque_pub_ = rclcpp::create_publisher<geometry_msgs::msg::WrenchStamped>(
-  //       param_interface, topics_interface, "force_torque_sensors", rclcpp::SystemDefaultsQoS());
-  //   auto force_torque_sub_ = data_->world_->CreateForceTorqueSubscription(
-  //       [this](const intrinsic_proto::ForceTorqueMessage& msg) { this->ForceTorqueCallback(msg); });
-  //   if (!force_torque_sub_.ok()) {
-  //     LOG(ERROR) << "Unable to create Force Torque Subscription: " << force_torque_sub_.status();
-  //     return false;
-  //   }
-  //   LOG(INFO) << "Subscribed to Flowstate Force Torque topic";
-  //   data_->force_torque_sub_ = std::move(*force_torque_sub_);
-  // } else {
-  //   LOG(INFO) << "Force Torque bridge is disabled by parameter.";
-  // }
-
-  // // Camera Stream Bridge
-  // if (param_interface->get_parameter(kEnableCameraStreamBridgeParamName).as_bool()) {
-  //   data_->camera_pub_ = rclcpp::create_publisher<sensor_msgs::msg::Image>(
-  //       param_interface, topics_interface, "camera_stream", rclcpp::SystemDefaultsQoS());
-  //   auto camera_sub_ = data_->world_->CreateCameraSubscription(
-  //       [this](const intrinsic_proto::CameraMessage& msg) { this->CameraCallback(msg); });
-  //   if (!camera_sub_.ok()) {
-  //     LOG(ERROR) << "Unable to create Camera Stream Subscription: " << camera_sub_.status();
-  //     return false;
-  //   }
-  //   LOG(INFO) << "Subscribed to Flowstate Camera Stream topic";
-  //   data_->camera_sub_ = std::move(*camera_sub_);
-  // } else {
-  //   LOG(INFO) << "Camera Stream bridge is disabled by parameter.";
-  // }
+  // Camera Stream Bridge
+  auto camera_sub = data_->world_->CreateCameraSubscription(
+      [this](const intrinsic_proto::perception::SensorImage& msg) { this->CameraCallback(msg); });
+  if (!camera_sub.ok())
+  {
+    LOG(ERROR) << "Unable to create Camera Stream Subscription: " << camera_sub.status();
+    return false;
+  }
+  LOG(INFO) << "Subscribed to Flowstate Camera Stream topic";
+  data_->camera_sub_ = std::move(*camera_sub);
 
   // Start a thread to publish sceneObject visualization messages whenever a new
   // object arrives
@@ -466,79 +439,49 @@ void WorldBridge::RobotStateCallback(const intrinsic_proto::icon::RobotStatus& r
       LOG(INFO) << "  Gripper State: " << part_status.gripper_state().sensed_state();
     }
   }
-  
 
   sensor_msgs::msg::JointState robot_state_ros;
   robot_state_ros.header.stamp.nanosec = robot_state_proto.timestamp_ns();
   // robot_state_ros.header.stamp.sec = robot_state_proto.timestamp_ns();
   // Populate robot_state_ros from robot_state_proto
   // This is a skeleton, actual conversion logic would go here.
-
-  data_->robot_state_pub_->publish(robot_state_ros);
+  // data_->robot_state_pub_->publish(robot_state_ros);
 
   const rclcpp::Duration elapsed = clock.now() - t_start;
   LOG(INFO) << "Robot state translation time: " << (1000.0 * elapsed.seconds()) << " ms";
   LOG(INFO) << "=======================================================" << std::endl;
+
+  // TODO: Use enable flags, extract gripper and force torque sensors and republish in ROS
 }
 
-// ///=============================================================================
-// void WorldBridge::GripperStateCallback(const intrinsic_proto::GripperStateMessage& gripper_state_proto) {
-//   rclcpp::Clock clock;
-//   const rclcpp::Time t_start = clock.now();
+///=============================================================================
+void WorldBridge::CameraCallback(const intrinsic_proto::perception::SensorImage& camera_proto)
+{
+  if (data_->camera_stream_topic_enabled_)
+  {
+    rclcpp::Clock clock;
+    const rclcpp::Time t_start = clock.now();
 
-//   sensor_msgs::msg::JointState gripper_state_ros; // Using JointState as a placeholder
-//   gripper_state_ros.header.stamp.sec = gripper_state_proto.header().stamp().seconds();
-//   gripper_state_ros.header.stamp.nanosec = gripper_state_proto.header().stamp().nanos();
-//   // Populate gripper_state_ros from gripper_state_proto
-//   // This is a skeleton, actual conversion logic would go here.
+    sensor_msgs::msg::Image camera_ros;
+    // camera_ros.header.stamp.sec = camera_proto.header().stamp().seconds();
+    // camera_ros.header.stamp.nanosec = camera_proto.header().stamp().nanos();
+    // camera_ros.header.frame_id = data_->tf_prefix_ + camera_proto.header().frame_id();
+    // Populate camera_ros from camera_proto
+    // This is a skeleton, actual conversion logic would go here.
+    // For example, if camera_proto contains raw image data:
+    // camera_ros.height = camera_proto.height();
+    // camera_ros.width = camera_proto.width();
+    // camera_ros.encoding = camera_proto.encoding(); // e.g., "rgb8", "mono8"
+    // camera_ros.is_bigendian = 0; // or 1 if applicable
+    // camera_ros.step = camera_proto.step(); // row length in bytes
+    // camera_ros.data.assign(camera_proto.data().begin(), camera_proto.data().end());
 
-//   data_->gripper_state_pub_->publish(gripper_state_ros);
+    data_->camera_pub_->publish(camera_ros);
 
-//   const rclcpp::Duration elapsed = clock.now() - t_start;
-//   LOG(INFO) << "Gripper state translation time: " << (1000.0 * elapsed.seconds()) << " ms";
-// }
-
-// ///=============================================================================
-// void WorldBridge::ForceTorqueCallback(const intrinsic_proto::ForceTorqueMessage& force_torque_proto) {
-//   rclcpp::Clock clock;
-//   const rclcpp::Time t_start = clock.now();
-
-//   geometry_msgs::msg::WrenchStamped force_torque_ros;
-//   force_torque_ros.header.stamp.sec = force_torque_proto.header().stamp().seconds();
-//   force_torque_ros.header.stamp.nanosec = force_torque_proto.header().stamp().nanos();
-//   // Populate force_torque_ros from force_torque_proto
-//   // This is a skeleton, actual conversion logic would go here.
-
-//   data_->force_torque_pub_->publish(force_torque_ros);
-
-//   const rclcpp::Duration elapsed = clock.now() - t_start;
-//   LOG(INFO) << "Force torque translation time: " << (1000.0 * elapsed.seconds()) << " ms";
-// }
-
-// ///=============================================================================
-// void WorldBridge::CameraCallback(const intrinsic_proto::CameraMessage& camera_proto) {
-//   rclcpp::Clock clock;
-//   const rclcpp::Time t_start = clock.now();
-
-//   sensor_msgs::msg::Image camera_ros;
-//   camera_ros.header.stamp.sec = camera_proto.header().stamp().seconds();
-//   camera_ros.header.stamp.nanosec = camera_proto.header().stamp().nanos();
-//   camera_ros.header.frame_id = data_->tf_prefix_ + camera_proto.header().frame_id();
-//   // Populate camera_ros from camera_proto
-//   // This is a skeleton, actual conversion logic would go here.
-//   // For example, if camera_proto contains raw image data:
-//   // camera_ros.height = camera_proto.height();
-//   // camera_ros.width = camera_proto.width();
-//   // camera_ros.encoding = camera_proto.encoding(); // e.g., "rgb8", "mono8"
-//   // camera_ros.is_bigendian = 0; // or 1 if applicable
-//   // camera_ros.step = camera_proto.step(); // row length in bytes
-//   // camera_ros.data.assign(camera_proto.data().begin(), camera_proto.data().end());
-
-//   data_->camera_pub_->publish(camera_ros);
-
-//   const rclcpp::Duration elapsed = clock.now() - t_start;
-//   LOG(INFO) << "Camera stream translation time: " << (1000.0 * elapsed.seconds()) << " ms";
-// }
+    const rclcpp::Duration elapsed = clock.now() - t_start;
+    LOG(INFO) << "Camera stream translation time: " << (1000.0 * elapsed.seconds()) << " ms";
+  }
+}
 
 WorldBridge::~WorldBridge() {
   if (data_->viz_thread_ && data_->viz_thread_->joinable()) {
