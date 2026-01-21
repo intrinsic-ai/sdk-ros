@@ -4,7 +4,7 @@ package intrinsic;
 
 message SensorConfig {
   bool enable_robot_state = 1;
-  bool enable_gripper_states = 2;
+  bool enable_gripper_state = 2;
   bool enable_force_torque = 3;
   bool enable_camera_stream = 4;
 }
