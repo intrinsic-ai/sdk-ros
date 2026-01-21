@@ -21,7 +21,7 @@
 #include "absl/status/statusor.h"
 #include "intrinsic/geometry/proto/geometry_service.grpc.pb.h"
 #include "intrinsic/geometry/proto/geometry_service.pb.h"
-#include "intrinsic/icon/proto/part_status.pb.h"
+#include "intrinsic/logging/proto/log_item.pb.h"
 #include "intrinsic/math/proto/tf_message.pb.h"
 #include "intrinsic/perception/proto/sensor_image.pb.h"
 #include "intrinsic/platform/pubsub/pubsub.h"
@@ -48,9 +48,8 @@ class World : public std::enable_shared_from_this<World> {
       intrinsic::SubscriptionOkCallback<intrinsic_proto::TFMessage> callback);
 
   // Robot States subscription
-  absl::StatusOr<std::shared_ptr<intrinsic::Subscription>>
-  CreateRobotStateSubscription(const std::string& topic_name,
-                               intrinsic::SubscriptionOkCallback<intrinsic_proto::icon::RobotStatus> callback);
+  absl::StatusOr<std::shared_ptr<intrinsic::Subscription>> CreateRobotStateSubscription(
+      const std::string& topic_name, intrinsic::SubscriptionOkCallback<intrinsic_proto::data_logger::LogItem> callback);
 
   // Camera Stream subscription
   absl::StatusOr<std::shared_ptr<intrinsic::Subscription>>

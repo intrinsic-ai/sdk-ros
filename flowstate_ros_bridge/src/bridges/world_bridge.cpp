@@ -51,7 +51,8 @@ void WorldBridge::declare_ros_parameters(
   param_interface->declare_parameter(kEnableGripperStateBridgeParamName, rclcpp::ParameterValue(true));
   param_interface->declare_parameter(kEnableForceTorqueBridgeParamName, rclcpp::ParameterValue(true));
   param_interface->declare_parameter(kEnableCameraStreamBridgeParamName, rclcpp::ParameterValue(false));
-  param_interface->declare_parameter(kRobotStatusTopicName, rclcpp::ParameterValue("robot_state_throttle"));
+  param_interface->declare_parameter(kRobotStatusTopicName, rclcpp::ParameterValue("/icon/robot_controller/"
+                                                                                   "robot_status_throttle"));
 }
 
 ///=============================================================================
@@ -140,7 +141,8 @@ bool WorldBridge::initialize(ROSNodeInterfaces ros_node_interfaces, std::shared_
   std::string robot_state_topic_name = param_interface->get_parameter(kRobotStatusTopicName).get_value<std::string>();
   LOG(INFO) << "Robot Status Topic Name: " << robot_state_topic_name;
   auto robot_state_sub = data_->world_->CreateRobotStateSubscription(
-      robot_state_topic_name, [this](const intrinsic_proto::icon::RobotStatus& msg) { this->RobotStateCallback(msg); });
+      robot_state_topic_name,
+      [this](const intrinsic_proto::data_logger::LogItem& msg) { this->RobotStateCallback(msg); });
   if (!robot_state_sub.ok())
   {
     LOG(ERROR) << "Unable to create Robot State Subscription: " << robot_state_sub.status();
@@ -409,49 +411,68 @@ void WorldBridge::TfCallback(const intrinsic_proto::TFMessage& tf_proto) {
 }
 
 ///=============================================================================
-void WorldBridge::RobotStateCallback(const intrinsic_proto::icon::RobotStatus& robot_state_proto) {
+void WorldBridge::RobotStateCallback(const intrinsic_proto::data_logger::LogItem& log_item)
+{
   rclcpp::Clock clock;
   const rclcpp::Time t_start = clock.now();
 
-  LOG(INFO) << "Received RobotStatus: " << robot_state_proto.DebugString();
-  LOG(INFO) << "---------------------------------------------------------" << std::endl;
-  for (const auto& entry : robot_state_proto.status_map()) {
-    const std::string& part_name = entry.first;
-    const auto& part_status = entry.second;
-    LOG(INFO) << "Part: " << part_name << ", Joint States: " << part_status.joint_states_size();
-    for (int i = 0; i < part_status.joint_states_size(); ++i) {
-      const auto& joint_state = part_status.joint_states(i);
-      if (joint_state.has_position_sensed()) {
-        LOG(INFO) << "  Joint " << i << " position: " << joint_state.position_sensed();
-      }
-      if (joint_state.has_velocity_sensed()) {
-        LOG(INFO) << "  Joint " << i << " velocity: " << joint_state.velocity_sensed();
-      }
-      if (joint_state.has_acceleration_sensed()) {
-        LOG(INFO) << "  Joint " << i << " acceleration: " << joint_state.acceleration_sensed();
-      }
-      if (joint_state.has_torque_sensed()) {
-        LOG(INFO) << "  Joint " << i << " torque: " << joint_state.torque_sensed();
-      }
+  const auto& payload = log_item.payload();
+
+  switch (payload.data_case())
+  {
+    case intrinsic_proto::data_logger::LogItem::Payload::kIconRobotStatus: {
+      LOG(INFO) << "Received RobotStatus:\n" << payload.icon_robot_status().DebugString();
+      break;
     }
 
-    if (part_status.has_gripper_state()) {
-      LOG(INFO) << "  Gripper State: " << part_status.gripper_state().sensed_state();
+    case intrinsic_proto::data_logger::LogItem::Payload::kIconL1JointState: {
+      LOG(INFO) << "Received JointState:\n" << payload.icon_l1_joint_state().DebugString();
+      break;
+    }
+
+    case intrinsic_proto::data_logger::LogItem::Payload::kIconFtWrench: {
+      LOG(INFO) << "Received FT Wrench:\n" << payload.icon_ft_wrench().DebugString();
+      break;
+    }
+
+    default: {
+      break;
     }
   }
 
-  sensor_msgs::msg::JointState robot_state_ros;
-  robot_state_ros.header.stamp.nanosec = robot_state_proto.timestamp_ns();
-  // robot_state_ros.header.stamp.sec = robot_state_proto.timestamp_ns();
-  // Populate robot_state_ros from robot_state_proto
-  // This is a skeleton, actual conversion logic would go here.
+  // for (const auto& entry : robot_state_proto.status_map()) {
+  //   const std::string& part_name = entry.first;
+  //   const auto& part_status = entry.second;
+  //   LOG(INFO) << "Part: " << part_name << ", Joint States: " << part_status.joint_states_size();
+  //   for (int i = 0; i < part_status.joint_states_size(); ++i) {
+  //     const auto& joint_state = part_status.joint_states(i);
+  //     if (joint_state.has_position_sensed()) {
+  //       LOG(INFO) << "  Joint " << i << " position: " << joint_state.position_sensed();
+  //     }
+  //     if (joint_state.has_velocity_sensed()) {
+  //       LOG(INFO) << "  Joint " << i << " velocity: " << joint_state.velocity_sensed();
+  //     }
+  //     if (joint_state.has_acceleration_sensed()) {
+  //       LOG(INFO) << "  Joint " << i << " acceleration: " << joint_state.acceleration_sensed();
+  //     }
+  //     if (joint_state.has_torque_sensed()) {
+  //       LOG(INFO) << "  Joint " << i << " torque: " << joint_state.torque_sensed();
+  //     }
+  //   }
+
+  //   if (part_status.has_gripper_state()) {
+  //     LOG(INFO) << "  Gripper State: " << part_status.gripper_state().sensed_state();
+  //   }
+  // }
+
+  // TODO: Translate
+  // sensor_msgs::msg::JointState robot_state_ros;
   // data_->robot_state_pub_->publish(robot_state_ros);
 
+  // TODO: Use enable flags, extract gripper and force torque sensors and republish in ROS
   const rclcpp::Duration elapsed = clock.now() - t_start;
   LOG(INFO) << "Robot state translation time: " << (1000.0 * elapsed.seconds()) << " ms";
   LOG(INFO) << "=======================================================" << std::endl;
-
-  // TODO: Use enable flags, extract gripper and force torque sensors and republish in ROS
 }
 
 ///=============================================================================

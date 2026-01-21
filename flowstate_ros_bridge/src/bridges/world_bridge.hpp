@@ -55,7 +55,7 @@ class WorldBridge : public BridgeInterface {
 
 private:
   void TfCallback(const intrinsic_proto::TFMessage&);
-  void RobotStateCallback(const intrinsic_proto::icon::RobotStatus&);
+  void RobotStateCallback(const intrinsic_proto::data_logger::LogItem&);
   void CameraCallback(const intrinsic_proto::perception::SensorImage&);
 
   struct Data : public std::enable_shared_from_this<Data> {
