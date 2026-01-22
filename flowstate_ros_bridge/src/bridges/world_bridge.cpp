@@ -415,64 +415,91 @@ void WorldBridge::RobotStateCallback(const intrinsic_proto::data_logger::LogItem
 {
   rclcpp::Clock clock;
   const rclcpp::Time t_start = clock.now();
+  constexpr int kLogThrottleCount = 500;
 
   const auto& payload = log_item.payload();
 
-  switch (payload.data_case())
-  {
+  switch (payload.data_case()) {
     case intrinsic_proto::data_logger::LogItem::Payload::kIconRobotStatus: {
-      LOG(INFO) << "Received RobotStatus:\n" << payload.icon_robot_status().DebugString();
+      // Here another functionality will be added to translate the RobotStatus to ROS message
+      static int count = 0;
+      if (count++ % kLogThrottleCount == 0) {
+        LOG(INFO) << "Received RobotStatus:\n" << payload.icon_robot_status().DebugString();
+
+        const auto& robot_status = payload.icon_robot_status();
+        for (const auto& entry : robot_status.status_map()) {
+          const std::string& part_name = entry.first;
+          const auto& part_status = entry.second;
+          LOG(INFO) << "Part: " << part_name << ", Joint States: " << part_status.joint_states_size();
+          for (int i = 0; i < part_status.joint_states_size(); ++i) {
+            const auto& joint_state = part_status.joint_states(i);
+            if (joint_state.has_position_sensed()) {
+              LOG(INFO) << "  Joint " << i << " position: " << joint_state.position_sensed();
+            }
+            if (joint_state.has_velocity_sensed()) {
+              LOG(INFO) << "  Joint " << i << " velocity: " << joint_state.velocity_sensed();
+            }
+            if (joint_state.has_acceleration_sensed()) {
+              LOG(INFO) << "  Joint " << i << " acceleration: " << joint_state.acceleration_sensed();
+            }
+            if (joint_state.has_torque_sensed()) {
+              LOG(INFO) << "  Joint " << i << " torque: " << joint_state.torque_sensed();
+            }
+          }
+
+          if (part_status.has_gripper_state()) {
+            LOG(INFO) << "  Gripper State: " << part_status.gripper_state().sensed_state();
+          }
+        }
+      }
       break;
     }
 
     case intrinsic_proto::data_logger::LogItem::Payload::kIconL1JointState: {
-      LOG(INFO) << "Received JointState:\n" << payload.icon_l1_joint_state().DebugString();
+      // Here another functionality will be added to translate the JointState to ROS message
+      static int count = 0;
+      if (count++ % kLogThrottleCount == 0) {
+        LOG(INFO) << "Received JointState:\n" << payload.icon_l1_joint_state().DebugString();
+      }
       break;
     }
 
     case intrinsic_proto::data_logger::LogItem::Payload::kIconFtWrench: {
-      LOG(INFO) << "Received FT Wrench:\n" << payload.icon_ft_wrench().DebugString();
+      // Here another functionality will be added to translate the FT Wrench to ROS message
+      static int count = 0;
+      if (count++ % kLogThrottleCount == 0) {
+        LOG(INFO) << "Received FT Wrench:\n" << payload.icon_ft_wrench().DebugString();
+      }
       break;
     }
 
     default: {
+      static int count = 0;
+      if (count++ % kLogThrottleCount == 0) {
+        const auto* descriptor = payload.GetDescriptor();
+        const auto* field = descriptor->FindFieldByNumber(payload.data_case());
+        if (field) {
+          LOG(INFO) << "Received unhandled data type: " << field->name()
+                    << " (ID: " << payload.data_case() << ")";
+        } else {
+          LOG(INFO) << "Received unknown or unset data type (ID: " << payload.data_case() << ")";
+        }
+      }
       break;
     }
   }
-
-  // for (const auto& entry : robot_state_proto.status_map()) {
-  //   const std::string& part_name = entry.first;
-  //   const auto& part_status = entry.second;
-  //   LOG(INFO) << "Part: " << part_name << ", Joint States: " << part_status.joint_states_size();
-  //   for (int i = 0; i < part_status.joint_states_size(); ++i) {
-  //     const auto& joint_state = part_status.joint_states(i);
-  //     if (joint_state.has_position_sensed()) {
-  //       LOG(INFO) << "  Joint " << i << " position: " << joint_state.position_sensed();
-  //     }
-  //     if (joint_state.has_velocity_sensed()) {
-  //       LOG(INFO) << "  Joint " << i << " velocity: " << joint_state.velocity_sensed();
-  //     }
-  //     if (joint_state.has_acceleration_sensed()) {
-  //       LOG(INFO) << "  Joint " << i << " acceleration: " << joint_state.acceleration_sensed();
-  //     }
-  //     if (joint_state.has_torque_sensed()) {
-  //       LOG(INFO) << "  Joint " << i << " torque: " << joint_state.torque_sensed();
-  //     }
-  //   }
-
-  //   if (part_status.has_gripper_state()) {
-  //     LOG(INFO) << "  Gripper State: " << part_status.gripper_state().sensed_state();
-  //   }
-  // }
 
   // TODO: Translate
   // sensor_msgs::msg::JointState robot_state_ros;
   // data_->robot_state_pub_->publish(robot_state_ros);
 
   // TODO: Use enable flags, extract gripper and force torque sensors and republish in ROS
-  const rclcpp::Duration elapsed = clock.now() - t_start;
-  LOG(INFO) << "Robot state translation time: " << (1000.0 * elapsed.seconds()) << " ms";
-  LOG(INFO) << "=======================================================" << std::endl;
+  static int count = 0;
+  if (count++ % kLogThrottleCount == 0) {
+    const rclcpp::Duration elapsed = clock.now() - t_start; 
+    LOG(INFO) << "Robot state translation time: " << (1000.0 * elapsed.seconds()) << " ms";
+    LOG(INFO) << "=======================================================" << std::endl;
+  }
 }
 
 ///=============================================================================
