@@ -119,7 +119,9 @@ RUN \
     --mount=type=cache,target=/ccache/ \
     . /opt/ros/jazzy/setup.sh \
     && set -x \
+    && export CCACHE_DIR=/ccache \
     && export PATH="/usr/lib/ccache:/usr/local/opt/ccache/libexec:$PATH" \
+    && ccache -z \
     && cd /opt/intrinsic/intrinsic_sdk_cmake \
     && touch src/intrinsic_sdk_ros/intrinsic_sdk/COLCON_IGNORE \
     && touch src/intrinsic_sdk_ros/intrinsic_sdk_ros/COLCON_IGNORE \
