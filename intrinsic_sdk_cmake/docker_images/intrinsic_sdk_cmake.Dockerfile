@@ -127,6 +127,7 @@ RUN \
     && touch src/intrinsic_sdk_ros/intrinsic_sdk_ros/COLCON_IGNORE \
     && colcon build \
         --cmake-args -DBUILD_TESTING=OFF \
+        --event-handlers parallel_status+ \
         --merge-install \
     && ccache -s
 

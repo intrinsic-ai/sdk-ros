@@ -49,7 +49,7 @@ RUN \
         --from-paths src \
         --ignore-src \
         --default-yes \
-    && apt-get install ccache
+    && apt-get install -y ccache
 
 # Build the user's packages.
 RUN \
@@ -62,8 +62,8 @@ RUN \
     && cd $SKILL_WORKSPACE \
     && colcon build \
         --cmake-args -DBUILD_TESTING=ON \
+        --event-handlers parallel_status+ \
         --merge-install \
-        --executor=sequential \
         --packages-up-to $SKILL_PACKAGE \
     && ccache -s
 
