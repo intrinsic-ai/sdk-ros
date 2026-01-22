@@ -51,19 +51,25 @@ jobs:
         id: cache-for-var-cache-apt
         with:
           path: var-cache-apt
-          key: buildx-cache-mount-for-var-cache-apt
+          key: buildx-cache-mount-for-var-cache-apt-${{ runner.os }}-${{ github.run_id }}
+          restore-keys: |
+            buildx-cache-mount-for-var-cache-apt-${{ runner.os }}
       - name: GitHub Action Cache for var-lib-apt
         uses: actions/cache@v4
         id: cache-for-var-lib-apt
         with:
           path: var-lib-apt
-          key: buildx-cache-mount-for-var-lib-apt
+          key: buildx-cache-mount-for-var-lib-apt-${{ runner.os }}-${{ github.run_id }}
+          restore-keys: |
+            buildx-cache-mount-for-var-lib-apt-${{ runner.os }}
       - name: GitHub Action Cache for ccache
         uses: actions/cache@v4
         id: cache-for-ccache
         with:
           path: ccache
-          key: buildx-cache-mount-for-ccache
+          key: buildx-cache-mount-for-ccache-${{ runner.os }}-${{ github.run_id }}
+          restore-keys: |
+            buildx-cache-mount-for-ccache-${{ runner.os }}
 
       # Set up the caching of docker cache-mount volumes which normally live
       # inside a .db file that the buildx container keeps.
