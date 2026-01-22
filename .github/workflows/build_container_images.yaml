@@ -1,6 +1,11 @@
 name: Build intrinsic_sdk_cmake container images
 run-name: ${{ github.actor }}'s changes have triggered a build of the sdk container images.
-on: [workflow_call]
+on:
+  workflow_call:
+    outputs:
+      intrinsic_ai_sdk_version:
+        description: "The intrinsic-ai/sdk version being used"
+        value: ${{ jobs.build-container-images.outputs.intrinsic_ai_sdk_version }}
 jobs:
   build-container-images:
     runs-on: ubuntu-24.04-8core

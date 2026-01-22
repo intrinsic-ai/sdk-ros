@@ -52,7 +52,7 @@ chmod 644 images/$SERVICE_NAME/$SERVICE_NAME.tar
 TAR_FILES="$SERVICE_NAME.tar service_manifest.binarypb"
 for FILE in default_config.binarypb parameter-descriptor-set.proto.bin
 do
-  if [ -f $FILE ]; then
+  if [ -f "images/$SERVICE_NAME/$FILE" ]; then
     TAR_FILES="$TAR_FILES $FILE"
   fi
 done

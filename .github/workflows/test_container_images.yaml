@@ -2,6 +2,10 @@ name: Build and Test Container Images
 run-name: ${{ github.actor }}'s changes have triggered a build, test, and push of the sdk container images.
 on:
   workflow_call:
+    outputs:
+      intrinsic_ai_sdk_version:
+        description: "The intrinsic-ai/sdk version being used"
+        value: ${{ jobs.test-container-images.outputs.intrinsic_ai_sdk_version }}
   pull_request:
     types: [opened, reopened, synchronize, edited]
 jobs:
