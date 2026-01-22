@@ -62,7 +62,6 @@ RUN \
     && cd $SKILL_WORKSPACE \
     && colcon build \
         --cmake-args -DBUILD_TESTING=ON \
-        --event-handlers parallel_status+ \
         --merge-install \
         --packages-up-to $SKILL_PACKAGE \
     && ccache -s
