@@ -19,10 +19,15 @@ WORKDIR /opt/intrinsic
 ENV ROS_HOME=/tmp
 
 # Install rmw_zenoh_cpp and set it as the default RMW implementation.
-RUN apt-get update \
+RUN \
+    --mount=type=cache,target=/var/cache/apt,sharing=locked \
+    --mount=type=cache,target=/var/lib/apt,sharing=locked \
+    set -x \
+    && rm -f /etc/apt/apt.conf.d/docker-clean \
+    && echo 'Binary::apt::APT::Keep-Downloaded-Packages "true";' >/etc/apt/apt.conf.d/keep-cache \
+    && apt-get update \
     && apt-get dist-upgrade -y \
-    && apt-get install -y --no-install-recommends ros-jazzy-rmw-zenoh-cpp \
-    && rm -rf /var/lib/apt/lists/*
+    && apt-get install -y --no-install-recommends ros-jazzy-rmw-zenoh-cpp
 ENV RMW_IMPLEMENTATION=rmw_zenoh_cpp
 RUN set -x \
     && sed --in-place \

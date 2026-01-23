@@ -35,22 +35,54 @@ jobs:
       - id: intrinsic_ai_sdk_version
         run: echo "version=${{ env.INTRINSIC_AI_SDK_VERSION }}" >> "$GITHUB_OUTPUT"
 
-      # TODO(wjwwood): use ccache (and apt and bazel caches) when buildkit supports persisting
-      # cache type mounts: https://github.com/moby/buildkit/issues/1512
-      # Consider using something like: https://github.com/dashevo/gh-action-cache-buildkit-state
-      # Or this: https://github.com/reproducible-containers/buildkit-cache-dance
-      # # Set up ccache.
-      # - name: ccache
-      #   uses: hendrikmuhs/ccache-action@v1.2
-
       # Set up buildx.
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
+        id: setup-buildx
         with:
           # This is needed in order to let buildx push to the local repository.
           driver-opts: network=host
+
+      # Set up the GitHub Action Caches where we'll store the docker cache-mount volumes.
+      - name: GitHub Action Cache for var-cache-apt
+        uses: actions/cache@v4
+        id: cache-for-var-cache-apt
+        with:
+          path: var-cache-apt
+          key: buildx-cache-mount-for-var-cache-apt-${{ runner.os }}-${{ github.run_id }}
+          restore-keys: |
+            buildx-cache-mount-for-var-cache-apt-${{ runner.os }}
+      - name: GitHub Action Cache for var-lib-apt
+        uses: actions/cache@v4
+        id: cache-for-var-lib-apt
+        with:
+          path: var-lib-apt
+          key: buildx-cache-mount-for-var-lib-apt-${{ runner.os }}-${{ github.run_id }}
+          restore-keys: |
+            buildx-cache-mount-for-var-lib-apt-${{ runner.os }}
+      - name: GitHub Action Cache for ccache
+        uses: actions/cache@v4
+        id: cache-for-ccache
+        with:
+          path: ccache
+          key: buildx-cache-mount-for-ccache-${{ runner.os }}-${{ github.run_id }}
+          restore-keys: |
+            buildx-cache-mount-for-ccache-${{ runner.os }}
+
+      # Set up the caching of docker cache-mount volumes which normally live
+      # inside a .db file that the buildx container keeps.
+      - name: Restore Docker cache mounts
+        uses: reproducible-containers/buildkit-cache-dance@v3
+        with:
+          builder: ${{ steps.setup-buildx.outputs.name }}
+          cache-map: |
+            {
+              "var-cache-apt": "/var/cache/apt",
+              "var-lib-apt": "/var/lib/apt",
+              "ccache": "/ccache"
+            }
 
       # Build the base, normal, and run images.
       # They are tagged and pushed into the local container registry service so
@@ -65,8 +97,6 @@ jobs:
           # TODO(wjwwood): The cache for gha (GitHub Actions) is limited,
           # consider trying the registry cache type that caches to an image, see:
           # https://www.blacksmith.sh/blog/cache-is-king-a-guide-for-docker-layer-caching-in-github-actions
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
           outputs: type=docker,dest=${{ runner.temp }}/intrinsic_sdk_cmake_base.tar
           tags: |
             localhost:5000/intrinsic_sdk_cmake_base:temp
@@ -76,8 +106,6 @@ jobs:
           context: .
           file: intrinsic_sdk_cmake/docker_images/intrinsic_sdk_cmake.Dockerfile
           push: true
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
           outputs: type=docker,dest=${{ runner.temp }}/intrinsic_sdk_cmake.tar
           build-args: |
             REPOSITORY=localhost:5000
@@ -91,8 +119,6 @@ jobs:
           file: intrinsic_sdk_cmake/docker_images/intrinsic_sdk_cmake_run.Dockerfile
           # No push for the last one since there is no subsequent image that needs it.
           # push: true
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
           outputs: type=docker,dest=${{ runner.temp }}/intrinsic_sdk_cmake_run.tar
           build-args: |
             REPOSITORY=localhost:5000
