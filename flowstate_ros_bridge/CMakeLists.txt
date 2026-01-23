@@ -138,6 +138,8 @@ target_link_libraries(flowstate_ros_builtin_bridges
     flowstate_ros_bridge_interface
     intrinsic_sdk_cmake::intrinsic_sdk_cmake
     nlohmann_json::nlohmann_json
+    absl::strings
+    absl::log
     pluginlib::pluginlib
     ${diagnostic_msgs_TARGETS}
     ${std_msgs_TARGETS}

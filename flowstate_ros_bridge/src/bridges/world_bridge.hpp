@@ -30,7 +30,6 @@
 #include "tf2_msgs/msg/tf_message.hpp"
 #include "visualization_msgs/msg/marker_array.hpp"
 
-// Placeholder for new ROS messages
 #include "geometry_msgs/msg/wrench_stamped.hpp"
 #include "sensor_msgs/msg/image.hpp"
 #include "sensor_msgs/msg/joint_state.hpp"
@@ -57,6 +56,19 @@ private:
   void TfCallback(const intrinsic_proto::TFMessage&);
   void RobotStateCallback(const intrinsic_proto::data_logger::LogItem&);
   void CameraCallback(const intrinsic_proto::perception::SensorImage&);
+
+  // Helper methods for RobotStateCallback
+  void HandleRobotStatus(const intrinsic_proto::icon::RobotStatus& robot_status, const rclcpp::Time& time);
+  void HandleJointState(const intrinsic_proto::icon::JointState& joint_state);
+  void HandleFtWrench(const intrinsic_proto::icon::Wrench& wrench);
+  void PublishJointState(const std::string& part_name,
+                         const intrinsic_proto::icon::PartStatus& part_status,
+                         const rclcpp::Time& time);
+  void PublishWrench(const std::string& part_name,
+                     const intrinsic_proto::icon::PartStatus& part_status,
+                     const rclcpp::Time& time);
+  void LogGripperState(const std::string& part_name,
+                       const intrinsic_proto::icon::PartStatus& part_status);
 
   struct Data : public std::enable_shared_from_this<Data> {
     /**
@@ -85,7 +97,7 @@ private:
     std::shared_ptr<rclcpp::Publisher<geometry_msgs::msg::WrenchStamped>> force_torque_pub_;
     std::shared_ptr<rclcpp::Publisher<sensor_msgs::msg::Image>> camera_pub_;
     bool robot_state_topic_enabled_;
-    bool gripper_states_topic_enabled_;
+    bool gripper_state_topic_enabled_;
     bool force_torque_topic_enabled_;
     bool camera_stream_topic_enabled_;
 
