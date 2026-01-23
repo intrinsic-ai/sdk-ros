@@ -84,7 +84,8 @@ RUN \
         git \
         python3-colcon-common-extensions \
         python3-colcon-mixin \
-        python3-vcstool
+        python3-vcstool \
+    && /usr/sbin/update-ccache-symlinks
 
 # Setup colcon mixin and metadata.
 RUN set -x \
@@ -120,7 +121,7 @@ RUN \
     . /opt/ros/jazzy/setup.sh \
     && set -x \
     && export CCACHE_DIR=/ccache \
-    && export PATH="/usr/lib/ccache:/usr/local/opt/ccache/libexec:$PATH" \
+    && export PATH="/usr/lib/ccache:$PATH" \
     && ccache -z \
     && cd /opt/intrinsic/intrinsic_sdk_cmake \
     && touch src/intrinsic_sdk_ros/intrinsic_sdk/COLCON_IGNORE \

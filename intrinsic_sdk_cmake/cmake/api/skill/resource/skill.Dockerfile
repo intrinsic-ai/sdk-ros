@@ -49,7 +49,8 @@ RUN \
         --from-paths src \
         --ignore-src \
         --default-yes \
-    && apt-get install -y ccache
+    && apt-get install -y ccache \
+    && /usr/sbin/update-ccache-symlinks
 
 # Build the user's packages.
 RUN \
@@ -57,7 +58,7 @@ RUN \
     . /opt/intrinsic/intrinsic_sdk_cmake/install/setup.sh \
     && set -x \
     && export CCACHE_DIR=/ccache \
-    && export PATH="/usr/lib/ccache:/usr/local/opt/ccache/libexec:$PATH" \
+    && export PATH="/usr/lib/ccache:$PATH" \
     && ccache -z \
     && cd $SKILL_WORKSPACE \
     && colcon build \
