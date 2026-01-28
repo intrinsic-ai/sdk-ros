@@ -49,7 +49,7 @@ class World : public std::enable_shared_from_this<World> {
 
   // Robot States subscription
   absl::StatusOr<std::shared_ptr<intrinsic::Subscription>> CreateRobotStateSubscription(
-      const std::string& topic_name, intrinsic::SubscriptionOkCallback<intrinsic_proto::data_logger::LogItem> callback);
+      intrinsic::SubscriptionOkCallback<intrinsic_proto::data_logger::LogItem> callback);
 
   // Camera Stream subscription
   absl::StatusOr<std::shared_ptr<intrinsic::Subscription>>
