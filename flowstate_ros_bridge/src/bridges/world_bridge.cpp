@@ -34,7 +34,6 @@ constexpr const char* kEnableRobotStateBridgeParamName = "enable_robot_state_top
 constexpr const char* kEnableGripperStateBridgeParamName = "enable_gripper_state_topic";
 constexpr const char* kEnableForceTorqueBridgeParamName = "enable_force_torque_topic";
 constexpr const char* kEnableCameraStreamBridgeParamName = "enable_camera_stream_topic";
-constexpr const char* kRobotStatusTopicName = "robot_status_topic_name";
 
 ///=============================================================================
 void WorldBridge::declare_ros_parameters(
@@ -52,8 +51,6 @@ void WorldBridge::declare_ros_parameters(
   param_interface->declare_parameter(kEnableGripperStateBridgeParamName, rclcpp::ParameterValue(true));
   param_interface->declare_parameter(kEnableForceTorqueBridgeParamName, rclcpp::ParameterValue(true));
   param_interface->declare_parameter(kEnableCameraStreamBridgeParamName, rclcpp::ParameterValue(false));
-  param_interface->declare_parameter(kRobotStatusTopicName, rclcpp::ParameterValue("/icon/robot_controller/"
-                                                                                   "robot_status_throttle"));
 }
 
 ///=============================================================================
@@ -128,21 +125,18 @@ bool WorldBridge::initialize(ROSNodeInterfaces ros_node_interfaces, std::shared_
   LOG(INFO) << "Force Torque Bridge Enabled: " << data_->force_torque_topic_enabled_;
   LOG(INFO) << "Camera Stream Bridge Enabled: " << data_->camera_stream_topic_enabled_;
 
-  // Create ROS publisheres
+  // Create ROS publishers
   data_->robot_state_pub_ = rclcpp::create_publisher<sensor_msgs::msg::JointState>(
       param_interface, topics_interface, "robot_state", rclcpp::SystemDefaultsQoS());
   data_->gripper_state_pub_ = rclcpp::create_publisher<sensor_msgs::msg::JointState>(
       param_interface, topics_interface, "gripper_states", rclcpp::SystemDefaultsQoS());
   data_->force_torque_pub_ = rclcpp::create_publisher<geometry_msgs::msg::WrenchStamped>(
-      param_interface, topics_interface, "force_torque_sensors", rclcpp::SystemDefaultsQoS());
+      param_interface, topics_interface, "force_torque_sensors", rclcpp::SensorDataQoS());
   data_->camera_pub_ = rclcpp::create_publisher<sensor_msgs::msg::Image>(param_interface, topics_interface,
-                                                                         "camera_stream", rclcpp::SystemDefaultsQoS());
+                                                                         "camera_stream", rclcpp::SensorDataQoS());
 
   // Create Flowstate subscriptions
-  std::string robot_state_topic_name = param_interface->get_parameter(kRobotStatusTopicName).get_value<std::string>();
-  LOG(INFO) << "Robot Status Topic Name: " << robot_state_topic_name;
   auto robot_state_sub = data_->world_->CreateRobotStateSubscription(
-      robot_state_topic_name,
       [this](const intrinsic_proto::data_logger::LogItem& msg) { this->RobotStateCallback(msg); });
   if (!robot_state_sub.ok())
   {
@@ -422,9 +416,6 @@ void WorldBridge::RobotStateCallback(const intrinsic_proto::data_logger::LogItem
     case intrinsic_proto::data_logger::LogItem::Payload::kIconRobotStatus: {
       if (data_->robot_state_topic_enabled_ || data_->force_torque_topic_enabled_ || data_->gripper_state_topic_enabled_) {
         HandleRobotStatus(payload.icon_robot_status(), t_start);
-        LOG_EVERY_N(INFO, 1000) << "-------------------------------------------------------";
-        LOG_EVERY_N(INFO, 1000) << "Received RobotStatus:\n" << payload.icon_robot_status().DebugString();
-        LOG_EVERY_N(INFO, 1000) << "-------------------------------------------------------";
       }
       break;
     }
@@ -485,9 +476,6 @@ void WorldBridge::PublishJointState(const std::string& part_name,
   robot_state_ros.header.stamp = time;
   robot_state_ros.header.frame_id = "";
 
-  std::string joint_state_str = absl::StrFormat("JointState values for part: %s\nSize: %d\n",
-                                                part_name, part_status.joint_states_size());
-
   for (int i = 0; i < part_status.joint_states_size(); ++i) {
     const auto& joint_state = part_status.joint_states(i);
     std::string joint_name = absl::StrFormat("%s_joint_%d", part_name, i);
@@ -501,13 +489,8 @@ void WorldBridge::PublishJointState(const std::string& part_name,
     robot_state_ros.velocity.push_back(vel);
     robot_state_ros.effort.push_back(eff);
 
-    absl::StrAppend(&joint_state_str,
-        absl::StrFormat("Name: %s\nPosition: %f\nVelocity: %f\nTorque: %f\n",
-                        joint_name, pos, vel, eff));
   }
   data_->robot_state_pub_->publish(robot_state_ros);
-  LOG_EVERY_N(INFO, 1000) << joint_state_str;
-  LOG_EVERY_N(INFO, 1000) << "Published JointState robot state for part: " << part_name;
 }
 
 void WorldBridge::PublishWrench(const std::string& part_name,
@@ -526,14 +509,6 @@ void WorldBridge::PublishWrench(const std::string& part_name,
   wrench_msg.wrench.torque.z = w.rz();
 
   data_->force_torque_pub_->publish(wrench_msg);
-
-  std::string wrench_str = absl::StrFormat("Wrench values for part: %s\nForce: %f %f %f\nTorque: %f %f %f\n",
-      part_name,
-      wrench_msg.wrench.force.x, wrench_msg.wrench.force.y, wrench_msg.wrench.force.z,
-      wrench_msg.wrench.torque.x, wrench_msg.wrench.torque.y, wrench_msg.wrench.torque.z);
-
-  LOG_EVERY_N(INFO, 1000) << wrench_str;
-  LOG_EVERY_N(INFO, 1000) << "Published WrenchStamped force torque for part: " << part_name;
 }
 
 void WorldBridge::LogGripperState(const std::string& part_name, const intrinsic_proto::icon::PartStatus& part_status) {

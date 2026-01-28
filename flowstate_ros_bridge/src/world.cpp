@@ -51,9 +51,9 @@ World::CreateTfSubscription(
 }
 
 absl::StatusOr<std::shared_ptr<intrinsic::Subscription>> World::CreateRobotStateSubscription(
-    const std::string& topic_name, intrinsic::SubscriptionOkCallback<intrinsic_proto::data_logger::LogItem> callback)
+    intrinsic::SubscriptionOkCallback<intrinsic_proto::data_logger::LogItem> callback)
 {
-  auto sub = pubsub_->CreateSubscription(topic_name, intrinsic::TopicConfig(),
+  auto sub = pubsub_->CreateSubscription("/icon/robot_controller/robot_status_throttle", intrinsic::TopicConfig(),
                                          callback);
   if (!sub.ok()) {
     return sub.status();

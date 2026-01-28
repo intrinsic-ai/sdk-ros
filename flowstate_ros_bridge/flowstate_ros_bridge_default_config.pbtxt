@@ -25,5 +25,4 @@
     enable_force_torque: true
     enable_camera_stream: false
   },
-  robot_status_topic_name: "/icon/robot_controller/robot_status_throttle"
 }
