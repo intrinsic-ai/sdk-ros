@@ -16,9 +16,13 @@ COPY --from=build_image \
 
 # Re-install the packages needed for exec.
 # This avoids having the source code and unnecessary dependencies in the final image.
-RUN set -x \
+RUN \
+    --mount=type=cache,target=/var/cache/apt,sharing=locked \
+    --mount=type=cache,target=/var/lib/apt,sharing=locked \
+    set -x \
+    && rm -f /etc/apt/apt.conf.d/docker-clean \
+    && echo 'Binary::apt::APT::Keep-Downloaded-Packages "true";' >/etc/apt/apt.conf.d/keep-cache \
     && apt-get update \
     && apt-cache dumpavail | dpkg --merge-avail \
     && dpkg --set-selections < /exec_apt_packages.txt \
-    && apt-get dselect-upgrade -y \
-    && rm -rf /var/lib/apt/lists/*
+    && apt-get dselect-upgrade -y
