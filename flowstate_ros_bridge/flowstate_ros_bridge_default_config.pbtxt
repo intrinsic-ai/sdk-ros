@@ -23,6 +23,5 @@
     enable_robot_state: true
     enable_gripper_state: true
     enable_force_torque: true
-    enable_camera_stream: false
   },
 }

@@ -31,7 +31,6 @@
 #include "visualization_msgs/msg/marker_array.hpp"
 
 #include "geometry_msgs/msg/wrench_stamped.hpp"
-#include "sensor_msgs/msg/image.hpp"
 #include "sensor_msgs/msg/joint_state.hpp"
 
 namespace flowstate_ros_bridge {
@@ -55,7 +54,6 @@ class WorldBridge : public BridgeInterface {
 private:
   void TfCallback(const intrinsic_proto::TFMessage&);
   void RobotStateCallback(const intrinsic_proto::data_logger::LogItem&);
-  void CameraCallback(const intrinsic_proto::perception::SensorImage&);
 
   // Helper methods for RobotStateCallback
   void HandleRobotStatus(const intrinsic_proto::icon::RobotStatus& robot_status, const rclcpp::Time& time);
@@ -89,17 +87,14 @@ private:
     std::shared_ptr<intrinsic::Subscription> tf_sub_;
     std::shared_ptr<rclcpp::Publisher<tf2_msgs::msg::TFMessage>> tf_pub_;
 
-    // Robot state, gripper state, force torque, camera functionality
+    // Robot state, gripper state, force torque functionality
     std::shared_ptr<intrinsic::Subscription> robot_state_sub_;
-    std::shared_ptr<intrinsic::Subscription> camera_sub_;
     std::shared_ptr<rclcpp::Publisher<sensor_msgs::msg::JointState>> robot_state_pub_;
     std::shared_ptr<rclcpp::Publisher<sensor_msgs::msg::JointState>> gripper_state_pub_;
     std::shared_ptr<rclcpp::Publisher<geometry_msgs::msg::WrenchStamped>> force_torque_pub_;
-    std::shared_ptr<rclcpp::Publisher<sensor_msgs::msg::Image>> camera_pub_;
     bool robot_state_topic_enabled_;
     bool gripper_state_topic_enabled_;
     bool force_torque_topic_enabled_;
-    bool camera_stream_topic_enabled_;
 
     std::shared_ptr<rclcpp::Publisher<visualization_msgs::msg::MarkerArray>>
         workcell_markers_pub_;

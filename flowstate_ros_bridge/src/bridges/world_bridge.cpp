@@ -33,7 +33,6 @@ constexpr const char* kMeshUrlPrefixParamName = "mesh_url_prefix";
 constexpr const char* kEnableRobotStateBridgeParamName = "enable_robot_state_topic";
 constexpr const char* kEnableGripperStateBridgeParamName = "enable_gripper_state_topic";
 constexpr const char* kEnableForceTorqueBridgeParamName = "enable_force_torque_topic";
-constexpr const char* kEnableCameraStreamBridgeParamName = "enable_camera_stream_topic";
 
 ///=============================================================================
 void WorldBridge::declare_ros_parameters(
@@ -50,7 +49,6 @@ void WorldBridge::declare_ros_parameters(
   param_interface->declare_parameter(kEnableRobotStateBridgeParamName, rclcpp::ParameterValue(true));
   param_interface->declare_parameter(kEnableGripperStateBridgeParamName, rclcpp::ParameterValue(true));
   param_interface->declare_parameter(kEnableForceTorqueBridgeParamName, rclcpp::ParameterValue(true));
-  param_interface->declare_parameter(kEnableCameraStreamBridgeParamName, rclcpp::ParameterValue(false));
 }
 
 ///=============================================================================
@@ -119,11 +117,9 @@ bool WorldBridge::initialize(ROSNodeInterfaces ros_node_interfaces, std::shared_
   data_->robot_state_topic_enabled_ = param_interface->get_parameter(kEnableRobotStateBridgeParamName).as_bool();
   data_->gripper_state_topic_enabled_ = param_interface->get_parameter(kEnableGripperStateBridgeParamName).as_bool();
   data_->force_torque_topic_enabled_ = param_interface->get_parameter(kEnableForceTorqueBridgeParamName).as_bool();
-  data_->camera_stream_topic_enabled_ = param_interface->get_parameter(kEnableCameraStreamBridgeParamName).as_bool();
   LOG(INFO) << "Robot State Bridge Enabled: " << data_->robot_state_topic_enabled_;
   LOG(INFO) << "Gripper States Bridge Enabled: " << data_->gripper_state_topic_enabled_;
   LOG(INFO) << "Force Torque Bridge Enabled: " << data_->force_torque_topic_enabled_;
-  LOG(INFO) << "Camera Stream Bridge Enabled: " << data_->camera_stream_topic_enabled_;
 
   // Create ROS publishers
   data_->robot_state_pub_ = rclcpp::create_publisher<sensor_msgs::msg::JointState>(
@@ -132,8 +128,6 @@ bool WorldBridge::initialize(ROSNodeInterfaces ros_node_interfaces, std::shared_
       param_interface, topics_interface, "gripper_states", rclcpp::SystemDefaultsQoS());
   data_->force_torque_pub_ = rclcpp::create_publisher<geometry_msgs::msg::WrenchStamped>(
       param_interface, topics_interface, "force_torque_sensors", rclcpp::SensorDataQoS());
-  data_->camera_pub_ = rclcpp::create_publisher<sensor_msgs::msg::Image>(param_interface, topics_interface,
-                                                                         "camera_stream", rclcpp::SensorDataQoS());
 
   // Create Flowstate subscriptions
   auto robot_state_sub = data_->world_->CreateRobotStateSubscription(
@@ -145,17 +139,6 @@ bool WorldBridge::initialize(ROSNodeInterfaces ros_node_interfaces, std::shared_
   }
   LOG(INFO) << "Subscribed to Flowstate Robot State topic";
   data_->robot_state_sub_ = std::move(*robot_state_sub);
-
-  // Camera Stream Bridge
-  auto camera_sub = data_->world_->CreateCameraSubscription(
-      [this](const intrinsic_proto::perception::SensorImage& msg) { this->CameraCallback(msg); });
-  if (!camera_sub.ok())
-  {
-    LOG(ERROR) << "Unable to create Camera Stream Subscription: " << camera_sub.status();
-    return false;
-  }
-  LOG(INFO) << "Subscribed to Flowstate Camera Stream topic";
-  data_->camera_sub_ = std::move(*camera_sub);
 
   // Start a thread to publish sceneObject visualization messages whenever a new
   // object arrives
@@ -535,33 +518,6 @@ void WorldBridge::HandleFtWrench(const intrinsic_proto::icon::Wrench& wrench) {
 }
 
 ///=============================================================================
-void WorldBridge::CameraCallback(const intrinsic_proto::perception::SensorImage& camera_proto)
-{
-  if (data_->camera_stream_topic_enabled_)
-  {
-    rclcpp::Clock clock;
-    const rclcpp::Time t_start = clock.now();
-
-    sensor_msgs::msg::Image camera_ros;
-    // camera_ros.header.stamp.sec = camera_proto.header().stamp().seconds();
-    // camera_ros.header.stamp.nanosec = camera_proto.header().stamp().nanos();
-    // camera_ros.header.frame_id = data_->tf_prefix_ + camera_proto.header().frame_id();
-    // Populate camera_ros from camera_proto
-    // This is a skeleton, actual conversion logic would go here.
-    // For example, if camera_proto contains raw image data:
-    // camera_ros.height = camera_proto.height();
-    // camera_ros.width = camera_proto.width();
-    // camera_ros.encoding = camera_proto.encoding(); // e.g., "rgb8", "mono8"
-    // camera_ros.is_bigendian = 0; // or 1 if applicable
-    // camera_ros.step = camera_proto.step(); // row length in bytes
-    // camera_ros.data.assign(camera_proto.data().begin(), camera_proto.data().end());
-
-    data_->camera_pub_->publish(camera_ros);
-
-    const rclcpp::Duration elapsed = clock.now() - t_start;
-    LOG(INFO) << "Camera stream translation time: " << (1000.0 * elapsed.seconds()) << " ms";
-  }
-}
 
 WorldBridge::~WorldBridge() {
   if (data_->viz_thread_ && data_->viz_thread_->joinable()) {

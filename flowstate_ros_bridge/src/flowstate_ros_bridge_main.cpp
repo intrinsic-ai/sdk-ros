@@ -101,7 +101,6 @@ int main(int argc, char* argv[]) {
   params.emplace_back("enable_robot_state_topic", s.enable_robot_state());
   params.emplace_back("enable_gripper_state_topic", s.enable_gripper_state());
   params.emplace_back("enable_force_torque_topic", s.enable_force_torque());
-  params.emplace_back("enable_camera_stream_topic", s.enable_camera_stream());
 
   options.parameter_overrides(params);
 

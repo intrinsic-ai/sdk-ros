@@ -23,7 +23,6 @@
 #include "intrinsic/geometry/proto/geometry_service.pb.h"
 #include "intrinsic/logging/proto/log_item.pb.h"
 #include "intrinsic/math/proto/tf_message.pb.h"
-#include "intrinsic/perception/proto/sensor_image.pb.h"
 #include "intrinsic/platform/pubsub/pubsub.h"
 #include "intrinsic/platform/pubsub/zenoh_publisher_data.h"
 #include "intrinsic/world/objects/object_world_client.h"
@@ -50,10 +49,6 @@ class World : public std::enable_shared_from_this<World> {
   // Robot States subscription
   absl::StatusOr<std::shared_ptr<intrinsic::Subscription>> CreateRobotStateSubscription(
       intrinsic::SubscriptionOkCallback<intrinsic_proto::data_logger::LogItem> callback);
-
-  // Camera Stream subscription
-  absl::StatusOr<std::shared_ptr<intrinsic::Subscription>>
-  CreateCameraSubscription(intrinsic::SubscriptionOkCallback<intrinsic_proto::perception::SensorImage> callback);
 
   // Establish connections with various services.
   absl::Status connect();
