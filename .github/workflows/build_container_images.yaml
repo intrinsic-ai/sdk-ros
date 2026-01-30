@@ -26,7 +26,7 @@ jobs:
 
       # Checkout.
       - name: Check out repository code
-        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # was: actions/checkout@v4.2.2
 
       # Extract the intrinsic sdk version being used.
       - name: Get intrinsic-ai/sdk Version
@@ -37,9 +37,9 @@ jobs:
 
       # Set up buildx.
       - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
+        uses: docker/setup-qemu-action@c7c53464625b32c7a7e944ae62b3e17d2b600130 # was: docker/setup-qemu-action@v3
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # was: docker/setup-buildx-action@v3
         id: setup-buildx
         with:
           # This is needed in order to let buildx push to the local repository.
@@ -47,7 +47,7 @@ jobs:
 
       # Set up the GitHub Action Caches where we'll store the docker cache-mount volumes.
       - name: GitHub Action Cache for var-cache-apt
-        uses: actions/cache@v4
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # was: actions/cache@v4
         id: cache-for-var-cache-apt
         with:
           path: var-cache-apt
@@ -55,7 +55,7 @@ jobs:
           restore-keys: |
             buildx-cache-mount-for-var-cache-apt-${{ runner.os }}
       - name: GitHub Action Cache for var-lib-apt
-        uses: actions/cache@v4
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # was: actions/cache@v4
         id: cache-for-var-lib-apt
         with:
           path: var-lib-apt
@@ -63,7 +63,7 @@ jobs:
           restore-keys: |
             buildx-cache-mount-for-var-lib-apt-${{ runner.os }}
       - name: GitHub Action Cache for ccache
-        uses: actions/cache@v4
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # was: actions/cache@v4
         id: cache-for-ccache
         with:
           path: ccache
@@ -74,7 +74,7 @@ jobs:
       # Set up the caching of docker cache-mount volumes which normally live
       # inside a .db file that the buildx container keeps.
       - name: Restore Docker cache mounts
-        uses: reproducible-containers/buildkit-cache-dance@v3
+        uses: reproducible-containers/buildkit-cache-dance@5b81f4d29dc8397a7d341dba3aeecc7ec54d6361 # was: reproducible-containers/buildkit-cache-dance@v3
         with:
           builder: ${{ steps.setup-buildx.outputs.name }}
           cache-map: |
@@ -89,7 +89,7 @@ jobs:
       # subsequent images can use them to build, and they are output to tar
       # files so they can be uploaded as artifacts at the end.
       - name: Build intrinsic_sdk_cmake_base Docker Image
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@ca052bb54ab0790a636c9b5f226502c73d547a25 # was: docker/build-push-action@v5
         with:
           context: .
           file: intrinsic_sdk_cmake/docker_images/intrinsic_sdk_cmake_base.Dockerfile
@@ -101,7 +101,7 @@ jobs:
           tags: |
             localhost:5000/intrinsic_sdk_cmake_base:temp
       - name: Build intrinsic_sdk_cmake Docker Image
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@ca052bb54ab0790a636c9b5f226502c73d547a25 # was: docker/build-push-action@v5
         with:
           context: .
           file: intrinsic_sdk_cmake/docker_images/intrinsic_sdk_cmake.Dockerfile
@@ -113,7 +113,7 @@ jobs:
           tags: |
             localhost:5000/intrinsic_sdk_cmake:temp
       - name: Build intrinsic_sdk_cmake_run Docker Image
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@ca052bb54ab0790a636c9b5f226502c73d547a25 # was: docker/build-push-action@v5
         with:
           context: .
           file: intrinsic_sdk_cmake/docker_images/intrinsic_sdk_cmake_run.Dockerfile
@@ -128,19 +128,19 @@ jobs:
 
       # Upload images as temporary build artifacts for use in other jobs.
       - name: Upload intrinsic_sdk_cmake_base image
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # was: actions/upload-artifact@v4
         with:
           name: intrinsic_sdk_cmake_base_image
           path: ${{ runner.temp }}/intrinsic_sdk_cmake_base.tar
           retention-days: "1"
       - name: Upload intrinsic_sdk_cmake image
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # was: actions/upload-artifact@v4
         with:
           name: intrinsic_sdk_cmake_image
           path: ${{ runner.temp }}/intrinsic_sdk_cmake.tar
           retention-days: "1"
       - name: Upload intrinsic_sdk_cmake_run image
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # was: actions/upload-artifact@v4
         with:
           name: intrinsic_sdk_cmake_run_image
           path: ${{ runner.temp }}/intrinsic_sdk_cmake_run.tar
