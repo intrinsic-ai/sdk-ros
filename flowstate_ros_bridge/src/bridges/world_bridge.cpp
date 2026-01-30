@@ -429,7 +429,6 @@ void WorldBridge::RobotStateCallback(const intrinsic_proto::data_logger::LogItem
 
   const rclcpp::Duration elapsed = clock.now() - t_start;
   LOG_EVERY_N(INFO, 1000) << absl::StrFormat("Robot state translation time: %.3f ms", 1000.0 * elapsed.seconds());
-  LOG_EVERY_N(INFO, 1000) << "=================================================================";
 }
 
 void WorldBridge::HandleRobotStatus(const intrinsic_proto::icon::RobotStatus& robot_status, const rclcpp::Time& time) {
