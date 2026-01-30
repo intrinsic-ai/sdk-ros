@@ -45,9 +45,9 @@ void WorldBridge::declare_ros_parameters(
 }
 
 ///=============================================================================
-bool WorldBridge::initialize(ROSNodeInterfaces ros_node_interfaces,
-                             std::shared_ptr<Executive> /*executive_client*/,
-                             std::shared_ptr<World> world_client) {
+bool WorldBridge::initialize(ROSNodeInterfaces ros_node_interfaces, std::shared_ptr<Executive> /*executive_client*/,
+                             std::shared_ptr<World> world_client)
+{
   data_ = std::make_shared<Data>();
   data_->node_interfaces_ = std::move(ros_node_interfaces);
   data_->world_ = std::move(world_client);
