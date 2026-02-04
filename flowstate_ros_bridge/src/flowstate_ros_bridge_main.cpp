@@ -71,6 +71,10 @@ int main(int argc, char* argv[]) {
 
   std::vector<rclcpp::Parameter> params;
   // Get parameters from config
+  params.emplace_back("diagnostics_deadline_seconds",
+                      ros_config.diagnostics_deadline_seconds());
+  params.emplace_back("diagnostics_service_address",
+                      ros_config.diagnostics_service_address());
   params.emplace_back("executive_service_address",
                       ros_config.executive_service_address());
   params.emplace_back("executive_deadline_seconds",
@@ -92,6 +96,11 @@ int main(int argc, char* argv[]) {
                                        bridge_plugins_proto.end());
   rclcpp::Parameter bridge_plugins_param("bridge_plugins", plugin_list);
   params.push_back(std::move(bridge_plugins_param));
+
+  const auto& s = ros_config.sensors();
+  params.emplace_back("enable_robot_state_topic", s.enable_robot_state());
+  params.emplace_back("enable_gripper_state_topic", s.enable_gripper_state());
+  params.emplace_back("enable_force_torque_topic", s.enable_force_torque());
 
   options.parameter_overrides(params);
 

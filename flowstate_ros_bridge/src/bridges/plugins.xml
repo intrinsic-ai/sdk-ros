@@ -5,4 +5,7 @@
   <class type="flowstate_ros_bridge::ExecutiveBridge" base_class_type="flowstate_ros_bridge::BridgeInterface">
     <description>Bridge with Flowstate executive service.</description>
   </class>
+  <class type="flowstate_ros_bridge::DiagnosticsBridge" base_class_type="flowstate_ros_bridge::BridgeInterface">
+    <description>Bridge with Flowstate diagnostics service.</description>
+  </class>
 </library>

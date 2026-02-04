@@ -30,6 +30,9 @@
 #include "tf2_msgs/msg/tf_message.hpp"
 #include "visualization_msgs/msg/marker_array.hpp"
 
+#include "geometry_msgs/msg/wrench_stamped.hpp"
+#include "sensor_msgs/msg/joint_state.hpp"
+
 namespace flowstate_ros_bridge {
 
 ///=============================================================================
@@ -45,12 +48,25 @@ class WorldBridge : public BridgeInterface {
   void declare_ros_parameters(ROSNodeInterfaces ros_node_interfaces) final;
 
   /// Documentation inherited.
-  bool initialize(ROSNodeInterfaces ros_node_interfaces,
-                  std::shared_ptr<Executive> executive_client,
+  bool initialize(ROSNodeInterfaces ros_node_interfaces, std::shared_ptr<Executive> executive_client,
                   std::shared_ptr<World> world_client) final;
 
- private:
+private:
   void TfCallback(const intrinsic_proto::TFMessage&);
+  void RobotStateCallback(const intrinsic_proto::data_logger::LogItem&);
+
+  // Helper methods for RobotStateCallback
+  void HandleRobotStatus(const intrinsic_proto::icon::RobotStatus& robot_status, const rclcpp::Time& time);
+  void HandleJointState(const intrinsic_proto::icon::JointState& joint_state);
+  void HandleFtWrench(const intrinsic_proto::icon::Wrench& wrench);
+  void PublishJointState(const std::string& part_name,
+                         const intrinsic_proto::icon::PartStatus& part_status,
+                         const rclcpp::Time& time);
+  void PublishWrench(const std::string& part_name,
+                     const intrinsic_proto::icon::PartStatus& part_status,
+                     const rclcpp::Time& time);
+  void LogGripperState(const std::string& part_name,
+                       const intrinsic_proto::icon::PartStatus& part_status);
 
   struct Data : public std::enable_shared_from_this<Data> {
     /**
@@ -66,8 +82,20 @@ class WorldBridge : public BridgeInterface {
 
     ROSNodeInterfaces node_interfaces_;
     std::shared_ptr<World> world_;
+
+    // TF functionality
     std::shared_ptr<intrinsic::Subscription> tf_sub_;
     std::shared_ptr<rclcpp::Publisher<tf2_msgs::msg::TFMessage>> tf_pub_;
+
+    // Robot state, gripper state, force torque functionality
+    std::shared_ptr<intrinsic::Subscription> robot_state_sub_;
+    std::shared_ptr<rclcpp::Publisher<sensor_msgs::msg::JointState>> robot_state_pub_;
+    std::shared_ptr<rclcpp::Publisher<sensor_msgs::msg::JointState>> gripper_state_pub_;
+    std::shared_ptr<rclcpp::Publisher<geometry_msgs::msg::WrenchStamped>> force_torque_pub_;
+    bool robot_state_topic_enabled_;
+    bool gripper_state_topic_enabled_;
+    bool force_torque_topic_enabled_;
+
     std::shared_ptr<rclcpp::Publisher<visualization_msgs::msg::MarkerArray>>
         workcell_markers_pub_;
     std::string tf_prefix_;

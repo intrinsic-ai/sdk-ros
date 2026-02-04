@@ -17,3 +17,9 @@ Then, create the bundle with the `build_service_bundle.sh` script. This will com
 ```
 
 The output of this command will be a tarball inside the `images` directory of the colcon workspace which can be pushed to FlowState as a new service.
+
+## Documentation
+
+* [Flowstate Diagnostics ROS Bridge:](docs/diagnostics_ros_bridge.md) Details the operational logic of the diagnostics polling feature, including architecture, configuration, and verification procedures.
+
+* [Flowstate Robot State and Sensor ROS Bridge:](docs/robot_state_sensor.md) Explains the translation of internal Flowstate data (joint states, force/torque) into standard ROS 2 messages, with setup and testing instructions.

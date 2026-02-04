@@ -12,8 +12,16 @@
   external_zenoh_router_address: "tcp/zenoh-router.app-intrinsic-base:7447"
   bridge_plugins: [
     "flowstate_ros_bridge::WorldBridge",
-    "flowstate_ros_bridge::ExecutiveBridge"
+    "flowstate_ros_bridge::ExecutiveBridge",
+    "flowstate_ros_bridge::DiagnosticsBridge"
   ],
   executive_deadline_seconds: 5
   executive_update_rate_millis: 1000
+  diagnostics_service_address: "istio-ingressgateway.app-ingress.svc.cluster.local:80"
+  diagnostics_deadline_seconds: 5
+  sensors: {
+    enable_robot_state: true
+    enable_gripper_state: true
+    enable_force_torque: true
+  },
 }

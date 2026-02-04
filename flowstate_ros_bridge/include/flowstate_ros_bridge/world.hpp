@@ -21,6 +21,7 @@
 #include "absl/status/statusor.h"
 #include "intrinsic/geometry/proto/geometry_service.grpc.pb.h"
 #include "intrinsic/geometry/proto/geometry_service.pb.h"
+#include "intrinsic/logging/proto/log_item.pb.h"
 #include "intrinsic/math/proto/tf_message.pb.h"
 #include "intrinsic/platform/pubsub/pubsub.h"
 #include "intrinsic/platform/pubsub/zenoh_publisher_data.h"
@@ -44,6 +45,10 @@ class World : public std::enable_shared_from_this<World> {
 
   absl::StatusOr<std::shared_ptr<intrinsic::Subscription>> CreateTfSubscription(
       intrinsic::SubscriptionOkCallback<intrinsic_proto::TFMessage> callback);
+
+  // Robot States subscription
+  absl::StatusOr<std::shared_ptr<intrinsic::Subscription>> CreateRobotStateSubscription(
+      intrinsic::SubscriptionOkCallback<intrinsic_proto::data_logger::LogItem> callback);
 
   // Establish connections with various services.
   absl::Status connect();
