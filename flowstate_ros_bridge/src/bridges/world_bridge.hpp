@@ -66,8 +66,6 @@ class WorldBridge : public BridgeInterface {
   void PublishWrench(const std::string& part_name,
                      const intrinsic_proto::icon::PartStatus& part_status,
                      const rclcpp::Time& time);
-  void LogGripperState(const std::string& part_name,
-                       const intrinsic_proto::icon::PartStatus& part_status);
 
   struct Data : public std::enable_shared_from_this<Data> {
     /**
@@ -88,13 +86,11 @@ class WorldBridge : public BridgeInterface {
     std::shared_ptr<intrinsic::Subscription> tf_sub_;
     std::shared_ptr<rclcpp::Publisher<tf2_msgs::msg::TFMessage>> tf_pub_;
 
-    // Robot state, gripper state, force torque functionality
+    // Robot state and force torque functionality
     std::shared_ptr<intrinsic::Subscription> robot_state_sub_;
     std::shared_ptr<rclcpp::Publisher<sensor_msgs::msg::JointState>> robot_state_pub_;
-    std::shared_ptr<rclcpp::Publisher<sensor_msgs::msg::JointState>> gripper_state_pub_;
     std::shared_ptr<rclcpp::Publisher<geometry_msgs::msg::WrenchStamped>> force_torque_pub_;
     bool robot_state_topic_enabled_;
-    bool gripper_state_topic_enabled_;
     bool force_torque_topic_enabled_;
 
     std::shared_ptr<rclcpp::Publisher<visualization_msgs::msg::MarkerArray>>

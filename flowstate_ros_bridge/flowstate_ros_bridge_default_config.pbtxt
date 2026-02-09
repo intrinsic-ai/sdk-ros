@@ -18,7 +18,6 @@
   executive_update_rate_millis: 1000
   sensors: {
     enable_robot_state: true
-    enable_gripper_state: true
     enable_force_torque: true
   },
 }
