@@ -31,7 +31,6 @@ constexpr const char* kTfPrefixParamName = "world_tf_prefix";
 constexpr const char* kResourceServiceName = "flowstate_get_resource";
 constexpr const char* kMeshUrlPrefixParamName = "mesh_url_prefix";
 constexpr const char* kEnableRobotStateBridgeParamName = "enable_robot_state_topic";
-constexpr const char* kEnableGripperStateBridgeParamName = "enable_gripper_state_topic";
 constexpr const char* kEnableForceTorqueBridgeParamName = "enable_force_torque_topic";
 
 ///=============================================================================
@@ -47,7 +46,6 @@ void WorldBridge::declare_ros_parameters(
       kMeshUrlPrefixParamName,
       rclcpp::ParameterValue{"http://localhost:8123/"});
   param_interface->declare_parameter(kEnableRobotStateBridgeParamName, rclcpp::ParameterValue(true));
-  param_interface->declare_parameter(kEnableGripperStateBridgeParamName, rclcpp::ParameterValue(true));
   param_interface->declare_parameter(kEnableForceTorqueBridgeParamName, rclcpp::ParameterValue(true));
 }
 
@@ -115,17 +113,13 @@ bool WorldBridge::initialize(ROSNodeInterfaces ros_node_interfaces, std::shared_
 
   // Robot States Bridge
   data_->robot_state_topic_enabled_ = param_interface->get_parameter(kEnableRobotStateBridgeParamName).as_bool();
-  data_->gripper_state_topic_enabled_ = param_interface->get_parameter(kEnableGripperStateBridgeParamName).as_bool();
   data_->force_torque_topic_enabled_ = param_interface->get_parameter(kEnableForceTorqueBridgeParamName).as_bool();
   LOG(INFO) << "Robot State Bridge Enabled: " << data_->robot_state_topic_enabled_;
-  LOG(INFO) << "Gripper States Bridge Enabled: " << data_->gripper_state_topic_enabled_;
   LOG(INFO) << "Force Torque Bridge Enabled: " << data_->force_torque_topic_enabled_;
 
   // Create ROS publishers
   data_->robot_state_pub_ = rclcpp::create_publisher<sensor_msgs::msg::JointState>(
       param_interface, topics_interface, "robot_state", rclcpp::SystemDefaultsQoS());
-  data_->gripper_state_pub_ = rclcpp::create_publisher<sensor_msgs::msg::JointState>(
-      param_interface, topics_interface, "gripper_states", rclcpp::SystemDefaultsQoS());
   data_->force_torque_pub_ = rclcpp::create_publisher<geometry_msgs::msg::WrenchStamped>(
       param_interface, topics_interface, "force_torque_sensors", rclcpp::SensorDataQoS());
 
@@ -397,7 +391,7 @@ void WorldBridge::RobotStateCallback(const intrinsic_proto::data_logger::LogItem
 
   switch (payload.data_case()) {
     case intrinsic_proto::data_logger::LogItem::Payload::kIconRobotStatus: {
-      if (data_->robot_state_topic_enabled_ || data_->force_torque_topic_enabled_ || data_->gripper_state_topic_enabled_) {
+      if (data_->robot_state_topic_enabled_ || data_->force_torque_topic_enabled_) {
         HandleRobotStatus(payload.icon_robot_status(), t_start);
       }
       break;
@@ -444,10 +438,6 @@ void WorldBridge::HandleRobotStatus(const intrinsic_proto::icon::RobotStatus& ro
     else if (data_->force_torque_topic_enabled_ && part_status.has_wrench_at_ft()) {
       PublishWrench(part_name, part_status, time);
     }
-    // Gripper state - No information yet
-    else if (data_->gripper_state_topic_enabled_ && (part_status.has_gripper_state() || part_status.has_linear_gripper_state())) {
-      LogGripperState(part_name, part_status);
-    }
   }
 }
 
@@ -491,21 +481,6 @@ void WorldBridge::PublishWrench(const std::string& part_name,
   wrench_msg.wrench.torque.z = w.rz();
 
   data_->force_torque_pub_->publish(wrench_msg);
-}
-
-void WorldBridge::LogGripperState(const std::string& part_name, const intrinsic_proto::icon::PartStatus& part_status) {
-  if (part_status.has_gripper_state()) {
-    std::string gripper_str = absl::StrFormat("Gripper state for part: %s\nSensed state: %f\n",
-        part_name, part_status.gripper_state().sensed_state());
-    LOG_EVERY_N(INFO, 1000) << gripper_str;
-    LOG_EVERY_N(INFO, 1000) << "Published GripperState for part: " << part_name;
-  }
-  if (part_status.has_linear_gripper_state()) {
-    std::string linear_gripper_str = absl::StrFormat("Linear gripper state for part: %s\nSensed width: %f\n",
-        part_name, part_status.linear_gripper_state().sensed_width());
-    LOG_EVERY_N(INFO, 1000) << linear_gripper_str;
-    LOG_EVERY_N(INFO, 1000) << "Published LinearGripperState for part: " << part_name;
-  }
 }
 
 void WorldBridge::HandleJointState(const intrinsic_proto::icon::JointState& joint_state) {

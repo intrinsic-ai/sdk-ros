@@ -3,11 +3,10 @@ syntax = "proto3";
 package intrinsic;
 
 // Configuration to control which sensors are enabled to publish ROS 2 messages.
-// Robot state (joints), gripper state and force/torque sensor data.
+// Robot state (joints) and force/torque sensor data.
 message SensorConfig {
   bool enable_robot_state = 1;
-  bool enable_gripper_state = 2;
-  bool enable_force_torque = 3;
+  bool enable_force_torque = 2;
 }
 
 message FlowstateRosBridgeConfig {

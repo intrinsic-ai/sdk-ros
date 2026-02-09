@@ -2,12 +2,12 @@
 
 ## 1. Overview
 
-This bridge facilitates the translation of internal Flowstate data—specifically joint states, gripper and force/torque readings into standard ROS 2 messages. It provides a configurable interface to expose robot hardware states and sensor feedback to the ROS ecosystem.
+This bridge facilitates the translation of internal Flowstate data—specifically joint states and force/torque readings into standard ROS 2 messages. It provides a configurable interface to expose robot hardware states and sensor feedback to the ROS ecosystem.
 
 
 **How it works:**
 
-* **Configurable Filtering:** The bridge utilizes a `SensorConfig` Protobuf message to manage data streams. Users can toggle specific sensor topics (robot state, gripper or force/torque) on or off via Flowstate `ROS bridge` service configuration, which prevents the instantiation of unnecessary ROS publishers and reduces network overhead.
+* **Configurable Filtering:** The bridge utilizes a `SensorConfig` Protobuf message to manage data streams. Users can toggle specific sensor topics (robot state or force/torque) on or off via Flowstate `ROS bridge` service configuration, which prevents the instantiation of unnecessary ROS publishers and reduces network overhead.
 * **Zenoh-Based Subscriptions:** The bridge uses the `intrinsic::platform::pubsub` library to establish direct Zenoh subscriptions to Flowstate's internal telemetry topics, such as `/icon/robot_controller/robot_status_throttle`.
 * **Callback-Driven Translation:** The bridge registers dedicated callback functions (e.g., `RobotStateCallback`) that are triggered whenever new data arrives on the subscribed topics. These handlers parse the high-frequency Protobuf payloads and map them into ROS-native messages `JointState` and `WrenchStamped`.
 
@@ -27,7 +27,6 @@ The following topics are now available for publishing sensor data:
 | Topic | Type | Description |
 | :--- | :--- | :--- |
 | `robot_state` | `sensor_msgs/msg/JointState` | Robot joint positions, velocities, and effort. |
-| `gripper_states` | `sensor_msgs/msg/JointState` | Current sensed state or width of the gripper. |
 | `force_torque_sensors` | `geometry_msgs/msg/WrenchStamped` | Force and torque (wrench) data in the part's frame. |
 
 ### 2.2 Logic Mapping Details (Proto → ROS)
@@ -67,7 +66,6 @@ These parameters are defined in the `SensorConfig` message and can be modified i
 | Parameter Name | Default | Description |
 | :--- | :--- | :--- |
 | `enable_robot_state_topic` | `true` | Enables publishing of robot joint states. |
-| `enable_gripper_state_topic` | `true` | Enables publishing of gripper status. |
 | `enable_force_torque_topic` | `true` | Enables publishing of F/T sensor data. |
 
 ---
