@@ -71,6 +71,11 @@ int main(int argc, char* argv[]) {
 
   std::vector<rclcpp::Parameter> params;
   // Get parameters from config
+  params.emplace_back("diagnostics_ros_topic_name", ros_config.diagnostics_ros_topic_name());
+  params.emplace_back("diagnostics_deadline_seconds",
+                      ros_config.diagnostics_deadline_seconds());
+  params.emplace_back("diagnostics_service_address",
+                      ros_config.diagnostics_service_address());
   params.emplace_back("executive_service_address",
                       ros_config.executive_service_address());
   params.emplace_back("executive_deadline_seconds",

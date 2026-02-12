@@ -31,8 +31,7 @@ constexpr const char* kServiceTunnelParamName = "service_tunnel";
 constexpr const char* kBridgePluginParamName = "bridge_plugins";
 constexpr const char* kExecutiveDeadlineParamName =
     "executive_deadline_seconds";
-constexpr const char* kExecutiveUpdateRateMillisParamName =
-    "executive_update_rate_millis";
+constexpr const char* kExecutiveUpdateRateMillisParamName = "executive_update_rate_millis";
 
 ///=============================================================================
 FlowstateROSBridge::FlowstateROSBridge(const rclcpp::NodeOptions& options)
@@ -65,15 +64,15 @@ FlowstateROSBridge::FlowstateROSBridge(const rclcpp::NodeOptions& options)
           : service_tunnel);
 
   this->declare_parameter(
-      kWorldAddressParamName,
-      service_tunnel.empty() ? "world.app-intrinsic-base.svc.cluster.local:8080"
-                             : service_tunnel);
-
-  this->declare_parameter(
       kGeometryAddressParamName,
       service_tunnel.empty()
           ? "geomservice.app-intrinsic-base.svc.cluster.local:8080"
           : service_tunnel);
+
+  this->declare_parameter(
+      kWorldAddressParamName,
+      service_tunnel.empty() ? "world.app-intrinsic-base.svc.cluster.local:8080"
+                             : service_tunnel);
 
   this->declare_parameter(kBridgePluginParamName, std::vector<std::string>{});
 
@@ -142,7 +141,8 @@ auto FlowstateROSBridge::on_activate(
   std::vector<pluginlib::UniquePtr<BridgeInterface>>::iterator iter;
   for (iter = bridges_.begin(); iter != bridges_.end(); ++iter) {
     try {
-      if (!(*iter)->initialize(*this, this->executive_, this->world_)) {
+      if (!(*iter)->initialize(*this, this->executive_, this->world_))
+      {
         return CallbackReturn::FAILURE;
       }
     } catch (const std::exception& e) {
