@@ -96,6 +96,8 @@ int main(int argc, char* argv[]) {
   const auto& s = ros_config.sensors();
   params.emplace_back("enable_robot_state_topic", s.enable_robot_state());
   params.emplace_back("enable_force_torque_topic", s.enable_force_torque());
+  params.emplace_back("robot_state_topic", s.robot_state_topic());
+  params.emplace_back("force_torque_topic", s.force_torque_topic());
 
   options.parameter_overrides(params);
 
