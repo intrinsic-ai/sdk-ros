@@ -16,6 +16,7 @@ constexpr const char* kDiagnosticsUpdateRateParamName = "diagnostics_update_rate
 constexpr const char* kDiagnosticsAddressParamName = "diagnostics_service_address";
 constexpr const char* kDiagnosticsDeadlineParamName = "diagnostics_deadline_seconds";
 constexpr const char* kDiagnosticsRosTopicNameParamName = "diagnostics_ros_topic_name";
+constexpr const char* kDiagnosticsPlatformStateName = "Platform State";
 
 ///=============================================================================
 void DiagnosticsBridge::declare_ros_parameters(
@@ -103,7 +104,7 @@ void DiagnosticsBridge::update_diagnostics() {
 
     // Add key-value pairs for more detail.
     diagnostic_msgs::msg::KeyValue kv_state;
-    kv_state.key = "Platform State";
+    kv_state.key = kDiagnosticsPlatformStateName;
     kv_state.value = intrinsic_proto::services::v1::State::StateCode_Name(
         instance_state.state().state_code());
     status_msg.values.push_back(kv_state);
