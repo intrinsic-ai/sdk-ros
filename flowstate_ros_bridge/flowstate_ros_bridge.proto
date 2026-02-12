@@ -7,6 +7,8 @@ package intrinsic;
 message SensorConfig {
   bool enable_robot_state = 1;
   bool enable_force_torque = 2;
+  string robot_state_topic = 3;
+  string force_torque_topic = 4;
 }
 
 message FlowstateRosBridgeConfig {

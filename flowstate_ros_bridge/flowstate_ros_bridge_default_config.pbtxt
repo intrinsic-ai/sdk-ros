@@ -19,5 +19,7 @@
   sensors: {
     enable_robot_state: true
     enable_force_torque: true
+    robot_state_topic: "/robot_state"
+    force_torque_topic: "/force_torque_sensor"
   },
 }

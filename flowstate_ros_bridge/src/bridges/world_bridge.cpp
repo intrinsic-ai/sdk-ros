@@ -32,6 +32,8 @@ constexpr const char* kResourceServiceName = "flowstate_get_resource";
 constexpr const char* kMeshUrlPrefixParamName = "mesh_url_prefix";
 constexpr const char* kEnableRobotStateBridgeParamName = "enable_robot_state_topic";
 constexpr const char* kEnableForceTorqueBridgeParamName = "enable_force_torque_topic";
+constexpr const char* kRobotStateTopicParamName = "robot_state_topic";
+constexpr const char* kForceTorqueTopicParamName = "force_torque_topic";
 
 ///=============================================================================
 void WorldBridge::declare_ros_parameters(
@@ -47,6 +49,8 @@ void WorldBridge::declare_ros_parameters(
       rclcpp::ParameterValue{"http://localhost:8123/"});
   param_interface->declare_parameter(kEnableRobotStateBridgeParamName, rclcpp::ParameterValue(true));
   param_interface->declare_parameter(kEnableForceTorqueBridgeParamName, rclcpp::ParameterValue(true));
+  param_interface->declare_parameter(kRobotStateTopicParamName, rclcpp::ParameterValue("/robot_state"));
+  param_interface->declare_parameter(kForceTorqueTopicParamName, rclcpp::ParameterValue("/force_torque_sensor"));
 }
 
 ///=============================================================================
@@ -119,9 +123,11 @@ bool WorldBridge::initialize(ROSNodeInterfaces ros_node_interfaces,
 
   // Create ROS publishers
   data_->robot_state_pub_ = rclcpp::create_publisher<sensor_msgs::msg::JointState>(
-      param_interface, topics_interface, "robot_state", rclcpp::SystemDefaultsQoS());
+      param_interface, topics_interface, param_interface->get_parameter(kRobotStateTopicParamName).as_string(),
+      rclcpp::SystemDefaultsQoS());
   data_->force_torque_pub_ = rclcpp::create_publisher<geometry_msgs::msg::WrenchStamped>(
-      param_interface, topics_interface, "force_torque_sensors", rclcpp::SensorDataQoS());
+      param_interface, topics_interface, param_interface->get_parameter(kForceTorqueTopicParamName).as_string(),
+      rclcpp::SensorDataQoS());
 
   // Create Flowstate subscriptions
   auto robot_state_sub = data_->world_->CreateRobotStateSubscription(
