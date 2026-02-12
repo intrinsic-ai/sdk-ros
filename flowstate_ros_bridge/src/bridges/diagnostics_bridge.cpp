@@ -15,6 +15,7 @@ namespace flowstate_ros_bridge {
 constexpr const char* kDiagnosticsUpdateRateParamName = "diagnostics_update_rate_hz";
 constexpr const char* kDiagnosticsAddressParamName = "diagnostics_service_address";
 constexpr const char* kDiagnosticsDeadlineParamName = "diagnostics_deadline_seconds";
+constexpr const char* kDiagnosticsRosTopicNameParamName = "diagnostics_ros_topic_name";
 
 ///=============================================================================
 void DiagnosticsBridge::declare_ros_parameters(
@@ -30,6 +31,7 @@ void DiagnosticsBridge::declare_ros_parameters(
                                                                                           "80"));
 
   param_interface->declare_parameter(kDiagnosticsDeadlineParamName, rclcpp::ParameterValue(5));
+  param_interface->declare_parameter(kDiagnosticsRosTopicNameParamName, rclcpp::ParameterValue("/diagnostics"));
 }
 
 ///=============================================================================
@@ -59,9 +61,9 @@ bool DiagnosticsBridge::initialize(ROSNodeInterfaces ros_node_interfaces,
   auto topics_interface = ros_node_interfaces.get<rclcpp::node_interfaces::NodeTopicsInterface>();
   auto params_interface = ros_node_interfaces.get<rclcpp::node_interfaces::NodeParametersInterface>();
   diagnostics_pub_ = rclcpp::create_publisher<diagnostic_msgs::msg::DiagnosticArray>(
-      params_interface,
-      topics_interface,
-      "/diagnostics", rclcpp::SystemDefaultsQoS());
+      params_interface, topics_interface,
+      parameter_interface->get_parameter(kDiagnosticsRosTopicNameParamName).get_value<std::string>(),
+      rclcpp::SystemDefaultsQoS());
 
   // Create the ROS timer to trigger updates.
   timer_ = rclcpp::create_timer(

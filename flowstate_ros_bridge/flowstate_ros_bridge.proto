@@ -16,4 +16,5 @@ message FlowstateRosBridgeConfig {
   int64 executive_update_rate_millis = 11;
   string diagnostics_service_address = 12;
   int64 diagnostics_deadline_seconds = 13;
+  string diagnostics_ros_topic_name = 14;
 }
