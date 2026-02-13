@@ -33,10 +33,10 @@ struct Status
   StatusCode code = StatusCode::kOk;
   std::string message = "";
 
-  bool ok() const { return code == StatusCode::kOk; }
+  bool ok() const {return code == StatusCode::kOk;}
 };
 
-constexpr Status OkStatus() { return {}; }
+constexpr Status OkStatus() {return {};}
 
 struct RealtimeStatus
 {
@@ -45,10 +45,11 @@ struct RealtimeStatus
   using MessageType = std::array<char, kMaxMessageLength>;
   StatusCode code = StatusCode::kOk;
   MessageType message = {0};
-  std::string_view GetMessage() const {
+  std::string_view GetMessage() const
+  {
     // Find terminator, if any
     return {message.begin(), std::find(message.begin(), message.end(), '\0')};
-  };
+  }
 };
 
 }

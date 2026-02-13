@@ -8,7 +8,8 @@
 #include "flatbuffers/array.h"
 #include "flatbuffers/vector.h"
 
-namespace intrinsic_fbs {
+namespace intrinsic_fbs
+{
 
 // Helper function to get the number of elements of a flatbuffer struct's array
 // member at compile time.
@@ -35,9 +36,10 @@ namespace intrinsic_fbs {
 // NOTE: You do *not* need to specify any of the template parameters, the
 //       compiler can infer all three from the function pointer you pass into
 //       this function.
-template <typename FlatbufferStructT, typename ArrayT, uint16_t array_length>
+template<typename FlatbufferStructT, typename ArrayT, uint16_t array_length>
 constexpr size_t FlatbufferArrayNumElements(
-    const flatbuffers::Array<ArrayT, array_length>* (FlatbufferStructT::*)() const) {
+  const flatbuffers::Array<ArrayT, array_length> * (FlatbufferStructT::*)() const)
+{
   return array_length;
 }
 
@@ -47,9 +49,10 @@ constexpr size_t FlatbufferArrayNumElements(
 // copied trough std::copy.
 // Returns OutOfRangeError if the `from` vector and the
 // `to`vector have different sizes.
-template <typename T>
+template<typename T>
 intrinsic::hal::RealtimeStatus CopyFbsVector(
-    const flatbuffers::Vector<T>& from, flatbuffers::Vector<T>& to) {
+  const flatbuffers::Vector<T> & from, flatbuffers::Vector<T> & to)
+{
   if (from.size() != to.size()) {
     intrinsic::hal::RealtimeStatus status;
     status.code = intrinsic::hal::StatusCode::kOutOfRange;

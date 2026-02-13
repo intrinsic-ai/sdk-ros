@@ -1,4 +1,3 @@
-
 #pragma once
 
 #include <stddef.h>
@@ -14,21 +13,23 @@
 #include "status.hpp"
 #include "segment_header.hpp"
 
-namespace intrinsic::hal {
+namespace intrinsic::hal
+{
 
 // Each memory segment has to be created and initialized by a
 // `SharedMemoryManager`. The Read-Only as well as Read-Write memory segment
 // classes below only provide an access handle to these segments, but don't
 // create these.
 class MemorySegment {
- public:
+public:
   // Shared memory layout is: SegmentHeader | Data.
-  struct SegmentDescriptor {
+  struct SegmentDescriptor
+  {
     // The starting address of the shared memory segment. Points to the
     // SegmentHeader.
     // Shared memory layout is described in:
     // intrinsic/icon/interprocess/shared_memory_manager/segment_header.h
-    uint8_t* segment_start;
+    uint8_t * segment_start;
     // The size of the shared memory segment. This is the size of the entire
     // segment, including the SegmentHeader.
     size_t size;
@@ -45,14 +46,15 @@ class MemorySegment {
   std::string Name() const;
 
   // Returns the header information of the shared memory segment.
-  const SegmentHeader& Header() const;
+  const SegmentHeader & Header() const;
 
   // Returns the SegmentHeader of the shared memory segment. May be nullptr!
-  SegmentHeader* HeaderPointer();
+  SegmentHeader * HeaderPointer();
 
   // Marks the time that the segment was updated.
   // 'current_cycle' is the control cycle that the segment was updated.
-  void UpdatedAt(Time time, uint64_t current_cycle) {
+  void UpdatedAt(Time time, uint64_t current_cycle)
+  {
     HeaderPointer()->UpdatedAt(time, current_cycle);
   }
 
@@ -60,8 +62,9 @@ class MemorySegment {
   // Returns 0 if the segment is invalid.
   size_t ValueSize() const;
 
- protected:
-  enum class ReadWriteKind {
+protected:
+  enum class ReadWriteKind
+  {
     kUnknown,
     kReadOnly,
     kReadWrite,
@@ -79,28 +82,29 @@ class MemorySegment {
   // segment is too small to hold a SegmentHeader and at least one byte of
   // payload.
   static tl::expected<SegmentDescriptor, Status> Get(
-      const SegmentNameToFileDescriptorMap& segment_name_to_file_descriptor_map,
-      std::string_view name);
+    const SegmentNameToFileDescriptorMap & segment_name_to_file_descriptor_map,
+    std::string_view name);
 
   // Returns the raw, untyped value of the shared memory segment.
-  uint8_t* Value();
-  const uint8_t* Value() const;
+  uint8_t * Value();
+  const uint8_t * Value() const;
 
-  MemorySegment(std::string_view name, SegmentDescriptor segment,
-                ReadWriteKind kind);
-  MemorySegment(const MemorySegment& other) = delete;
-  MemorySegment& operator=(const MemorySegment& other) = delete;
-  MemorySegment(MemorySegment&& other) noexcept;
-  MemorySegment& operator=(MemorySegment&& other) noexcept;
+  MemorySegment(
+    std::string_view name, SegmentDescriptor segment,
+    ReadWriteKind kind);
+  MemorySegment(const MemorySegment & other) = delete;
+  MemorySegment & operator=(const MemorySegment & other) = delete;
+  MemorySegment(MemorySegment && other) noexcept;
+  MemorySegment & operator=(MemorySegment && other) noexcept;
 
- private:
+private:
   // TODO(karstenknese) Put into header.
   std::string name_ = "";
 
   // The segment header as well as the actual payload (value) are located in the
   // same shared memory segment. We separate the pointers by a simple offset.
-  SegmentHeader* header_ = nullptr;
-  uint8_t* value_ = nullptr;
+  SegmentHeader * header_ = nullptr;
+  uint8_t * value_ = nullptr;
   // The size of the shared memory segment. This is the size of the entire
   // segment, including the SegmentHeader.
   size_t size_ = 0;
@@ -118,9 +122,10 @@ class MemorySegment {
 // shared memory segment, including the SegmentHeader.
 // The parameter `segment_name` is only used for error reporting.
 // Returns InternalError if `segment_size` is too small to hold <T>.
-template <class T>
+template<class T>
 Status SharedMemorySegmentFitsLowerSizeBound(
-    std::string_view segment_name, size_t segment_size) {
+  std::string_view segment_name, size_t segment_size)
+{
   const size_t minimal_size = sizeof(T) + sizeof(SegmentHeader);
   if (segment_size < minimal_size) {
     std::stringstream msg;
@@ -130,16 +135,16 @@ Status SharedMemorySegmentFitsLowerSizeBound(
         << "bytes. This can be due to a version mismatch of your resources.";
     return {
       .code = StatusCode::kInternal,
-      .message= msg.str(),
+      .message = msg.str(),
     };
   }
   return {};
 }
 
 // Read-Only access to a shared memory segment of type `T`.
-template <class T>
+template<class T>
 class ReadOnlyMemorySegment final : public MemorySegment {
- public:
+public:
   // Gets read-only access to a shared memory segment called `segment_name`.
   // Returns NotFoundError if the shared memory segment with the given
   // name is not in `segment_name_to_file_descriptor_map` e.g. not previously
@@ -147,16 +152,18 @@ class ReadOnlyMemorySegment final : public MemorySegment {
   // Returns InternalError if mapping the segment fails, or if the size of the
   // segment is too small to hold a SegmentHeader and at least sizeof(T) bytes.
   static tl::expected<ReadOnlyMemorySegment, Status> Get(
-      const SegmentNameToFileDescriptorMap& segment_name_to_file_descriptor_map,
-      std::string_view segment_name) {
-    auto segment_info=
-        MemorySegment::Get(segment_name_to_file_descriptor_map, segment_name);
-    if (!segment_info){
+    const SegmentNameToFileDescriptorMap & segment_name_to_file_descriptor_map,
+    std::string_view segment_name)
+  {
+    auto segment_info =
+      MemorySegment::Get(segment_name_to_file_descriptor_map, segment_name);
+    if (!segment_info) {
       return segment_info;
     }
     if (auto status = SharedMemorySegmentFitsLowerSizeBound<T>(
             segment_name, segment_info->size);
-        status.code != StatusCode::kOk) {
+      status.code != StatusCode::kOk)
+    {
       return status;
     }
 
@@ -164,20 +171,20 @@ class ReadOnlyMemorySegment final : public MemorySegment {
   }
 
   ReadOnlyMemorySegment() = default;
-  ReadOnlyMemorySegment(const ReadOnlyMemorySegment& other) = delete;
-  ReadOnlyMemorySegment& operator=(
-      const ReadOnlyMemorySegment& other) noexcept = delete;
-  ReadOnlyMemorySegment(ReadOnlyMemorySegment&& other) noexcept = default;
-  ReadOnlyMemorySegment& operator=(ReadOnlyMemorySegment&& other) noexcept =
-      default;
+  ReadOnlyMemorySegment(const ReadOnlyMemorySegment & other) = delete;
+  ReadOnlyMemorySegment & operator=(
+    const ReadOnlyMemorySegment & other) noexcept = delete;
+  ReadOnlyMemorySegment(ReadOnlyMemorySegment && other) noexcept = default;
+  ReadOnlyMemorySegment & operator=(ReadOnlyMemorySegment && other) noexcept =
+  default;
 
   // Accesses the value of the shared memory segment.
-  const T& GetValue() const { return *reinterpret_cast<const T*>(Value()); }
-  const uint8_t* GetRawValue() const { return Value(); }
+  const T & GetValue() const {return *reinterpret_cast<const T *>(Value());}
+  const uint8_t * GetRawValue() const {return Value();}
 
- private:
+private:
   ReadOnlyMemorySegment(std::string_view name, SegmentDescriptor segment)
-      : MemorySegment(name, segment, MemorySegment::ReadWriteKind::kReadOnly) {}
+  : MemorySegment(name, segment, MemorySegment::ReadWriteKind::kReadOnly) {}
 };
 
 // Read-Write access to a shared memory segment of type `T`.
@@ -189,9 +196,9 @@ class ReadOnlyMemorySegment final : public MemorySegment {
 // a single reader in which the reader might potentially read an inconsistent
 // value while the writer updates it. It's therefore the application's
 // responsibility to guarantee a safe execution when featuring multiple writers.
-template <class T>
+template<class T>
 class ReadWriteMemorySegment final : public MemorySegment {
- public:
+public:
   // Gets read-write access to a shared memory segment called `segment_name`.
   // Returns NotFoundError if the shared memory segment with the given
   // name is not in `segment_name_to_file_descriptor_map` e.g. not previously
@@ -199,17 +206,19 @@ class ReadWriteMemorySegment final : public MemorySegment {
   // Returns InternalError if mapping the segment fails, or if the size of the
   // segment is too small to hold a SegmentHeader and at least sizeof(T) bytes.
   static tl::expected<ReadWriteMemorySegment, Status> Get(
-      const SegmentNameToFileDescriptorMap& segment_name_to_file_descriptor_map,
-      std::string_view segment_name) {
+    const SegmentNameToFileDescriptorMap & segment_name_to_file_descriptor_map,
+    std::string_view segment_name)
+  {
     auto segment_info =
-        MemorySegment::Get(segment_name_to_file_descriptor_map, segment_name);
+      MemorySegment::Get(segment_name_to_file_descriptor_map, segment_name);
     if (!segment_info) {
       return segment_info;
     }
 
     if (auto status = SharedMemorySegmentFitsLowerSizeBound<T>(
             segment_name, segment_info->size);
-        status.code != StatusCode::kOk) {
+      status.code != StatusCode::kOk)
+    {
       return status;
     }
 
@@ -217,27 +226,28 @@ class ReadWriteMemorySegment final : public MemorySegment {
   }
 
   ReadWriteMemorySegment() = default;
-  ReadWriteMemorySegment(const ReadWriteMemorySegment& other) = delete;
-  ReadWriteMemorySegment& operator=(const ReadWriteMemorySegment& other) =
-      delete;
-  ReadWriteMemorySegment(ReadWriteMemorySegment&& other) noexcept = default;
-  ReadWriteMemorySegment& operator=(ReadWriteMemorySegment&& other) noexcept =
-      default;
+  ReadWriteMemorySegment(const ReadWriteMemorySegment & other) = delete;
+  ReadWriteMemorySegment & operator=(const ReadWriteMemorySegment & other) =
+  delete;
+  ReadWriteMemorySegment(ReadWriteMemorySegment && other) noexcept = default;
+  ReadWriteMemorySegment & operator=(ReadWriteMemorySegment && other) noexcept =
+  default;
 
   // Accesses the value of the shared memory segment.
-  T& GetValue() { return *reinterpret_cast<T*>(Value()); }
-  const T& GetValue() const { return *reinterpret_cast<const T*>(Value()); }
-  uint8_t* GetRawValue() { return Value(); }
-  const uint8_t* GetRawValue() const { return Value(); }
+  T & GetValue() {return *reinterpret_cast<T *>(Value());}
+  const T & GetValue() const {return *reinterpret_cast<const T *>(Value());}
+  uint8_t * GetRawValue() {return Value();}
+  const uint8_t * GetRawValue() const {return Value();}
 
   // Updates the value of the shared memory segment.
   // TODO(b/214080423) Add concurrency mechanism to avoid a data race between
   // multiple writers.
-  void SetValue(const T& value) { *reinterpret_cast<T*>(Value()) = value; }
+  void SetValue(const T & value) {*reinterpret_cast<T *>(Value()) = value;}
 
- private:
+private:
   ReadWriteMemorySegment(std::string_view name, SegmentDescriptor segment)
-      : MemorySegment(name, segment, MemorySegment::ReadWriteKind::kReadWrite) {
+  : MemorySegment(name, segment, MemorySegment::ReadWriteKind::kReadWrite)
+  {
   }
 };
 

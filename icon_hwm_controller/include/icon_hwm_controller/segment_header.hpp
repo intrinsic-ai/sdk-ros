@@ -12,7 +12,8 @@
 
 #include "time.hpp"
 
-namespace intrinsic::hal {
+namespace intrinsic::hal
+{
 
 // SegmentHeader is meta information about the shared memory segment.
 // Each allocated segment is offset by this header information before its actual
@@ -32,42 +33,46 @@ namespace intrinsic::hal {
 // The SegmentHeader class is aligned to 64bit in order to guarantee a valid
 // data representation across different platforms.
 class alignas(64) SegmentHeader final {
- public:
+public:
   // The TypeInfo class contains convenience functions around the type string
   // associated with the shm segment payload.
   class alignas(64) TypeInfo {
-   public:
+public:
     // The max size a type id can have.
     constexpr static size_t kMaxSize = 100;
 
     // Creates a new TypeInfo instance. Truncates `type_id` to `kMaxSize`
     // characters.
-    explicit TypeInfo(const std::string& type_id) {
+    explicit TypeInfo(const std::string & type_id)
+    {
       std::memset(&type_id_, '\0', kMaxSize);
       size_t string_size =
-          type_id.size() < kMaxSize ? type_id.size() : kMaxSize;
+        type_id.size() < kMaxSize ? type_id.size() : kMaxSize;
       std::memcpy(&type_id_, type_id.c_str(), string_size);
       type_id_size_ = string_size;
     }
 
     // Returns the type id string.
-    std::string_view TypeID() const {
+    std::string_view TypeID() const
+    {
       return {type_id_, type_id_size_};
     }
 
     // Comparison operators.
-    bool operator==(const TypeInfo& rhs) const {
+    bool operator==(const TypeInfo & rhs) const
+    {
       return type_id_size_ == rhs.type_id_size_ &&
              std::strncmp(type_id_, rhs.type_id_, type_id_size_) == 0;
     }
-    bool operator!=(const TypeInfo& rhs) const { return !(*this == rhs); }
+    bool operator!=(const TypeInfo & rhs) const {return !(*this == rhs);}
 
-   private:
+private:
     size_t type_id_size_;
     char type_id_[kMaxSize];
   };
 
-  enum class Flags : int {
+  enum class Flags : int
+  {
     // Creates an exclusively owned memory segment.
     // Indicates that the memory segment is exclusively created by a single
     // owner. The shared memory manager shall not repurpose or override the
@@ -77,13 +82,14 @@ class alignas(64) SegmentHeader final {
 
   // The SegmentHeader class is move-only.
   SegmentHeader() noexcept;
-  explicit SegmentHeader(const std::string& type_id) noexcept;
-  SegmentHeader(const std::string& type_id,
-                const std::initializer_list<Flags>& flags) noexcept;
-  SegmentHeader(const SegmentHeader& other) noexcept = delete;
-  SegmentHeader& operator=(const SegmentHeader& other) noexcept = delete;
-  SegmentHeader(SegmentHeader&& other) noexcept = default;
-  SegmentHeader& operator=(SegmentHeader&& other) noexcept = delete;
+  explicit SegmentHeader(const std::string & type_id) noexcept;
+  SegmentHeader(
+    const std::string & type_id,
+    const std::initializer_list<Flags> & flags) noexcept;
+  SegmentHeader(const SegmentHeader & other) noexcept = delete;
+  SegmentHeader & operator=(const SegmentHeader & other) noexcept = delete;
+  SegmentHeader(SegmentHeader && other) noexcept = default;
+  SegmentHeader & operator=(SegmentHeader && other) noexcept = delete;
   ~SegmentHeader() noexcept;
 
   // Gets the current reference count of read-only access handles.
@@ -126,7 +132,8 @@ class alignas(64) SegmentHeader final {
   void UpdatedAt(Time time, uint64_t current_cycle);
 
   // The expected version of the SegmentHeader not stored in shared memory.
-  static constexpr size_t ExpectedVersion() {
+  static constexpr size_t ExpectedVersion()
+  {
     // Version of the SegmentHeader.
     // Increment on changes that break backwards compatibility. E.g. if the size
     // of the members changes.
@@ -138,9 +145,9 @@ class alignas(64) SegmentHeader final {
   }
 
   // The version of the SegmentHeader as stored in shared memory.
-  size_t Version() const { return kVersion; }
+  size_t Version() const {return kVersion;}
 
- private:
+private:
   // See go/totw/135.
   friend class SegmentHeaderTestPeer;
 

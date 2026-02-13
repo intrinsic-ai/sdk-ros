@@ -150,7 +150,8 @@ public:
   {
     AssertSharedMemoryCompatibility<T>();
     if (auto status = InitSegment(name, must_be_used, sizeof(T), type_id);
-        status.code != StatusCode::kOk) {
+      status.code != StatusCode::kOk)
+    {
       return status;
     }
     return SetSegmentValue(name, T());
@@ -174,7 +175,8 @@ public:
   {
     AssertSharedMemoryCompatibility<T>();
     if (auto status = InitSegment(name, must_be_used, sizeof(T), type_id);
-        status.code != StatusCode::kOk) {
+      status.code != StatusCode::kOk)
+    {
       return status;
     }
     return SetSegmentValue(name, value);
@@ -193,7 +195,8 @@ public:
     const std::string & type_id)
   {
     if (auto status = InitSegment(name, must_be_used, sizeof(T), type_id);
-        status.code != StatusCode::kOk) {
+      status.code != StatusCode::kOk)
+    {
       return status;
     }
     return SetSegmentValue(name, std::forward<T>(value));
