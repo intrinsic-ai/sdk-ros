@@ -7,7 +7,7 @@ This bridge facilitates the translation of internal Flowstate data—specificall
 
 **How it works:**
 
-* **Configurable Filtering:** The bridge utilizes a `SensorConfig` Protobuf message to manage data streams. Users can toggle specific sensor topics (robot state or force/torque) on or off via Flowstate `ROS bridge` service configuration, which prevents the instantiation of unnecessary ROS publishers and reduces network overhead.
+* **Configurable Filtering:** The bridge utilizes a `SensorPublisherConfig` Protobuf message to manage data streams. Users can toggle specific sensor topics (robot state or force/torque) on or off via Flowstate `ROS bridge` service configuration, which prevents the instantiation of unnecessary ROS publishers and reduces network overhead.
 * **Zenoh-Based Subscriptions:** The bridge uses the `intrinsic::platform::pubsub` library to establish direct Zenoh subscriptions to Flowstate's internal telemetry topics, such as `/icon/robot_controller/robot_status_throttle`.
 * **Callback-Driven Translation:** The bridge registers dedicated callback functions (e.g., `RobotStateCallback`) that are triggered whenever new data arrives on the subscribed topics. These handlers parse the high-frequency Protobuf payloads and map them into ROS-native messages `JointState` and `WrenchStamped`.
 
@@ -61,7 +61,7 @@ The `geometry_msgs/msg/WrenchStamped` message maps 6-axis force and torque data 
 
 ### 2.3 Configuration Parameters
 
-These parameters are defined in the `SensorConfig` message and can be modified in Flowstate `ROS Bridge` service or in `.pbtxt` configuration:
+These parameters are defined in the `SensorPublisherConfig` message and can be modified in Flowstate `ROS Bridge` service or in `.pbtxt` configuration:
 
 | Parameter Name | Default | Description |
 | :--- | :--- | :--- |
