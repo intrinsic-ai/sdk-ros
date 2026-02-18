@@ -34,6 +34,7 @@ constexpr const char* kEnableRobotStateBridgeParamName = "enable_robot_state_top
 constexpr const char* kEnableForceTorqueBridgeParamName = "enable_force_torque_topic";
 constexpr const char* kRobotStateTopicParamName = "robot_state_topic";
 constexpr const char* kForceTorqueTopicParamName = "force_torque_topic";
+constexpr const char* kWorldUpdateRateMillisParamName = "world_update_rate_millis";
 
 ///=============================================================================
 void WorldBridge::declare_ros_parameters(
@@ -51,6 +52,7 @@ void WorldBridge::declare_ros_parameters(
   param_interface->declare_parameter(kEnableForceTorqueBridgeParamName, rclcpp::ParameterValue(true));
   param_interface->declare_parameter(kRobotStateTopicParamName, rclcpp::ParameterValue("/robot_state"));
   param_interface->declare_parameter(kForceTorqueTopicParamName, rclcpp::ParameterValue("/force_torque_sensor"));
+  param_interface->declare_parameter(kWorldUpdateRateMillisParamName, rclcpp::ParameterValue(1000));
 }
 
 ///=============================================================================
@@ -120,6 +122,7 @@ bool WorldBridge::initialize(ROSNodeInterfaces ros_node_interfaces,
   data_->force_torque_topic_enabled_ = param_interface->get_parameter(kEnableForceTorqueBridgeParamName).as_bool();
   LOG(INFO) << "Robot State Bridge Enabled: " << data_->robot_state_topic_enabled_;
   LOG(INFO) << "Force Torque Bridge Enabled: " << data_->force_torque_topic_enabled_;
+  data_->world_update_rate_millis_ = param_interface->get_parameter(kWorldUpdateRateMillisParamName).as_int();
 
   // Create ROS publishers
   data_->robot_state_pub_ = rclcpp::create_publisher<sensor_msgs::msg::JointState>(
@@ -408,20 +411,11 @@ void WorldBridge::RobotStateCallback(const intrinsic_proto::data_logger::LogItem
   const auto& payload = log_item.payload();
 
   switch (payload.data_case()) {
+    // At the time of writing this was the only received item in the LogItem msg
     case intrinsic_proto::data_logger::LogItem::Payload::kIconRobotStatus: {
       if (data_->robot_state_topic_enabled_ || data_->force_torque_topic_enabled_) {
         HandleRobotStatus(payload.icon_robot_status(), t_start);
       }
-      break;
-    }
-
-    case intrinsic_proto::data_logger::LogItem::Payload::kIconL1JointState: {
-      HandleJointState(payload.icon_l1_joint_state());
-      break;
-    }
-
-    case intrinsic_proto::data_logger::LogItem::Payload::kIconFtWrench: {
-      HandleFtWrench(payload.icon_ft_wrench());
       break;
     }
 
@@ -434,13 +428,14 @@ void WorldBridge::RobotStateCallback(const intrinsic_proto::data_logger::LogItem
       } else {
         msg = absl::StrFormat("Received unknown or unset data type (ID: %d)", payload.data_case());
       }
-      LOG_EVERY_N(INFO, 1000) << msg;
+      LOG_EVERY_N(INFO, data_->world_update_rate_millis_) << msg;
       break;
     }
   }
 
   const rclcpp::Duration elapsed = clock.now() - t_start;
-  LOG_EVERY_N(INFO, 1000) << absl::StrFormat("Robot state translation time: %.3f ms", 1000.0 * elapsed.seconds());
+  LOG_EVERY_N(INFO, data_->world_update_rate_millis_)
+      << absl::StrFormat("Robot state translation time: %.3f ms", data_->world_update_rate_millis_ * elapsed.seconds());
 }
 
 void WorldBridge::HandleRobotStatus(const intrinsic_proto::icon::RobotStatus& robot_status, const rclcpp::Time& time) {
@@ -499,14 +494,6 @@ void WorldBridge::PublishWrench(const std::string& part_name,
   wrench_msg.wrench.torque.z = w.rz();
 
   data_->force_torque_pub_->publish(wrench_msg);
-}
-
-void WorldBridge::HandleJointState(const intrinsic_proto::icon::JointState& joint_state) {
-  LOG_EVERY_N(INFO, 1000) << "Received JointState:\n" << joint_state.DebugString();
-}
-
-void WorldBridge::HandleFtWrench(const intrinsic_proto::icon::Wrench& wrench) {
-  LOG_EVERY_N(INFO, 1000) << "Received FT Wrench:\n" << wrench.DebugString();
 }
 
 ///=============================================================================

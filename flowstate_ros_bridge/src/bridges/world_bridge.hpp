@@ -58,8 +58,6 @@ class WorldBridge : public BridgeInterface {
 
   // Helper methods for RobotStateCallback
   void HandleRobotStatus(const intrinsic_proto::icon::RobotStatus& robot_status, const rclcpp::Time& time);
-  void HandleJointState(const intrinsic_proto::icon::JointState& joint_state);
-  void HandleFtWrench(const intrinsic_proto::icon::Wrench& wrench);
   void PublishJointState(const std::string& part_name,
                          const intrinsic_proto::icon::PartStatus& part_status,
                          const rclcpp::Time& time);
@@ -92,6 +90,7 @@ class WorldBridge : public BridgeInterface {
     std::shared_ptr<rclcpp::Publisher<geometry_msgs::msg::WrenchStamped>> force_torque_pub_;
     bool robot_state_topic_enabled_;
     bool force_torque_topic_enabled_;
+    int world_update_rate_millis_{ 1000 };
 
     std::shared_ptr<rclcpp::Publisher<visualization_msgs::msg::MarkerArray>>
         workcell_markers_pub_;
