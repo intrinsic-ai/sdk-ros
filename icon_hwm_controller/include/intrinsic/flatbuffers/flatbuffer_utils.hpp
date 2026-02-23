@@ -50,12 +50,12 @@ constexpr size_t FlatbufferArrayNumElements(
 // Returns OutOfRangeError if the `from` vector and the
 // `to`vector have different sizes.
 template<typename T>
-intrinsic::hal::RealtimeStatus CopyFbsVector(
+intrinsic::RealtimeStatus CopyFbsVector(
   const flatbuffers::Vector<T> & from, flatbuffers::Vector<T> & to)
 {
   if (from.size() != to.size()) {
-    intrinsic::hal::RealtimeStatus status;
-    status.code = intrinsic::hal::StatusCode::kOutOfRange;
+    intrinsic::RealtimeStatus status;
+    status.code = intrinsic::StatusCode::kOutOfRange;
     (void) std::snprintf(
         status.message.data(),
         status.message.size(),

@@ -1,4 +1,4 @@
-#include "icon_hwm_controller/segment_header.hpp"
+#include "intrinsic/shared_memory_manager/segment_header.hpp"
 
 #include <semaphore.h>
 

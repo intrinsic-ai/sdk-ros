@@ -10,13 +10,12 @@
 #include <string_view>
 #include <unordered_map>
 #include <chrono>
+#include <filesystem>
 
 #include <tl/expected.hpp>
-#include "status.hpp"
-#include "flatbuffer_utils.hpp"
 
-//#include "intrinsic/icon/flatbuffers/flatbuffer_utils.h"
-//#include "intrinsic/icon/interprocess/shared_memory_manager/segment_info.fbs.h"
+#include "intrinsic/utils/status.hpp"
+#include "intrinsic/flatbuffers/flatbuffer_utils.hpp"
 #include "hwm_fbs/segment_info.fbs.h"
 
 namespace intrinsic::hal
@@ -69,26 +68,26 @@ struct ShmDescriptors
 // NoOp if the directory already exists.
 // Returns InvalidArgumentError if `absolute_path` is not absolute.
 // Forwards errors of creating the respective directories.
-Status CreateSocketDirectory(std::string_view absolute_path);
+Status CreateSocketDirectory(std::filesystem::path absolute_path);
 
 // Returns the absolute path of the socket file for the given `absolute_path`
 // and `module_name`.
 // `absolute_path` is the base directory for the socket file.
 // InvalidArgumentError if the generated path is too long.
-tl::expected<std::string, Status> AbsoluteSocketPath(
-  std::string_view absolute_path,
+tl::expected<std::filesystem::path, Status> AbsoluteSocketPath(
+  std::filesystem::path absolute_path,
   std::string_view module_name);
 
 // Writes `absolute_socket_path` into a valid sockaddr_un.
 // Returns InvalidArgumentError if `absolute_socket_path` is too long.
 tl::expected<sockaddr_un, Status> AddressFromAbsolutePath(
-  std::string_view absolute_socket_path);
+  std::filesystem::path absolute_socket_path);
 
 }  // namespace domain_socket_internal
 
 // Returns the socket directory for the given `shared_memory_namespace`.
 // Returns the default socket directory when `shared_memory_namespace` is empty.
-std::string SocketDirectoryFromNamespace(
+std::filesystem::path SocketDirectoryFromNamespace(
   std::string_view shared_memory_namespace);
 
 using SegmentNameToFileDescriptorMap = std::unordered_map<std::string, int>;
@@ -109,7 +108,7 @@ using SegmentNameToFileDescriptorMap = std::unordered_map<std::string, int>;
 // `connection_timeout`.
 tl::expected<SegmentNameToFileDescriptorMap, Status>
 GetSegmentNameToFileDescriptorMap(
-  std::string_view socket_directory,
+  std::filesystem::path socket_directory,
   std::string_view module_name,
   std::chrono::seconds connection_timeout);
 

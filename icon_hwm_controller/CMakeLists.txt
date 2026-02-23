@@ -24,7 +24,10 @@ find_package(ament_cmake REQUIRED)
 # further dependencies manually.
 # find_package(<dependency> REQUIRED)
 
-include_directories(include)
+include_directories(
+  include
+  ${EIGEN3_INCLUDE_DIRS}
+)
 
 add_executable(testing testing.cpp)
 add_dependencies(testing icon_hwm_fbs)
@@ -36,7 +39,16 @@ target_include_directories(testing PUBLIC
 
 add_library(shared_memory_manager
   src/shared_memory_manager.cc
+  src/domain_socket_server.cc
+  src/domain_socket_utils.cc
   src/segment_header.cc
+  src/memory_segment.cc
+  src/unique_segment_name.cc
+  src/segment_info_utils.cc
+  src/icon_state_utils.cc
+  src/thread.cc
+  src/joint_limits.cc
+  src/joint_limits_utils.cc
 )
 
 add_dependencies(shared_memory_manager icon_hwm_fbs)
@@ -60,12 +72,20 @@ if(BUILD_TESTING)
   ament_lint_auto_find_test_dependencies()
 
   find_package(ament_cmake_gtest REQUIRED)
-  ament_add_gtest(shared_memory_manager_test test/shared_memory_manager_test.cpp)
+  find_package(ament_cmake_gmock REQUIRED)
+  ament_add_gmock(shared_memory_manager_test test/shared_memory_manager_test.cpp)
   target_include_directories(shared_memory_manager_test PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
     $<INSTALL_INTERFACE:include>
   )
   target_link_libraries(shared_memory_manager_test shared_memory_manager)
+
+  ament_add_gmock(get_hardware_interface_test test/get_hardware_interface_test.cc)
+  target_include_directories(get_hardware_interface_test PUBLIC
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+    $<INSTALL_INTERFACE:include>
+  )
+  target_link_libraries(get_hardware_interface_test shared_memory_manager)
 endif()
 
 ament_package()

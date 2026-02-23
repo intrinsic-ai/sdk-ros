@@ -9,10 +9,10 @@
 #include <unordered_map>
 #include <tl/expected.hpp>
 
-#include "status.hpp"
-#include "domain_socket_utils.hpp"
-#include "memory_segment.hpp"
-#include "segment_header.hpp"
+#include "intrinsic/utils/status.hpp"
+#include "intrinsic/shared_memory_manager/domain_socket_utils.hpp"
+#include "intrinsic/shared_memory_manager/memory_segment.hpp"
+#include "intrinsic/shared_memory_manager/segment_header.hpp"
 
 namespace intrinsic::hal
 {
@@ -110,7 +110,7 @@ public:
   // Contains the names and file descriptors of all segments that are currently
   // registered with the SharedMemoryManager.
   // For tests where no HardwareModule Proxy is used.
-  const SegmentNameToFileDescriptorMap & GetSegmentNameToFileDescriptorMap() const
+  const ::intrinsic::hal::SegmentNameToFileDescriptorMap & SegmentNameToFileDescriptorMap() const
   {
     return segment_name_to_file_descriptor_map_;
   }
@@ -318,7 +318,7 @@ private:
 
   // Can be generated from memory_segments_, but it's more efficient to simply
   // update the map when a new segment is added.
-  SegmentNameToFileDescriptorMap segment_name_to_file_descriptor_map_;
+  ::intrinsic::hal::SegmentNameToFileDescriptorMap segment_name_to_file_descriptor_map_;
 
   // We not only store the name of the each initialized segment, but also a
   // pointer to its allocated memory. That way we can later on provide

@@ -9,9 +9,10 @@
 
 #include <tl/expected.hpp>
 
-#include "time.hpp"
-#include "status.hpp"
-#include "segment_header.hpp"
+#include "intrinsic/utils/time.hpp"
+#include "intrinsic/utils/status.hpp"
+#include "intrinsic/shared_memory_manager/domain_socket_utils.hpp"
+#include "intrinsic/shared_memory_manager/segment_header.hpp"
 
 namespace intrinsic::hal
 {
@@ -128,17 +129,16 @@ Status SharedMemorySegmentFitsLowerSizeBound(
 {
   const size_t minimal_size = sizeof(T) + sizeof(SegmentHeader);
   if (segment_size < minimal_size) {
-    std::stringstream msg;
-    msg << "Shared memory segment '" << segment_name
-        << "' of size " << segment_size
-        << "bytes must be >= " << minimal_size
-        << "bytes. This can be due to a version mismatch of your resources.";
     return {
       .code = StatusCode::kInternal,
-      .message = msg.str(),
+      .message = (std::stringstream()
+                  << "Shared memory segment '" << segment_name
+                  << "' of size " << segment_size
+                  << "bytes must be >= " << minimal_size
+                  << "bytes. This can be due to a version mismatch of your resources.").str(),
     };
   }
-  return {};
+  return OkStatus();
 }
 
 // Read-Only access to a shared memory segment of type `T`.
@@ -158,13 +158,13 @@ public:
     auto segment_info =
       MemorySegment::Get(segment_name_to_file_descriptor_map, segment_name);
     if (!segment_info) {
-      return segment_info;
+      return tl::unexpected(segment_info.error());
     }
     if (auto status = SharedMemorySegmentFitsLowerSizeBound<T>(
             segment_name, segment_info->size);
       status.code != StatusCode::kOk)
     {
-      return status;
+      return tl::unexpected(status);
     }
 
     return ReadOnlyMemorySegment<T>(segment_name, *segment_info);
@@ -212,14 +212,14 @@ public:
     auto segment_info =
       MemorySegment::Get(segment_name_to_file_descriptor_map, segment_name);
     if (!segment_info) {
-      return segment_info;
+      return tl::unexpected(segment_info.error());
     }
 
     if (auto status = SharedMemorySegmentFitsLowerSizeBound<T>(
             segment_name, segment_info->size);
       status.code != StatusCode::kOk)
     {
-      return status;
+      return tl::unexpected(status);
     }
 
     return ReadWriteMemorySegment<T>(segment_name, *segment_info);

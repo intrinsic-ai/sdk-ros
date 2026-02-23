@@ -1,4 +1,4 @@
-#include "icon_hwm_controller/shared_memory_manager.hpp"
+#include "intrinsic/shared_memory_manager/shared_memory_manager.hpp"
 
 #include <algorithm>
 #include <cstddef>
@@ -22,8 +22,8 @@
 #include <utility>
 #include <vector>
 
-#include "flatbuffer_utils.hpp"
-#include "icon_hwm_controller/status.hpp"
+#include "intrinsic/flatbuffers/flatbuffer_utils.hpp"
+#include "intrinsic/utils/status.hpp"
 
 namespace intrinsic::hal {
 

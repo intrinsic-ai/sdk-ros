@@ -10,7 +10,7 @@
 #include <string>
 #include <string_view>
 
-#include "time.hpp"
+#include "intrinsic/utils/time.hpp"
 
 namespace intrinsic::hal
 {
