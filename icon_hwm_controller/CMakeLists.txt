@@ -86,6 +86,13 @@ if(BUILD_TESTING)
     $<INSTALL_INTERFACE:include>
   )
   target_link_libraries(get_hardware_interface_test shared_memory_manager)
+
+  ament_add_gmock(segment_header_test test/segment_header_test.cc)
+  target_include_directories(segment_header_test PUBLIC
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+    $<INSTALL_INTERFACE:include>
+  )
+  target_link_libraries(segment_header_test shared_memory_manager)
 endif()
 
 ament_package()
