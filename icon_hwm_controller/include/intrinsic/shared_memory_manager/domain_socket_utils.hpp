@@ -87,6 +87,7 @@ tl::expected<sockaddr_un, Status> AddressFromAbsolutePath(
 
 // Returns the socket directory for the given `shared_memory_namespace`.
 // Returns the default socket directory when `shared_memory_namespace` is empty.
+// Ignores leading directory separators in `shared_memory_namespace`
 std::filesystem::path SocketDirectoryFromNamespace(
   std::string_view shared_memory_namespace);
 

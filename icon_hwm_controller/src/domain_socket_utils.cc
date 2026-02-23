@@ -500,7 +500,15 @@ namespace intrinsic::hal {
     if (shared_memory_namespace.empty()) {
       return socket_base_path;
     }
-    return socket_base_path / shared_memory_namespace;
+    // Ensure that we **don't** replace the base path if
+    // `shared_memory_namespace` happens to be an absolute path (i.e. start with
+    // a directory separator).
+    //
+    // But at the same time, we do want a separator if `shared_memory_namespace`
+    // *doesn't* start with one. Appending the empty string to
+    // `socket_base_path` ensures that there's a separator before
+    // `shared_memory_namespace`.
+    return (socket_base_path / "").concat(shared_memory_namespace);
   }
 
 }  // namespace intrinsic::hal
