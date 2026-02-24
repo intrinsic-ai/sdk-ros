@@ -439,18 +439,38 @@ void WorldBridge::RobotStateCallback(const intrinsic_proto::data_logger::LogItem
 }
 
 void WorldBridge::HandleRobotStatus(const intrinsic_proto::icon::RobotStatus& robot_status, const rclcpp::Time& time) {
-  for (const auto& entry : robot_status.status_map()) {
-    const std::string& part_name = entry.first;
-    const auto& part_status = entry.second;
 
-    // Joint states
-    if (data_->robot_state_topic_enabled_ && !part_status.joint_states().empty()) {
-      PublishJointState(part_name, part_status, time);
+  // On first execution, cache the part names to avoid repeated map iteration
+  if (!data_->robot_arm_part_name_.has_value()) {
+    for (const auto& entry : robot_status.status_map()) {
+      const std::string& part_name = entry.first;
+      const auto& part_status = entry.second;
+      if (!part_status.joint_states().empty()) {
+        data_->robot_arm_part_name_ = part_name;
+        LOG(INFO) << "Cached robot arm part name: " << part_name;
+      }
     }
-    // Wrench at FT
-    else if (data_->force_torque_topic_enabled_ && part_status.has_wrench_at_ft()) {
-      PublishWrench(part_name, part_status, time);
+  }
+  if (!data_->force_torque_part_name_.has_value()) {
+    for (const auto& entry : robot_status.status_map()) {
+      const std::string& part_name = entry.first;
+      const auto& part_status = entry.second;
+      if (!data_->force_torque_part_name_.has_value() && part_status.has_wrench_at_ft()) {
+        data_->force_torque_part_name_ = part_name;
+        LOG(INFO) << "Cached force torque sensor part name: " << part_name;
+      }
     }
+  }
+
+  // Use cached part names for publishing
+  if (data_->robot_state_topic_enabled_ && data_->robot_arm_part_name_.has_value()) {
+    const auto& part_status = robot_status.status_map().at(data_->robot_arm_part_name_.value());
+    PublishJointState(data_->robot_arm_part_name_.value(), part_status, time);
+  }
+
+  if (data_->force_torque_topic_enabled_ && data_->force_torque_part_name_.has_value()) {
+    const auto& part_status = robot_status.status_map().at(data_->force_torque_part_name_.value());
+    PublishWrench(data_->force_torque_part_name_.value(), part_status, time);
   }
 }
 
