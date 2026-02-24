@@ -91,6 +91,9 @@ class WorldBridge : public BridgeInterface {
     bool robot_state_topic_enabled_;
     bool force_torque_topic_enabled_;
     int world_update_rate_millis_{ 1000 };
+    // Cached part names to avoid repeated map iteration
+    std::optional<std::string> robot_arm_part_name_;
+    std::optional<std::string> force_torque_part_name_;
 
     std::shared_ptr<rclcpp::Publisher<visualization_msgs::msg::MarkerArray>>
         workcell_markers_pub_;
