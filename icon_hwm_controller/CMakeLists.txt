@@ -107,6 +107,13 @@ if(BUILD_TESTING)
     $<INSTALL_INTERFACE:include>
   )
   target_link_libraries(domain_socket_utils_test shared_memory_manager)
+
+  ament_add_gmock(thread_test test/thread_test.cpp)
+  target_include_directories(thread_test PUBLIC
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+    $<INSTALL_INTERFACE:include>
+  )
+  target_link_libraries(thread_test shared_memory_manager)
 endif()
 
 ament_package()
