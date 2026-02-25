@@ -23,84 +23,88 @@
 #include "intrinsic/shared_memory_manager/segment_info_utils.hpp"
 #include "hwm_fbs/segment_info.fbs.h"
 
-namespace intrinsic::hal {
+namespace intrinsic::hal
+{
 
-  namespace {
+namespace
+{
 
-    constexpr std::string_view kDomainSocketDirectory = "/tmp/intrinsic_icon";
+constexpr std::string_view kDomainSocketDirectory = "/tmp/intrinsic_icon";
 
 // Validates that the socket path fits into `sockaddr_un`.
-    Status PathLengthIsValidForSockaddrUn(std::filesystem::path socket_path)
-    {
+Status PathLengthIsValidForSockaddrUn(std::filesystem::path socket_path)
+{
   // sockaddr_un::sun_path requires a null terminator.
-      const size_t kMaxSocketPathLength = sizeof(sockaddr_un::sun_path) - 1;
-      if (socket_path.native().length() > kMaxSocketPathLength) {
-        return Status {
-                 .code = StatusCode::kInvalidArgument,
-                 .message = (std::stringstream()
+  const size_t kMaxSocketPathLength = sizeof(sockaddr_un::sun_path) - 1;
+  if (socket_path.native().length() > kMaxSocketPathLength) {
+    return Status {
+      .code = StatusCode::kInvalidArgument,
+      .message = (std::stringstream()
                    << "Socket path is too long. Got: " << socket_path << " with length "
                    << socket_path.native().length() << ". Max length is " <<
-                   kMaxSocketPathLength).str(),
-        };
-      }
+        kMaxSocketPathLength).str(),
+    };
+  }
+  return OkStatus();
+}
+
+// Closes socket on error.
+Status ConnectToServer(
+  int to_server_sock,
+  std::filesystem::path absolute_socket_path,
+  Time deadline)
+{
+  auto addr =
+    domain_socket_internal::AddressFromAbsolutePath(absolute_socket_path);
+  if (!addr) {
+    return addr.error();
+  }
+
+  bool logged_connection_retry = false;
+  do {
+    if (connect(to_server_sock, (sockaddr *)&(addr.value()), sizeof(sockaddr_un)) == 0) {
+      LOG(INFO) << "Connected to server.";
       return OkStatus();
     }
 
-// Closes socket on error.
-    Status ConnectToServer(
-      int to_server_sock,
-      std::filesystem::path absolute_socket_path,
-      Time deadline)
-    {
-      auto addr =
-        domain_socket_internal::AddressFromAbsolutePath(absolute_socket_path);
-      if (!addr) {
-        return addr.error();
-      }
-
-      bool logged_connection_retry = false;
-      do {
-        if (connect(to_server_sock, (sockaddr *)&(addr.value()), sizeof(sockaddr_un)) == 0) {
-          LOG(INFO) << "Connected to server.";
-          return OkStatus();
-        }
-
-        if (!logged_connection_retry) {
-          LOG(WARNING)
+    if (!logged_connection_retry) {
+      LOG(WARNING)
             << "Failed to connect to socket '" << absolute_socket_path.native()
             << "' with error: " << strerror(errno) << " Retrying until "
             << deadline;
-          logged_connection_retry = true;
-        }
-        std::this_thread::sleep_for(std::chrono::seconds(1));
-      } while (Now() < deadline);
+      logged_connection_retry = true;
+    }
+    std::this_thread::sleep_for(std::chrono::seconds(1));
+  } while (Now() < deadline);
 
-      LOG(ERROR)
+  LOG(ERROR)
         << "Failed to connect to socket before " << deadline
         << ". Cleaning up.";
-      if (close(to_server_sock) == -1) {
-        LOG(WARNING)
+  if (close(to_server_sock) == -1) {
+    LOG(WARNING)
           << "Failed to close socket fd for '" << absolute_socket_path.native()
           << "' with error: " << strerror(errno) << ".";
-      }
+  }
 
-      return Status {
-               .code = StatusCode::kDeadlineExceeded,
-               .message = (std::stringstream()
+  return Status {
+    .code = StatusCode::kDeadlineExceeded,
+    .message = (std::stringstream()
                  << "Failed to connect to socket '" << absolute_socket_path.native()
                  << "' before " << deadline << ".").str(),
-      };
-    }
+  };
+}
 
-  } // namespace
+}   // namespace
 
-  namespace domain_socket_internal {
+namespace domain_socket_internal
+{
 
-    tl::expected < std::filesystem::path, Status > AbsoluteSocketPath(
-    std::filesystem::path absolute_path,
-    std::string_view module_name) {
+tl::expected<std::filesystem::path, Status> AbsoluteSocketPath(
+  std::filesystem::path absolute_path,
+  std::string_view module_name)
+{
   if (!absolute_path.is_absolute()) {
-        return tl::unexpected(Status {
+    return tl::unexpected(Status {
           .code = StatusCode::kInvalidArgument,
           .message = (std::stringstream()
                       << "The path `socket_directory` must be absolute. Got: "
@@ -109,67 +113,68 @@ namespace intrinsic::hal {
   }
 
   std::filesystem::path full_socket_path =
-        (absolute_path / module_name).concat(domain_socket_internal::kSocketSuffix);
+    (absolute_path / module_name).concat(domain_socket_internal::kSocketSuffix);
 
   if (auto status = PathLengthIsValidForSockaddrUn(full_socket_path); !status.ok()) {
-        return tl::unexpected(status);
+    return tl::unexpected(status);
   }
-      return full_socket_path;
-    }
+  return full_socket_path;
+}
 
-    Status CreateSocketDirectory(std::filesystem::path absolute_path)
-    {
-      if (!absolute_path.is_absolute()) {
-        return Status {
-                 .code = StatusCode::kInvalidArgument,
-                 .message = (std::stringstream()
+Status CreateSocketDirectory(std::filesystem::path absolute_path)
+{
+  if (!absolute_path.is_absolute()) {
+    return Status {
+      .code = StatusCode::kInvalidArgument,
+      .message = (std::stringstream()
                    << "The path `socket_directory` must be absolute. Got: "
                    << absolute_path).str(),
-        };
-      }
+    };
+  }
 
-      {
-        std::error_code ec;
-        std::filesystem::create_directories(absolute_path, ec);
-        if (ec) {
-          return Status {
-                   .code = StatusCode::kInternal,
-                   .message = (std::stringstream()
+  {
+    std::error_code ec;
+    std::filesystem::create_directories(absolute_path, ec);
+    if (ec) {
+      return Status {
+        .code = StatusCode::kInternal,
+        .message = (std::stringstream()
                      << "Failed to create socket directory '" << absolute_path
                      << "'. Error code " << ec.category().name() << ':' << ec.value()
                      << " (" << ec.message() << ")").str(),
-          };
-        }
-      }
-
-      return OkStatus();
+      };
     }
+  }
 
-    tl::expected < sockaddr_un, Status > AddressFromAbsolutePath(
-    std::filesystem::path absolute_socket_path) {
+  return OkStatus();
+}
+
+tl::expected<sockaddr_un, Status> AddressFromAbsolutePath(
+  std::filesystem::path absolute_socket_path)
+{
   sockaddr_un addr;
   memset(&addr, 0, sizeof(struct sockaddr_un));
   addr.sun_family = AF_UNIX;
 
   if(auto status = PathLengthIsValidForSockaddrUn(absolute_socket_path); !status.ok()) {
-        return tl::unexpected(status);
+    return tl::unexpected(status);
   }
   // snprintf always includes the null terminator as required by
   // sockaddr_un::sun_path.
   if (std::snprintf(addr.sun_path, sizeof(addr.sun_path), "%s",
                     absolute_socket_path.c_str()) < 0)
-      {
-        return tl::unexpected(Status {
+  {
+    return tl::unexpected(Status {
           .code = StatusCode::kInternal,
           .message = (std::stringstream()
                       << "Failed to copy socket path '" << absolute_socket_path
                       << "' to sockaddr_un struct with error: " << strerror(errno)).str(),
       });
   }
-      return addr;
-    }
+  return addr;
+}
 
-  } // namespace domain_socket_internal
+}   // namespace domain_socket_internal
 
 // Receives a single message from the open socket `to_server_sock`.
 // Returns InternalError if a received file descriptor is not valid.
@@ -177,8 +182,9 @@ namespace intrinsic::hal {
 // Returns InternalError when the size of the received message is wrong.
 // Returns FailedPreconditionError when the socket protocol version of the
 // message doesn't match domain_socket_internal::kDomainSocketProtocolVersion.
-  tl::expected < domain_socket_internal::ShmDescriptors, Status > GetSingleMessage(
-    int to_server_sock) {
+tl::expected<domain_socket_internal::ShmDescriptors, Status> GetSingleMessage(
+  int to_server_sock)
+{
   domain_socket_internal::ShmDescriptors descriptors;
   descriptors.file_descriptors_in_order.reserve(
       domain_socket_internal::kMaxFdsPerMessage);
@@ -186,22 +192,22 @@ namespace intrinsic::hal {
   constexpr size_t kExpectedBytes = sizeof(descriptors.transfer_data);
 
   // Allocates size for the max number of fds.
-  std::array < char, CMSG_SPACE(domain_socket_internal::kMaxFdsPerMessage *
-                              sizeof(int)) >
-      cmsg_buf {0};
+  std::array<char, CMSG_SPACE(domain_socket_internal::kMaxFdsPerMessage *
+                              sizeof(int))>
+  cmsg_buf {0};
 
   iovec iov {.iov_base = (char *)(&descriptors.transfer_data),
-      .iov_len = kExpectedBytes};
+    .iov_len = kExpectedBytes};
 
   msghdr msgh {
-      .msg_name = nullptr,
-      .msg_namelen = 0,
-      .msg_iov = &iov,
-      .msg_iovlen = 1,
+    .msg_name = nullptr,
+    .msg_namelen = 0,
+    .msg_iov = &iov,
+    .msg_iovlen = 1,
     // ancillary data = file descriptors.
-      .msg_control = cmsg_buf.data(),
-      .msg_controllen = cmsg_buf.size(),
-      .msg_flags = 0,
+    .msg_control = cmsg_buf.data(),
+    .msg_controllen = cmsg_buf.size(),
+    .msg_flags = 0,
   };
 
 
@@ -213,7 +219,7 @@ namespace intrinsic::hal {
   // Receiving a single message can require multiple calls to recvmsg
   // https://gist.github.com/kentonv/bc7592af98c68ba2738f4436920868dc
   while (received_bytes_sum < kExpectedBytes) {
-      if (received_bytes_sum > 0) {
+    if (received_bytes_sum > 0) {
       // recvmsg() transmits the control message (which contains the file
       // descriptors) on the first call. For subsequent calls, we set the
       // msg_control and msg_controllen fields of msgh to zero so recvmsg() does
@@ -221,47 +227,47 @@ namespace intrinsic::hal {
       //
       // Because we made a copy of msgh before the loop, we can still access the
       // control message later.
-        msgh.msg_control = nullptr;
-        msgh.msg_controllen = 0;
-      }
+      msgh.msg_control = nullptr;
+      msgh.msg_controllen = 0;
+    }
 
     // Returns the number of bytes received.
-      ssize_t received_bytes = recvmsg(to_server_sock, &msgh, 0);
-      if (received_bytes == -1) {
-        return tl::unexpected(Status {
+    ssize_t received_bytes = recvmsg(to_server_sock, &msgh, 0);
+    if (received_bytes == -1) {
+      return tl::unexpected(Status {
           .code = StatusCode::kInternal,
           .message = (std::stringstream() <<
             "Failed to receive data with error: " << strerror(errno) << ".").str(),
         });
-      }
+    }
 
-      if (received_bytes == 0) {
-        return tl::unexpected(Status {
+    if (received_bytes == 0) {
+      return tl::unexpected(Status {
           .code = StatusCode::kInternal,
           .message = "No data received. Likely due to shutdown.",
         });
-      }
+    }
 
-      received_bytes_sum += received_bytes;
-      if ((received_bytes_sum) > kExpectedBytes) {
-        return tl::unexpected(Status {
+    received_bytes_sum += received_bytes;
+    if ((received_bytes_sum) > kExpectedBytes) {
+      return tl::unexpected(Status {
           .code = StatusCode::kOutOfRange,
           .message = (std::stringstream()
                         << "Received " << (received_bytes_sum)
                         << " bytes << but only expected " << kExpectedBytes << " bytes"
           ).str(),
         });
-      }
+    }
 
-      msgh.msg_iov->iov_base =
-        (char *)(&descriptors.transfer_data) + received_bytes_sum;
-      msgh.msg_iov->iov_len = kExpectedBytes - received_bytes_sum;
+    msgh.msg_iov->iov_base =
+      (char *)(&descriptors.transfer_data) + received_bytes_sum;
+    msgh.msg_iov->iov_len = kExpectedBytes - received_bytes_sum;
   }
 
   // // Returns error instead of retrying because the data is transmitted as a
   // // single message.
   if (received_bytes_sum != kExpectedBytes) {
-      return tl::unexpected(Status {
+    return tl::unexpected(Status {
         .code = StatusCode::kInternal,
         .message = (std::stringstream()
                       << "Received " << received_bytes_sum
@@ -271,9 +277,9 @@ namespace intrinsic::hal {
   }
 
   if (descriptors.transfer_data.domain_socket_protocol_version !=
-      domain_socket_internal::kDomainSocketProtocolVersion)
-    {
-      return tl::unexpected(Status {
+    domain_socket_internal::kDomainSocketProtocolVersion)
+  {
+    return tl::unexpected(Status {
         .code = StatusCode::kFailedPrecondition,
         .message = (std::stringstream()
                       << "Incompatible domain socket protocol version. Got: "
@@ -285,23 +291,23 @@ namespace intrinsic::hal {
 
   const int kNumNames = descriptors.transfer_data.file_descriptor_names.size();
   const auto segment_names =
-      GetNamesFromFileDescriptorNames(
+    GetNamesFromFileDescriptorNames(
           descriptors.transfer_data.file_descriptor_names);
   if (!segment_names) {
-      return tl::unexpected(segment_names.error());
+    return tl::unexpected(segment_names.error());
   }
 
   // Parses fd data.
   struct cmsghdr * cmsg = CMSG_FIRSTHDR(&first_msghdr);
   if (!cmsg) {
-      return tl::unexpected(Status {
+    return tl::unexpected(Status {
         .code = StatusCode::kInternal,
         .message = "No control message received",
       });
   }
 
   if (cmsg->cmsg_len != CMSG_LEN(kNumNames * sizeof(int))) {
-      return tl::unexpected(Status {
+    return tl::unexpected(Status {
         .code = StatusCode::kInternal,
         .message = (std::stringstream()
                       << "Unexpected size of control message. Expected "
@@ -312,7 +318,7 @@ namespace intrinsic::hal {
   }
 
   if (cmsg->cmsg_level != SOL_SOCKET) {
-      return tl::unexpected(Status {
+    return tl::unexpected(Status {
         .code = StatusCode::kInternal,
         .message = (std::stringstream()
                       << "Unexpected level of control message. Expected "
@@ -321,7 +327,7 @@ namespace intrinsic::hal {
       });
   }
   if (cmsg->cmsg_type != SCM_RIGHTS) {
-      return tl::unexpected(Status {
+    return tl::unexpected(Status {
         .code = StatusCode::kInternal,
         .message = (std::stringstream()
                       << "Unexpected type of control message. Expected '"
@@ -336,9 +342,9 @@ namespace intrinsic::hal {
   // descriptors are automatically closed in the receiving process. One cannot
   // split the list over multiple recvmsg calls.
   for (int i = 0; i < kNumNames; ++i) {
-      int fd = reinterpret_cast < int * > (CMSG_DATA(cmsg))[i];
-      if (fcntl(fd, F_GETFD) == -1) {
-        return tl::unexpected(Status {
+    int fd = reinterpret_cast<int *>(CMSG_DATA(cmsg))[i];
+    if (fcntl(fd, F_GETFD) == -1) {
+      return tl::unexpected(Status {
           .code = StatusCode::kInternal,
           .message = (std::stringstream()
                         << "File descriptor for segment '" << (*segment_names)[i]
@@ -347,26 +353,28 @@ namespace intrinsic::hal {
                         << strerror(errno) << "."
           ).str(),
         });
-      }
+    }
 
-      descriptors.file_descriptors_in_order[i] = fd;
+    descriptors.file_descriptors_in_order[i] = fd;
   }
   LOG(INFO)
       << "Received " << kNumNames << " valid file descriptors in message "
       << descriptors.transfer_data.message_index << " of "
       << descriptors.transfer_data.num_messages << ".";
 
-    return descriptors;
-  }
+  return descriptors;
+}
 
-  tl::expected < SegmentNameToFileDescriptorMap, Status >
-  GetSegmentNameToFileDescriptorMap(std::filesystem::path socket_directory,
-                                      std::string_view module_name,
-                                      std::chrono::seconds connection_timeout) {
+tl::expected<SegmentNameToFileDescriptorMap, Status>
+GetSegmentNameToFileDescriptorMap(
+  std::filesystem::path socket_directory,
+  std::string_view module_name,
+  std::chrono::seconds connection_timeout)
+{
   Time deadline = Now() + connection_timeout;
   int to_server_sock = socket(AF_UNIX, SOCK_STREAM, 0);
   if (to_server_sock == -1) {
-      return tl::unexpected(Status {
+    return tl::unexpected(Status {
         .code = StatusCode::kInternal,
         .message = (std::stringstream()
                       << "Failed to create GetShmDescriptors client socket with error: "
@@ -376,26 +384,26 @@ namespace intrinsic::hal {
   }
 
   if (auto status = domain_socket_internal::CreateSocketDirectory(socket_directory);
-      !status.ok())
-    {
-      return tl::unexpected(status);
+    !status.ok())
+  {
+    return tl::unexpected(status);
   }
 
   auto absolute_socket_path = domain_socket_internal::AbsoluteSocketPath(
       socket_directory, module_name);
   if (!absolute_socket_path) {
-      return tl::unexpected(absolute_socket_path.error());
+    return tl::unexpected(absolute_socket_path.error());
   }
 
   if (auto status = ConnectToServer(to_server_sock, *absolute_socket_path, deadline);
-      !status.ok())
-    {
-      return tl::unexpected(status);
+    !status.ok())
+  {
+    return tl::unexpected(status);
   }
 
   // Closes the socket on exit
   Cleanup close_socket(
-      [to_server_sock]() {
+    [to_server_sock]() {
       if (close(to_server_sock) == -1) {
         LOG(ERROR)
           << "Failed to close GetShmDescriptors client socket with error: "
@@ -406,15 +414,15 @@ namespace intrinsic::hal {
   // The socket blocks at most for one Second if no data is received.
   // This stops a misbehaving server from doing damage.
   struct timeval socket_receive_timeout
-    {
-      .tv_sec = 1,
-      .tv_usec = 0,
+  {
+    .tv_sec = 1,
+    .tv_usec = 0,
   };
   if (setsockopt(to_server_sock, SOL_SOCKET, SO_RCVTIMEO,
-      (const char *)&socket_receive_timeout,
+    (const char *)&socket_receive_timeout,
                  sizeof socket_receive_timeout) == -1)
-    {
-      return tl::unexpected(Status {
+  {
+    return tl::unexpected(Status {
         .code = StatusCode::kInternal,
         .message = (std::stringstream()
                       << "Failed to set socket timeout with error: " << strerror(errno) << "."
@@ -432,30 +440,30 @@ namespace intrinsic::hal {
   size_t expected_message_index = 1;
   size_t expected_num_messages = 0;
   do {
-      const auto message = GetSingleMessage(to_server_sock);
-      if (!message) {
-        return tl::unexpected(message.error());
-      }
+    const auto message = GetSingleMessage(to_server_sock);
+    if (!message) {
+      return tl::unexpected(message.error());
+    }
 
-      if (expected_message_index != message->transfer_data.message_index) {
-        return tl::unexpected(Status {
+    if (expected_message_index != message->transfer_data.message_index) {
+      return tl::unexpected(Status {
           .code = StatusCode::kInternal,
           .message = (std::stringstream()
                         << "Expected message with index " << expected_message_index
                         << " got " << message->transfer_data.message_index
           ).str(),
         });
-      }
+    }
     // Reserve the correct space after receiving the first message.
-      if (expected_message_index == 1) {
-        expected_num_messages = message->transfer_data.num_messages;
+    if (expected_message_index == 1) {
+      expected_num_messages = message->transfer_data.num_messages;
 
-        segment_name_to_file_descriptor_map.reserve(
+      segment_name_to_file_descriptor_map.reserve(
           domain_socket_internal::kMaxFdsPerMessage * expected_num_messages);
-      }
+    }
 
-      if (expected_num_messages != message->transfer_data.num_messages) {
-        return tl::unexpected(Status {
+    if (expected_num_messages != message->transfer_data.num_messages) {
+      return tl::unexpected(Status {
           .code = StatusCode::kFailedPrecondition,
           .message = (std::stringstream()
                         << "Expected " << expected_num_messages << " messages, but message ("
@@ -463,18 +471,18 @@ namespace intrinsic::hal {
                         << message->transfer_data.num_messages << "."
           ).str(),
         });
-      }
-      remaining_messages = expected_num_messages - expected_message_index;
-      expected_message_index++;
+    }
+    remaining_messages = expected_num_messages - expected_message_index;
+    expected_message_index++;
 
-      auto names = GetNamesFromFileDescriptorNames(
+    auto names = GetNamesFromFileDescriptorNames(
         message->transfer_data.file_descriptor_names);
-      if (!names) {
-        return tl::unexpected(names.error());
-      }
+    if (!names) {
+      return tl::unexpected(names.error());
+    }
 
-      if (names->size() != message->file_descriptors_in_order.size()) {
-        return tl::unexpected(Status {
+    if (names->size() != message->file_descriptors_in_order.size()) {
+      return tl::unexpected(Status {
           .code = StatusCode::kFailedPrecondition,
           .message = (std::stringstream()
                         << "Names and file descriptors have different sizes. Got: "
@@ -482,24 +490,24 @@ namespace intrinsic::hal {
                         << message->file_descriptors_in_order.size() << "."
           ).str(),
         });
-      }
+    }
 
-      for (size_t i = 0; i < names->size(); ++i) {
-        segment_name_to_file_descriptor_map[names->at(i)] =
-          message->file_descriptors_in_order[i];
-      }
+    for (size_t i = 0; i < names->size(); ++i) {
+      segment_name_to_file_descriptor_map[names->at(i)] =
+        message->file_descriptors_in_order[i];
+    }
   } while (remaining_messages > 0);
 
-    return segment_name_to_file_descriptor_map;
-  }
+  return segment_name_to_file_descriptor_map;
+}
 
-  std::filesystem::path SocketDirectoryFromNamespace(
-    std::string_view shared_memory_namespace)
-  {
-    auto socket_base_path = std::filesystem::path(kDomainSocketDirectory);
-    if (shared_memory_namespace.empty()) {
-      return socket_base_path;
-    }
+std::filesystem::path SocketDirectoryFromNamespace(
+  std::string_view shared_memory_namespace)
+{
+  auto socket_base_path = std::filesystem::path(kDomainSocketDirectory);
+  if (shared_memory_namespace.empty()) {
+    return socket_base_path;
+  }
     // Ensure that we **don't** replace the base path if
     // `shared_memory_namespace` happens to be an absolute path (i.e. start with
     // a directory separator).
@@ -508,7 +516,7 @@ namespace intrinsic::hal {
     // *doesn't* start with one. Appending the empty string to
     // `socket_base_path` ensures that there's a separator before
     // `shared_memory_namespace`.
-    return (socket_base_path / "").concat(shared_memory_namespace);
-  }
+  return (socket_base_path / "").concat(shared_memory_namespace);
+}
 
 }  // namespace intrinsic::hal

@@ -38,17 +38,17 @@ target_include_directories(testing PUBLIC
   "$<BUILD_INTERFACE:${icon_hwm_gen_dir}>")
 
 add_library(shared_memory_manager
-  src/shared_memory_manager.cc
-  src/domain_socket_server.cc
-  src/domain_socket_utils.cc
-  src/segment_header.cc
-  src/memory_segment.cc
-  src/unique_segment_name.cc
-  src/segment_info_utils.cc
-  src/icon_state_utils.cc
-  src/thread.cc
-  src/joint_limits.cc
-  src/joint_limits_utils.cc
+  src/shared_memory_manager.cpp
+  src/domain_socket_server.cpp
+  src/domain_socket_utils.cpp
+  src/segment_header.cpp
+  src/memory_segment.cpp
+  src/unique_segment_name.cpp
+  src/segment_info_utils.cpp
+  src/icon_state_utils.cpp
+  src/thread.cpp
+  src/joint_limits.cpp
+  src/joint_limits_utils.cpp
 )
 
 add_dependencies(shared_memory_manager icon_hwm_fbs)
@@ -80,28 +80,28 @@ if(BUILD_TESTING)
   )
   target_link_libraries(shared_memory_manager_test shared_memory_manager)
 
-  ament_add_gmock(get_hardware_interface_test test/get_hardware_interface_test.cc)
+  ament_add_gmock(get_hardware_interface_test test/get_hardware_interface_test.cpp)
   target_include_directories(get_hardware_interface_test PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
     $<INSTALL_INTERFACE:include>
   )
   target_link_libraries(get_hardware_interface_test shared_memory_manager)
 
-  ament_add_gmock(segment_header_test test/segment_header_test.cc)
+  ament_add_gmock(segment_header_test test/segment_header_test.cpp)
   target_include_directories(segment_header_test PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
     $<INSTALL_INTERFACE:include>
   )
   target_link_libraries(segment_header_test shared_memory_manager)
 
-  ament_add_gmock(segment_info_utils_test test/segment_info_utils_test.cc)
+  ament_add_gmock(segment_info_utils_test test/segment_info_utils_test.cpp)
   target_include_directories(segment_info_utils_test PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
     $<INSTALL_INTERFACE:include>
   )
   target_link_libraries(segment_info_utils_test shared_memory_manager)
 
-  ament_add_gmock(domain_socket_utils_test test/domain_socket_utils_test.cc)
+  ament_add_gmock(domain_socket_utils_test test/domain_socket_utils_test.cpp)
   target_include_directories(domain_socket_utils_test PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
     $<INSTALL_INTERFACE:include>
