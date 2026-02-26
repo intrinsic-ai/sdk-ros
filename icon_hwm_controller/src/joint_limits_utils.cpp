@@ -73,7 +73,7 @@ RealtimeStatus ToFlatbufferWithSizeCheck(
   if(const auto status = CheckSizeEqual(field, fb_field, field_name); !status.ok()) {
     return status;
   }
-  for (int i = 0; i < fb_field.size(); i++) {
+  for (size_t i = 0; i < fb_field.size(); i++) {
     fb_field.Mutate(i, field[i]);
   }
   return RtOkStatus();
@@ -139,7 +139,7 @@ RealtimeStatus CopyTo(
   if (const auto status = limits.SetSize(num_joints); !status.ok()) {
     return status;
   }
-  for (int i = 0; i < num_joints; ++i) {
+  for (size_t i = 0; i < num_joints; ++i) {
     limits.min_position[i] = fb_limits.min_position()->Get(i);
     limits.max_position[i] = fb_limits.max_position()->Get(i);
     if (fb_limits.has_velocity_limits()) {

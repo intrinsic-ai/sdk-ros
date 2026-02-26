@@ -138,9 +138,9 @@ inline RealtimeStatus WasUpdatedThisCycle(
     (void) std::snprintf(
         status.message.data(),
         status.message.size(),
-        "Command was not updated this cycle. icon_cycle (%d) != command_cycle (%d)",
+        "Command was not updated this cycle. icon_cycle (%ld) != command_cycle (%ld)",
         icon_state->current_cycle(),
-        hw_interface.LastUpdatedCycle);
+        hw_interface.LastUpdatedCycle());
     return status;
   }
   return RtOkStatus();
@@ -169,7 +169,7 @@ public:
   tl::expected<const T *, RealtimeStatus> Value() const
   {
     if(auto status =
-      WasUpdatedThisCycle(icon_state_, hardware_interface_); !status.ok)
+      WasUpdatedThisCycle(icon_state_, hardware_interface_); !status.ok())
     {
       return tl::unexpected(status);
     }

@@ -8,10 +8,10 @@
 
 #include "intrinsic/utils/attributes.hpp"
 #include "intrinsic/utils/status.hpp"
-#include "intrinsic/shared_memory_amnager/shared_memory_manager.hpp"
+#include "intrinsic/utils/realtime_guard.hpp"
+#include "intrinsic/shared_memory_manager/shared_memory_manager.hpp"
 #include "intrinsic/hal/get_hardware_interface.hpp"
 #include "intrinsic/hal/hardware_interface_handle.hpp"
-// TODO(nilsb): import these!
 #include "intrinsic/hal/hardware_interface_traits.hpp"
 
 namespace intrinsic::hal
@@ -38,7 +38,7 @@ public:
   // Constructs a new registry for hardware interfaces.
   // `shared_memory_manager` must outlive the return value of this function.
   explicit HardwareInterfaceRegistry(
-    SharedMemoryManager & shared_memory_manager ATTRIBUTE_LIFETIME_BOUND);
+    SharedMemoryManager & shared_memory_manager INTR_ATTRIBUTE_LIFETIME_BOUND);
 
   // Advertises a new hardware interface given an interface type and a set of
   // arguments used to initialize this interface.
@@ -55,9 +55,9 @@ public:
     if (auto status = AdvertiseInterfaceT<HardwareInterfaceT>(
             interface_name, /*must_be_used=*/false, args ...); !status.ok())
     {
-      return status;
+      return tl::unexpected(status);
     }
-    return icon::GetInterfaceHandle<HardwareInterfaceT>(*shm_manager_,
+    return ::intrinsic::hal::GetInterfaceHandle<HardwareInterfaceT>(*shm_manager_,
                                                         interface_name);
   }
 
@@ -66,15 +66,15 @@ public:
   // returns a handle to mutable interface.
   // Prefer AdvertiseStrictInterface.
   template<class HardwareInterfaceT, typename ... ArgsT>
-  tl::expected<MutableHardwareInterfaceHandle<HardwareInterfaceT>>
+  tl::expected<MutableHardwareInterfaceHandle<HardwareInterfaceT>, Status>
   AdvertiseMutableInterface(std::string_view interface_name, ArgsT... args)
   {
     if(auto status = AdvertiseInterfaceT<HardwareInterfaceT>(
            interface_name, /*must_be_used=*/false, args ...); !status.ok())
     {
-      return status;
+      return tl::unexpected(status);
     }
-    return icon::GetMutableInterfaceHandle<HardwareInterfaceT>(*shm_manager_,
+    return ::intrinsic::hal::GetMutableInterfaceHandle<HardwareInterfaceT>(*shm_manager_,
                                                                interface_name);
   }
 
@@ -90,9 +90,9 @@ public:
     if(auto status = AdvertiseInterfaceT(
            interface_name, /*must_be_used=*/false, message_buffer, type_id); !status.ok())
     {
-      return status;
+      return tl::unexpected(status);
     }
-    return icon::GetMutableInterfaceHandle<HardwareInterfaceT>(*shm_manager_,
+    return ::intrinsic::hal::GetMutableInterfaceHandle<HardwareInterfaceT>(*shm_manager_,
                                                                interface_name);
   }
 
@@ -114,9 +114,13 @@ public:
   tl::expected<StrictHardwareInterfaceHandle<HardwareInterfaceT>, Status>
   AdvertiseStrictInterface(std::string_view interface_name, ArgsT... args)
   {
-    INTR_RETURN_IF_ERROR(AdvertiseInterfaceT<HardwareInterfaceT>(
-        interface_name, /*must_be_used=*/true, args ...));
-    return icon::GetStrictInterfaceHandle<HardwareInterfaceT>(*shm_manager_,
+    if (auto s = AdvertiseInterfaceT<HardwareInterfaceT>(
+            interface_name, /*must_be_used=*/true, args ...); !s.ok())
+    {
+      return tl::unexpected(s);
+    }
+
+    return ::intrinsic::hal::GetStrictInterfaceHandle<HardwareInterfaceT>(*shm_manager_,
                                                               interface_name);
   }
 
@@ -140,9 +144,12 @@ public:
     std::string_view interface_name,
     ArgsT... args)
   {
-    INTR_RETURN_IF_ERROR(AdvertiseInterfaceT<HardwareInterfaceT>(
-        interface_name, /*must_be_used=*/true, args ...));
-    return icon::GetMutableStrictInterfaceHandle<HardwareInterfaceT>(
+    if(auto s = AdvertiseInterfaceT<HardwareInterfaceT>(
+           interface_name, /*must_be_used=*/true, args ...); !s.ok())
+    {
+      return tl::unexpected(s);
+    }
+    return ::intrinsic::hal::GetMutableStrictInterfaceHandle<HardwareInterfaceT>(
         *shm_manager_, interface_name);
   }
 
@@ -154,9 +161,12 @@ public:
   {
     auto type_id =
       hardware_interface_traits::TypeID<HardwareInterfaceT>::kTypeString;
-    INTR_RETURN_IF_ERROR(AdvertiseInterfaceT(
-        interface_name, /*must_be_used=*/true, message_buffer, type_id));
-    return icon::GetMutableStrictInterfaceHandle<HardwareInterfaceT>(
+    if(auto s = AdvertiseInterfaceT(
+           interface_name, /*must_be_used=*/true, message_buffer, type_id); !s.ok())
+    {
+      return tl::unexpected(s);
+    }
+    return ::intrinsic::hal::GetMutableStrictInterfaceHandle<HardwareInterfaceT>(
         *shm_manager_, interface_name);
   }
 
@@ -165,7 +175,7 @@ public:
   tl::expected<HardwareInterfaceHandle<HardwareInterfaceT>, Status>
   GetInterfaceHandle(std::string_view interface_name) const
   {
-    return icon::GetInterfaceHandle<HardwareInterfaceT>(*shm_manager_,
+    return ::intrinsic::hal::GetInterfaceHandle<HardwareInterfaceT>(*shm_manager_,
                                                         interface_name);
   }
 
@@ -175,7 +185,7 @@ public:
   tl::expected<MutableHardwareInterfaceHandle<HardwareInterfaceT>, Status>
   GetMutableInterfaceHandle(std::string_view interface_name) const
   {
-    return icon::GetMutableInterfaceHandle<HardwareInterfaceT>(*shm_manager_,
+    return ::intrinsic::hal::GetMutableInterfaceHandle<HardwareInterfaceT>(*shm_manager_,
                                                                interface_name);
   }
 

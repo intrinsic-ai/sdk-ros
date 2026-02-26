@@ -28,7 +28,7 @@ Status HardwareInterfaceRegistry::AdvertiseInterfaceT(
 
   if (auto status = shm_manager_->AddSegment(
           interface_name, must_be_used, buffer.size(), std::string(type_id));
-    status.code != StatusCode::kOkay)
+    !status.ok())
   {
     return status;
   }
