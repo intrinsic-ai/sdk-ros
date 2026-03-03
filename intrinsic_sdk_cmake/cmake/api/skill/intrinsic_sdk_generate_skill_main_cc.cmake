@@ -49,22 +49,24 @@ function(intrinsic_sdk_generate_skill_main_cc)
     ${ARGN}
   )
 
+  list(LENGTH arg_HEADER_FILES arg_HEADER_FILES_len)
+  if(arg_HEADER_FILES_len GREATER 1)
+    # TODO(wjwwood): remove this assertion once I update inbuild to take multiple header files.
+    #   The underlying template/generator code does support multiple, but one header is typical.
+    #   Note I am leaving the joining logic for now, as it will be used later.
+    message(FATAL_ERROR "intrinsic_sdk_generate_skill_main_cc only supports one header file for now, but got ${arg_HEADER_FILES_len}")
+  endif()
   list(JOIN arg_HEADER_FILES "," joined_header_files)
 
-  # get_property(skill_service_generator_path
-  #   TARGET skill_service_generator_import
-  #   PROPERTY IMPORTED_LOCATION
-  # )
-  # message(FATAL_ERROR "skill_service_generator_path: ${skill_service_generator_path}")
   add_custom_command(
     OUTPUT ${arg_MAIN_FILE_OUTPUT}
     # TODO(wjwwood): figure out why the alias does not work...
-    # COMMAND intrinsic_sdk_cmake::skill_service_generator
-    COMMAND skill_service_generator_import
+    # COMMAND intrinsic_sdk_cmake::inbuild
+    COMMAND inbuild_import
       --manifest=${arg_MANIFEST_PBBIN}
-      --lang=cpp
-      --out=${arg_MAIN_FILE_OUTPUT}
-      --cc_headers=${joined_header_files}
+      --language=cpp
+      --output=${arg_MAIN_FILE_OUTPUT}
+      --cc_header=${joined_header_files}
     DEPENDS ${arg_MANIFEST_PBBIN}
     COMMENT "Generating skill cpp main file: ${arg_MAIN_FILE_OUTPUT}"
   )

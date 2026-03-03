@@ -62,12 +62,12 @@ function(intrinsic_sdk_generate_skill_config)
   add_custom_command(
     OUTPUT ${arg_SKILL_CONFIG_FILE_OUTPUT}
     # TODO(wjwwood): figure out why the alias does not work...
-    # COMMAND intrinsic_sdk_cmake::skillserviceconfiggen_main
-    COMMAND skillserviceconfiggen_main_import
+    # COMMAND intrinsic_sdk_cmake::inbuild
+    COMMAND inbuild_import
     ARGS
-      --manifest_pbbin_filename=${arg_MANIFEST_PBBIN}
-      --proto_descriptor_filename=${arg_PROTO_DESCRIPTOR_FILE}
-      --output_config_filename=${arg_SKILL_CONFIG_FILE_OUTPUT}
+      --manifest=${arg_MANIFEST_PBBIN}
+      --file_descriptor_set=${arg_PROTO_DESCRIPTOR_FILE}
+      --output=${arg_SKILL_CONFIG_FILE_OUTPUT}
     COMMENT "Generating skill config for ${arg_SKILL_NAME}"
     DEPENDS
       ${arg_MANIFEST_PBBIN}
