@@ -7,6 +7,7 @@
 #   once we decide on how to distribute inbuild.
 
 set(sdk_bins_DIR "${CMAKE_CURRENT_BINARY_DIR}/sdk_bins")
+file(MAKE_DIRECTORY "${sdk_bins_DIR}")
 
 # Build inbuild
 add_custom_command(
