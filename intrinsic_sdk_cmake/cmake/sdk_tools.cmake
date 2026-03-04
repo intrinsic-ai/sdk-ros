@@ -6,6 +6,8 @@
 #   Edit: now we're just getting inbuild, but we can completely remove this stuff
 #   once we decide on how to distribute inbuild.
 
+set(sdk_bins_DIR "${CMAKE_CURRENT_BINARY_DIR}/sdk_bins")
+
 # Build inbuild
 add_custom_command(
   OUTPUT "${sdk_bins_DIR}/inbuild"
