@@ -63,6 +63,7 @@ function(intrinsic_sdk_generate_skill_main_cc)
     # TODO(wjwwood): figure out why the alias does not work...
     # COMMAND intrinsic_sdk_cmake::inbuild
     COMMAND inbuild_import
+      skill generate entrypoint
       --manifest=${arg_MANIFEST_PBBIN}
       --language=cpp
       --output=${arg_MAIN_FILE_OUTPUT}

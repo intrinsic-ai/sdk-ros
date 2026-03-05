@@ -65,6 +65,7 @@ function(intrinsic_sdk_generate_skill_config)
     # COMMAND intrinsic_sdk_cmake::inbuild
     COMMAND inbuild_import
     ARGS
+      skill generate config
       --manifest=${arg_MANIFEST_PBBIN}
       --file_descriptor_set=${arg_PROTO_DESCRIPTOR_FILE}
       --output=${arg_SKILL_CONFIG_FILE_OUTPUT}
