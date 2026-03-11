@@ -50,6 +50,17 @@ World::CreateTfSubscription(
   return std::make_shared<intrinsic::Subscription>(std::move(*sub));
 }
 
+absl::StatusOr<std::shared_ptr<intrinsic::Subscription>> World::CreateRobotStateSubscription(
+    intrinsic::SubscriptionOkCallback<intrinsic_proto::data_logger::LogItem> callback)
+{
+  auto sub = pubsub_->CreateSubscription("/icon/robot_controller/robot_status_throttle", intrinsic::TopicConfig(),
+                                         callback);
+  if (!sub.ok()) {
+    return sub.status();
+  }
+  return std::make_shared<intrinsic::Subscription>(std::move(*sub));
+}
+
 absl::Status World::connect() {
   if (connected_) {
     return absl::OkStatus();

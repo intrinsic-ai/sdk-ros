@@ -77,6 +77,7 @@ int main(int argc, char* argv[]) {
                       ros_config.executive_deadline_seconds());
   params.emplace_back("executive_update_rate_millis",
                       ros_config.executive_update_rate_millis());
+  params.emplace_back("world_update_rate_millis", ros_config.world_update_rate_millis());
   params.emplace_back("skill_registry_address",
                       ros_config.skill_registry_address());
   params.emplace_back("solution_service_address",
@@ -92,6 +93,12 @@ int main(int argc, char* argv[]) {
                                        bridge_plugins_proto.end());
   rclcpp::Parameter bridge_plugins_param("bridge_plugins", plugin_list);
   params.push_back(std::move(bridge_plugins_param));
+
+  const auto& s = ros_config.sensors();
+  params.emplace_back("enable_robot_state_topic", s.enable_robot_state());
+  params.emplace_back("enable_force_torque_topic", s.enable_force_torque());
+  params.emplace_back("robot_state_topic", s.robot_state_topic());
+  params.emplace_back("force_torque_topic", s.force_torque_topic());
 
   options.parameter_overrides(params);
 

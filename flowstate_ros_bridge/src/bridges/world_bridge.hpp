@@ -30,6 +30,9 @@
 #include "tf2_msgs/msg/tf_message.hpp"
 #include "visualization_msgs/msg/marker_array.hpp"
 
+#include "geometry_msgs/msg/wrench_stamped.hpp"
+#include "sensor_msgs/msg/joint_state.hpp"
+
 namespace flowstate_ros_bridge {
 
 ///=============================================================================
@@ -51,6 +54,16 @@ class WorldBridge : public BridgeInterface {
 
  private:
   void TfCallback(const intrinsic_proto::TFMessage&);
+  void RobotStateCallback(const intrinsic_proto::data_logger::LogItem&);
+
+  // Helper methods for RobotStateCallback
+  void HandleRobotStatus(const intrinsic_proto::icon::RobotStatus& robot_status, const rclcpp::Time& time);
+  void PublishJointState(const std::string& part_name,
+                         const intrinsic_proto::icon::PartStatus& part_status,
+                         const rclcpp::Time& time);
+  void PublishWrench(const std::string& part_name,
+                     const intrinsic_proto::icon::PartStatus& part_status,
+                     const rclcpp::Time& time);
 
   struct Data : public std::enable_shared_from_this<Data> {
     /**
@@ -66,8 +79,22 @@ class WorldBridge : public BridgeInterface {
 
     ROSNodeInterfaces node_interfaces_;
     std::shared_ptr<World> world_;
+
+    // TF functionality
     std::shared_ptr<intrinsic::Subscription> tf_sub_;
     std::shared_ptr<rclcpp::Publisher<tf2_msgs::msg::TFMessage>> tf_pub_;
+
+    // Robot state and force torque functionality
+    std::shared_ptr<intrinsic::Subscription> robot_state_sub_;
+    std::shared_ptr<rclcpp::Publisher<sensor_msgs::msg::JointState>> robot_state_pub_;
+    std::shared_ptr<rclcpp::Publisher<geometry_msgs::msg::WrenchStamped>> force_torque_pub_;
+    bool robot_state_topic_enabled_;
+    bool force_torque_topic_enabled_;
+    int world_update_rate_millis_{ 1000 };
+    // Cached part names to avoid repeated map iteration
+    std::optional<std::string> robot_arm_part_name_;
+    std::optional<std::string> force_torque_part_name_;
+
     std::shared_ptr<rclcpp::Publisher<visualization_msgs::msg::MarkerArray>>
         workcell_markers_pub_;
     std::string tf_prefix_;

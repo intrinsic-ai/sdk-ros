@@ -2,6 +2,15 @@ syntax = "proto3";
 
 package intrinsic;
 
+// Configuration to control which sensors are enabled to publish ROS 2 messages.
+// Robot state (joints) and force/torque sensor data.
+message SensorPublisherConfig {
+  bool enable_robot_state = 1;
+  bool enable_force_torque = 2;
+  string robot_state_topic = 3;
+  string force_torque_topic = 4;
+}
+
 message FlowstateRosBridgeConfig {
   string workcell_id = 1;
   string executive_service_address = 2;
@@ -14,4 +23,6 @@ message FlowstateRosBridgeConfig {
   repeated string bridge_plugins = 9;
   int64 executive_deadline_seconds = 10;
   int64 executive_update_rate_millis = 11;
+  SensorPublisherConfig sensors = 14;
+  optional int64 world_update_rate_millis = 12;
 }
