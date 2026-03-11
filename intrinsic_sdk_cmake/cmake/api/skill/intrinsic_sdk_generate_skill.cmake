@@ -32,7 +32,7 @@ include("${intrinsic_sdk_cmake_API_DIR}/skill/intrinsic_sdk_generate_skill_confi
 #
 # :param SKILL_NAME: the name of the skill
 # :type SKILL_NAME: string
-# :param MANIFEST: the path to the manifest file
+# :param MANIFEST: the path to the manifest file as a .textproto file
 # :type MANIFEST: string
 # :param PROTOS_TARGET: the cmake target for generating the skill's proto files
 # :type PROTOS_TARGET: cmake target
@@ -62,7 +62,7 @@ function(intrinsic_sdk_generate_skill)
   intrinsic_sdk_generate_skill_config(
     TARGET "${GENERATE_ARGS_SKILL_NAME}_config"
     SKILL_NAME ${GENERATE_ARGS_SKILL_NAME}
-    MANIFEST_PBBIN "${CMAKE_CURRENT_BINARY_DIR}/${GENERATE_ARGS_SKILL_NAME}.manifest.pbbin"
+    MANIFEST "${CMAKE_CURRENT_BINARY_DIR}/${GENERATE_ARGS_SKILL_NAME}.manifest.pbbin"
     PROTO_DESCRIPTOR_FILE "${CMAKE_CURRENT_BINARY_DIR}/${GENERATE_ARGS_SKILL_NAME}_protos.desc"
     SKILL_CONFIG_FILE_OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/${GENERATE_ARGS_SKILL_NAME}_config.pbbin"
   )
