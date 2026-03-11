@@ -1,10 +1,14 @@
 # Flowstate ROS Bridge
 
-## Running in a local environment
+There are two main ways to deploy the `flowstate_ros_bridge`:
+1. **Running locally**: Build and run the bridge locally, and test it with a physical connection to a Flowstate workcell over your local LAN.
+2. **Sideloading to Flowstate**: Build a Docker image and deploy the process directly as a service container within Flowstate.
+
+## Option 1: Running in a local environment
 
 ### Building the flowstate_ros_bridge locally
 
-Before we can build the `flowstate_ros_bridge`, you must follow the [Getting Started](https://github.com/intrinsic-ai/sdk-ros/blob/main/README.md#getting-started) instructions to set up your local SDK-ROS environment. 
+Before we can build the `flowstate_ros_bridge`, you must follow the [Getting Started](https://github.com/intrinsic-ai/sdk-ros/blob/main/README.md#getting-started) instructions to set up your local SDK-ROS environment.
 
 Source ROS and build the `flowstate_ros_bridge` within your workspace:
 ```bash
@@ -16,7 +20,34 @@ colcon build \
   --packages-up-to flowstate_ros_bridge
 ```
 
-## Sideloading to Flowstate as a service
+### Testing the flowstate_ros_bridge (over local LAN)
+
+Start a zenoh router to connect to the in-cluster router of the Flowstate IPC.
+
+```bash
+source /opt/ros/jazzy/setup.bash
+# Replace $IPC_ADDRESS with the IP address of the IPC
+export ZENOH_CONFIG_OVERRIDE='connect/endpoints=["tcp/$IPC_ADDRESS:17447"]'
+ros2 run rmw_zenoh_cpp rmw_zenohd
+```
+
+In a separate terminal, ensure `flowstate_ros_bridge` topics are being published by listing ROS 2 topics.
+
+```bash
+source /opt/ros/jazzy/setup.bash
+export RMW_IMPLEMENTATION=rmw_zenoh_cpp
+ros2 topic list --no-daemon
+```
+
+To quickly look at the TFs being published you can export the TF tree using `tf2_tools`.
+
+```bash
+source /opt/ros/jazzy/setup.bash
+export RMW_IMPLEMENTATION=rmw_zenoh_cpp
+ros2 run tf2_tools view_frames
+```
+
+## Option 2: Sideloading to Flowstate as a service
 
 ### Building the flowstate_ros_bridge bundle (Docker)
 
@@ -41,32 +72,5 @@ The output of this command will be a tarball inside the `images` directory of th
 With a solution open in Flowstate, the generated service bundle can be sideloaded with `inctl`.
 
 ```bash
-./inctl service install images/flowstate_ros_bridge.bundle.tar --org ekumen --cluster vmp-8c31-qpfxh4gp
-```
-
-### Testing the flowstate_ros_bridge (over local LAN)
-
-Start a zenoh router to connect to the in-cluster router of the Flowstate IPC.
-
-```bash
-source /opt/ros/jazzy/setup.bash
-# Replace $IPC_ADDRESS with the IP address of the IPC
-export ZENOH_CONFIG_OVERRIDE='connect/endpoints=["tcp/$IPC_ADDRESS:17447"]'
-ros2 run rmw_zenoh_cpp rmw_zenohd
-```
-
-In a separate terminal, ensure `flowstate_ros_bridge` topics are being published by listing ROS 2 topics.
-
-```bash
-source /opt/ros/jazzy/setup.bash
-export RMW_IMPLEMENTATION=rmw_zenoh_cpp
-ros2 topic list --no-daemon
-```
-
-To quickly look at the TFs being published you can export the TF tree using `tf2_tools`. 
-
-```bash
-source /opt/ros/jazzy/setup.bash
-export RMW_IMPLEMENTATION=rmw_zenoh_cpp
-ros2 run tf2_tools view_frames
+./inctl service install images/flowstate_ros_bridge.bundle.tar --org $ORG --cluster $CLUSTER # replace with your org and cluster
 ```
