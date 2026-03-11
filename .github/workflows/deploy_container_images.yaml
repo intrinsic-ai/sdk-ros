@@ -63,30 +63,30 @@ jobs:
       - name: Tag intrinsic_sdk_cmake_base Container Image
         run: |
           docker image tag \
-            host.docker.internal/intrinsic_sdk_cmake_base:temp \
+            localhost:5000/intrinsic_sdk_cmake_base:temp \
             ghcr.io/intrinsic-ai/intrinsic_sdk_cmake_base:${{ env.INTRINSIC_AI_SDK_VERSION }}
           docker image tag \
-            host.docker.internal/intrinsic_sdk_cmake_base:temp \
+            localhost:5000/intrinsic_sdk_cmake_base:temp \
             ghcr.io/intrinsic-ai/intrinsic_sdk_cmake_base:latest
           docker push ghcr.io/intrinsic-ai/intrinsic_sdk_cmake_base:${{ env.INTRINSIC_AI_SDK_VERSION }}
           docker push ghcr.io/intrinsic-ai/intrinsic_sdk_cmake_base:latest
       - name: Tag intrinsic_sdk_cmake Container Image
         run: |
           docker image tag \
-            host.docker.internal/intrinsic_sdk_cmake:temp \
+            localhost:5000/intrinsic_sdk_cmake:temp \
             ghcr.io/intrinsic-ai/intrinsic_sdk_cmake:${{ env.INTRINSIC_AI_SDK_VERSION }}
           docker image tag \
-            host.docker.internal/intrinsic_sdk_cmake:temp \
+            localhost:5000/intrinsic_sdk_cmake:temp \
             ghcr.io/intrinsic-ai/intrinsic_sdk_cmake:latest
           docker push ghcr.io/intrinsic-ai/intrinsic_sdk_cmake:${{ env.INTRINSIC_AI_SDK_VERSION }}
           docker push ghcr.io/intrinsic-ai/intrinsic_sdk_cmake:latest
       - name: Tag intrinsic_sdk_cmake_run Container Image
         run: |
           docker image tag \
-            host.docker.internal/intrinsic_sdk_cmake_run:temp \
+            localhost:5000/intrinsic_sdk_cmake_run:temp \
             ghcr.io/intrinsic-ai/intrinsic_sdk_cmake_run:${{ env.INTRINSIC_AI_SDK_VERSION }}
           docker image tag \
-            host.docker.internal/intrinsic_sdk_cmake_run:temp \
+            localhost:5000/intrinsic_sdk_cmake_run:temp \
             ghcr.io/intrinsic-ai/intrinsic_sdk_cmake_run:latest
           docker push ghcr.io/intrinsic-ai/intrinsic_sdk_cmake_run:${{ env.INTRINSIC_AI_SDK_VERSION }}
           docker push ghcr.io/intrinsic-ai/intrinsic_sdk_cmake_run:latest
