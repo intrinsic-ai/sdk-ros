@@ -18,6 +18,12 @@ jobs:
   push:
     runs-on: ubuntu-24.04-8core
     needs: [build-test]
+    permissions:
+      contents: read
+      packages: write
+      # TODO(wjwwood): these are needed if we do attestation for image provenance
+      # attestations: write
+      # id-toke: write
     steps:
       - run: echo "The job was automatically triggered by a ${{ github.event_name }} event."
       - run: echo "This job is now running on a ${{ runner.os }} server."
@@ -59,6 +65,9 @@ jobs:
       - name: Load intrinsic_sdk_cmake_run container image into docker
         run: docker load --input ${{ runner.temp }}/intrinsic_sdk_cmake_run.tar
 
+      # TODO(wjwwood): consider using docker/metadata-action to create image tags and labels.
+      #   https://github.com/docker/metadata-action#about
+
       # Tag the images and deploy them.
       - name: Tag intrinsic_sdk_cmake_base Container Image
         run: |
@@ -90,5 +99,9 @@ jobs:
             ghcr.io/intrinsic-ai/intrinsic_sdk_cmake_run:latest
           docker push ghcr.io/intrinsic-ai/intrinsic_sdk_cmake_run:${{ env.INTRINSIC_AI_SDK_VERSION }}
           docker push ghcr.io/intrinsic-ai/intrinsic_sdk_cmake_run:latest
+
+      # TODO(wjwwood): use actions/attest-build-provenance to write the attestation info to the
+      #   container registry, see:
+      # https://docs.github.com/en/actions/how-tos/secure-your-work/use-artifact-attestations/use-artifact-attestations
 
       - run: echo "🍏 This job's status is ${{ job.status }}."
