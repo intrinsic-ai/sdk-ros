@@ -167,34 +167,36 @@ rclcpp_components_register_node(flowstate_ros_bridge_component
 
 # TEMPORARY WORKAROUND
 # TODO(b-corry): Update with rclcpp_components_register_node that is able to access the
-# runtime context for the service config. Delete flowstate_ros_bridge_main when done
+# runtime context for the service config. Delete ${SERVICE_NAME}_main when done
 # Generate the skill's protobuf files, protobuf library, and descriptor set file.
+set(SERVICE_NAME "flowstate_ros_bridge")
+
 intrinsic_sdk_generate_service_manifest(
-  SERVICE_NAME flowstate_ros_bridge
-  MANIFEST flowstate_ros_bridge.manifest.textproto
-  PARAMETER_DESCRIPTOR flowstate_ros_bridge.proto
-  DEFAULT_CONFIGURATION flowstate_ros_bridge_default_config.pbtxt
-  PROTOS_TARGET flowstate_ros_bridge_protos
+  SERVICE_NAME ${SERVICE_NAME}
+  MANIFEST ${SERVICE_NAME}.manifest.textproto
+  PARAMETER_DESCRIPTOR ${SERVICE_NAME}.proto
+  DEFAULT_CONFIGURATION ${SERVICE_NAME}_default_config.pbtxt
+  PROTOS_TARGET ${SERVICE_NAME}_protos
 )
-add_executable(flowstate_ros_bridge_main
- src/flowstate_ros_bridge_main.cpp
+add_executable(${SERVICE_NAME}_main
+ src/${SERVICE_NAME}_main.cpp
 )
-target_include_directories(flowstate_ros_bridge_main PUBLIC
+target_include_directories(${SERVICE_NAME}_main PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
 )
-target_link_libraries(flowstate_ros_bridge_main
-  flowstate_ros_bridge_component
-  flowstate_ros_bridge_protos
+target_link_libraries(${SERVICE_NAME}_main
+  ${SERVICE_NAME}_component
+  ${SERVICE_NAME}_protos
 )
 
 # installs
 install(TARGETS
   executive
   world
-  flowstate_ros_bridge_component
-  flowstate_ros_bridge_interface
+  ${SERVICE_NAME}_component
+  ${SERVICE_NAME}_interface
   flowstate_ros_builtin_bridges
-  flowstate_ros_bridge_main
+  ${SERVICE_NAME}_main
   EXPORT executive
   RUNTIME DESTINATION lib/${PROJECT_NAME}
   LIBRARY DESTINATION lib
@@ -202,17 +204,17 @@ install(TARGETS
 )
 
 # Generate the manifest and default config binarypb files
-add_dependencies(flowstate_ros_bridge_main
-  flowstate_ros_bridge_manifest
-  flowstate_ros_bridge_default_config
+add_dependencies(${SERVICE_NAME}_main
+  ${SERVICE_NAME}_manifest
+  ${SERVICE_NAME}_default_config
 )
 
 # Install proto descriptor, manifest, and config files
 install(FILES
-  ${CMAKE_CURRENT_BINARY_DIR}/flowstate_ros_bridge_protos.desc
+  ${CMAKE_CURRENT_BINARY_DIR}/${SERVICE_NAME}_protos.desc
   ${CMAKE_CURRENT_BINARY_DIR}/service_manifest.binarypb
   ${CMAKE_CURRENT_BINARY_DIR}/default_config.binarypb
-  DESTINATION share/${PROJECT_NAME}/${PROJECT_NAME}
+  DESTINATION share/${PROJECT_NAME}/${SERVICE_NAME}
 )
 
 install(PROGRAMS
