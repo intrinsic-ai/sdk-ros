@@ -47,7 +47,7 @@ FlowstateROSBridge::FlowstateROSBridge(const rclcpp::NodeOptions& options)
   this->declare_parameter(
       kExecutiveAddressParamName,
       service_tunnel.empty()
-          ? "executive.app-intrinsic-app-chart.svc.cluster.local:8080"
+          ? "istio-ingressgateway.app-ingress.svc.cluster.local:80"
           : service_tunnel);
   this->declare_parameter(kExecutiveDeadlineParamName, 5);
   this->declare_parameter(kExecutiveUpdateRateMillisParamName, 1000);
@@ -55,24 +55,24 @@ FlowstateROSBridge::FlowstateROSBridge(const rclcpp::NodeOptions& options)
   this->declare_parameter(
       kSkillAddressParamName,
       service_tunnel.empty()
-          ? "skill-registry.app-intrinsic-app-chart.svc.cluster.local:8080"
+          ? "istio-ingressgateway.app-ingress.svc.cluster.local:80"
           : service_tunnel);
 
   this->declare_parameter(
       kSolutionAddressParamName,
       service_tunnel.empty()
-          ? "frontend.app-intrinsic-base.svc.cluster.local:8082"
+          ? "istio-ingressgateway.app-ingress.svc.cluster.local:80"
           : service_tunnel);
 
   this->declare_parameter(
       kWorldAddressParamName,
-      service_tunnel.empty() ? "world.app-intrinsic-base.svc.cluster.local:8080"
+      service_tunnel.empty() ? "istio-ingressgateway.app-ingress.svc.cluster.local:80"
                              : service_tunnel);
 
   this->declare_parameter(
       kGeometryAddressParamName,
       service_tunnel.empty()
-          ? "geomservice.app-intrinsic-base.svc.cluster.local:8080"
+          ? "istio-ingressgateway.app-ingress.svc.cluster.local:80"
           : service_tunnel);
 
   this->declare_parameter(kBridgePluginParamName, std::vector<std::string>{});
