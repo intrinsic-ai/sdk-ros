@@ -33,7 +33,7 @@ jobs:
         uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # was: docker/login-action@v3
         with:
           registry: ghcr.io/intrinsic-ai
-          username: ${{ github.actor }}
+          username: ${{ github.repository_owner }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
       # Download images from build workflow and load them into the local docker for tagging and pushing.
