@@ -212,7 +212,7 @@ install(FILES
   ${CMAKE_CURRENT_BINARY_DIR}/flowstate_ros_bridge_protos.desc
   ${CMAKE_CURRENT_BINARY_DIR}/service_manifest.binarypb
   ${CMAKE_CURRENT_BINARY_DIR}/default_config.binarypb
-  DESTINATION share/${PROJECT_NAME}
+  DESTINATION share/${PROJECT_NAME}/${PROJECT_NAME}
 )
 
 install(PROGRAMS
