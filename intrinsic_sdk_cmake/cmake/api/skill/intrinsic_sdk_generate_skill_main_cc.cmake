@@ -61,7 +61,8 @@ function(intrinsic_sdk_generate_skill_main_cc)
 
   list(LENGTH arg_HEADER_FILES arg_HEADER_FILES_len)
   if(arg_HEADER_FILES_len GREATER 1)
-    # TODO(wjwwood): remove this assertion once I update inbuild to take multiple header files.
+    # TODO(wjwwood): remove this assertion once I either update inbuild to take
+    #   multiple header files or we decide to only support a single header file.
     #   The underlying template/generator code does support multiple, but one header is typical.
     #   Note I am leaving the joining logic for now, as it will be used later.
     message(FATAL_ERROR "intrinsic_sdk_generate_skill_main_cc only supports one header file for now, but got ${arg_HEADER_FILES_len}")
