@@ -26,8 +26,9 @@ include_guard(GLOBAL)
 # This file needs to be generated because it contains variable things like the
 # skill name and the name of the skill's header, etc.
 #
-# :param MANIFEST_PBBIN: the path to the pbbin file for the skill manifest.
-#   This can be generated using intrinsic_sdk_generate_skill_manifest_pbbin().
+# :param MANIFEST_PBBIN: deprecated, use MANIFEST instead
+# :type MANIFEST_PBBIN: string
+# :param MANIFEST: the path to the skill manifest as a .textproto file
 # :type MANIFEST_PBBIN: string
 # :param HEADER_FILES: the paths to additional header files that need to be included
 # :type HEADER_FILES: list of strings
@@ -38,7 +39,7 @@ include_guard(GLOBAL)
 #
 function(intrinsic_sdk_generate_skill_main_cc)
   set(options)
-  set(one_value_args MANIFEST_PBBIN MAIN_FILE_OUTPUT)
+  set(one_value_args MANIFEST_PBBIN MANIFEST MAIN_FILE_OUTPUT)
   set(multi_value_args HEADER_FILES)
 
   cmake_parse_arguments(
@@ -49,23 +50,36 @@ function(intrinsic_sdk_generate_skill_main_cc)
     ${ARGN}
   )
 
+  if(arg_MANIFEST_PBBIN)
+    message(FATAL_ERROR "MANIFEST_PBBIN is no longer supported, use MANIFEST")
+  endif()
+
+  set(manifest_textproto "${arg_MANIFEST}")
+  if(NOT IS_ABSOLUTE "${manifest_textproto}")
+    set(manifest_textproto "${CMAKE_CURRENT_SOURCE_DIR}/${manifest_textproto}")
+  endif()
+
+  list(LENGTH arg_HEADER_FILES arg_HEADER_FILES_len)
+  if(arg_HEADER_FILES_len GREATER 1)
+    # TODO(wjwwood): remove this assertion once I either update inbuild to take
+    #   multiple header files or we decide to only support a single header file.
+    #   The underlying template/generator code does support multiple, but one header is typical.
+    #   Note I am leaving the joining logic for now, as it will be used later.
+    message(FATAL_ERROR "intrinsic_sdk_generate_skill_main_cc only supports one header file for now, but got ${arg_HEADER_FILES_len}")
+  endif()
   list(JOIN arg_HEADER_FILES "," joined_header_files)
 
-  # get_property(skill_service_generator_path
-  #   TARGET skill_service_generator_import
-  #   PROPERTY IMPORTED_LOCATION
-  # )
-  # message(FATAL_ERROR "skill_service_generator_path: ${skill_service_generator_path}")
   add_custom_command(
     OUTPUT ${arg_MAIN_FILE_OUTPUT}
     # TODO(wjwwood): figure out why the alias does not work...
-    # COMMAND intrinsic_sdk_cmake::skill_service_generator
-    COMMAND skill_service_generator_import
-      --manifest=${arg_MANIFEST_PBBIN}
-      --lang=cpp
-      --out=${arg_MAIN_FILE_OUTPUT}
-      --cc_headers=${joined_header_files}
-    DEPENDS ${arg_MANIFEST_PBBIN}
+    # COMMAND intrinsic_sdk_cmake::inbuild
+    COMMAND inbuild_import
+      skill generate entrypoint
+      --manifest=${manifest_textproto}
+      --language=cpp
+      --output=${arg_MAIN_FILE_OUTPUT}
+      --cc_header=${joined_header_files}
+    DEPENDS ${manifest_textproto}
     COMMENT "Generating skill cpp main file: ${arg_MAIN_FILE_OUTPUT}"
   )
 endfunction()
