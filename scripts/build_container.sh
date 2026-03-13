@@ -40,6 +40,11 @@ while [[ $# -gt 0 ]]; do
       shift # past argument
       shift # past value
       ;;
+    --dependencies)
+      DEPENDENCIES="$2"
+      shift # past argument
+      shift # past value
+      ;;
     -*|--*)
       echo "Unknown option $1"
       exit 1
@@ -69,6 +74,7 @@ if [[ -n "$SERVICE_NAME" && -n "$SERVICE_PACKAGE" ]]; then
       --file $DOCKERFILE \
       --build-arg="SERVICE_PACKAGE=$SERVICE_PACKAGE" \
       --build-arg="SERVICE_NAME=$SERVICE_NAME" \
+      --build-arg="DEPENDENCIES=$DEPENDENCIES" \
       --build-arg="SERVICE_EXECUTABLE_NAME=${SERVICE_NAME}_main"\
       .
 elif [[ -n "$SKILL_NAME" && -n "$SKILL_PACKAGE" ]]; then
