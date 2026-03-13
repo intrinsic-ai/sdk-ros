@@ -40,6 +40,8 @@ find_package(geometry_msgs REQUIRED)
 
 rosidl_generate_interfaces(${PROJECT_NAME}
   "msg/DiscoveredCamera.msg"
+  "msg/DiscoveryRequest.msg"
+  "msg/DiscoveryResponse.msg"
   "msg/SensorInfo.msg"
   "msg/ImageSnapshot.msg"
   "msg/PointCloud2Snapshot.msg"
