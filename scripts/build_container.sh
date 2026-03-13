@@ -40,6 +40,11 @@ while [[ $# -gt 0 ]]; do
       shift # past argument
       shift # past value
       ;;
+    --manifest_path)
+      MANIFEST_PATH="$2"
+      shift # past argument
+      shift # past value
+      ;;
     --dependencies)
       DEPENDENCIES="$2"
       shift # past argument
@@ -97,5 +102,35 @@ elif [[ -n "$SKILL_NAME" && -n "$SKILL_PACKAGE" ]]; then
       --file $DOCKERFILE \
       --build-arg="SKILL_PACKAGE=$SKILL_PACKAGE" \
       --build-arg="SKILL_NAME=$SKILL_NAME" \
+      --build-arg="SKILL_EXECUTABLE_NAME=${SKILL_NAME}_main" \
       .
+
+  if [[ -n "$MANIFEST_PATH" ]]; then
+    # Parse the SDK_VERSION from sdk_version.json
+    SDK_VERSION_FILE="$SCRIPT_DIR/../intrinsic_sdk_cmake/cmake/sdk_version.json"
+    SDK_VERSION=$(grep -oP '"sdk_version": "\K[^"]+' "$SDK_VERSION_FILE")
+
+    # Download the 'inbuild' tool if it doesn't exist
+    if [ ! -f ./inbuild ]; then
+        echo "INFO: Downloading inbuild tool version ${SDK_VERSION}..."
+        wget "https://github.com/intrinsic-ai/sdk/releases/download/${SDK_VERSION}/inbuild-linux-amd64" -O inbuild \
+          && chmod +x inbuild
+    fi
+
+    echo "INFO: Loading newly built image into local daemon..."
+    docker load -i "images/${SKILL_NAME}/${SKILL_NAME}.tar"
+
+    echo "INFO: Extracting descriptor set from container..."
+    docker create --name temp_container "$SKILL_PACKAGE:$SKILL_NAME"
+    docker cp "temp_container:/opt/ros/overlay/install/share/${SKILL_PACKAGE}/${SKILL_NAME}_protos.desc" \
+     "images/${SKILL_NAME}/${SKILL_NAME}_protos.desc"
+    docker rm -f temp_container
+
+    echo "INFO: Building the skill bundle..."
+    ./inbuild skill bundle \
+      --file_descriptor_set "images/${SKILL_NAME}/${SKILL_NAME}_protos.desc" \
+      --manifest "${MANIFEST_PATH}" \
+      --oci_image "images/${SKILL_NAME}/${SKILL_NAME}.tar" \
+      --output "images/${SKILL_NAME}/${SKILL_NAME}.bundle.tar"
+  fi
 fi
