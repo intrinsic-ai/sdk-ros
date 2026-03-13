@@ -67,7 +67,7 @@ if [[ -n "$SERVICE_NAME" && -n "$SERVICE_PACKAGE" ]]; then
       --builder="$BUILDER_NAME" \
       --output="\
         type=docker,\
-        dest=./images/$SERVICE_NAME/$SERVICE_NAME.tar,\
+        dest=$IMAGES_DIR/$SERVICE_NAME/$SERVICE_NAME.tar,\
         compression=zstd,\
         push=false,\
         name=$SERVICE_PACKAGE:$SERVICE_NAME" \
@@ -90,7 +90,7 @@ elif [[ -n "$SKILL_NAME" && -n "$SKILL_PACKAGE" ]]; then
       --builder="$BUILDER_NAME" \
       --output="\
         type=docker,\
-        dest=./images/$SKILL_NAME/$SKILL_NAME.tar,\
+        dest=$IMAGES_DIR/$SKILL_NAME/$SKILL_NAME.tar,\
         compression=zstd,\
         push=false,\
         name=$SKILL_PACKAGE:$SKILL_NAME" \
