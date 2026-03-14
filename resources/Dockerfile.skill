@@ -4,8 +4,10 @@
 #   - overlay (user code) ->
 #   - result (base + copied install folder of underlay and overlay)
 
+ARG ROS_DISTRO=jazzy
+
 # base stage: ros:jazzy + configs
-FROM ros:jazzy AS base
+FROM ros:${ROS_DISTRO} AS base
 
 WORKDIR /opt/ros/underlay
 
@@ -17,11 +19,11 @@ FROM base AS underlay
 
 ADD src/sdk-ros /opt/ros/underlay/src/sdk-ros
 
-RUN . /opt/ros/jazzy/setup.sh \
+RUN . /opt/ros/${ROS_DISTRO}/setup.sh \
     && apt-get update \
     && rosdep update \
     && rosdep install --from-paths src --ignore-src -r -y \
-    && apt install -y ros-jazzy-ament-cmake-vendor-package \
+    && apt install -y ros-${ROS_DISTRO}-ament-cmake-vendor-package \
     && colcon build \
         --continue-on-error \
         --cmake-args -DCMAKE_BUILD_TYPE=Release \
@@ -35,13 +37,14 @@ FROM underlay AS overlay
 ARG SKILL_PACKAGE
 ARG DEPENDENCIES
 
+ARG ROS_DISTRO=jazzy
 RUN apt-get update \
-    && apt install -y ros-jazzy-rmw-zenoh-cpp python3-protobuf ${DEPENDENCIES} \
+    && apt install -y ros-${ROS_DISTRO}-rmw-zenoh-cpp python3-protobuf ${DEPENDENCIES} \
     && rm -rf /var/lib/apt/lists/*
 
 ADD src /opt/ros/overlay/src
 
-RUN . /opt/ros/jazzy/setup.sh \
+RUN . /opt/ros/${ROS_DISTRO}/setup.sh \
     && . /opt/ros/underlay/install/setup.sh \
     && cd /opt/ros/overlay \
     && colcon build \
@@ -59,8 +62,9 @@ ARG SKILL_NAME
 ARG SKILL_EXECUTABLE_NAME
 ARG DEPENDENCIES
 
+ARG ROS_DISTRO=jazzy
 RUN apt-get update \
-    && apt-get install -y ros-jazzy-rmw-zenoh-cpp \
+    && apt-get install -y ros-${ROS_DISTRO}-rmw-zenoh-cpp \
     && rm -rf /var/lib/apt/lists/*
 
 COPY --from=overlay /opt/ros/underlay/install /opt/ros/underlay/install
