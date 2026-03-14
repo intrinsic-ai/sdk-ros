@@ -34,34 +34,34 @@ done
 
 SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 
-podman load --input images/$SERVICE_NAME/$SERVICE_NAME.tar
-podman create "$SERVICE_PACKAGE:$SERVICE_NAME" > images/$SERVICE_NAME/container_id.txt
-CONTAINER_ID=$(cat images/$SERVICE_NAME/container_id.txt)
+podman load --input $IMAGES_DIR/$SERVICE_NAME/$SERVICE_NAME.tar
+podman create "$SERVICE_PACKAGE:$SERVICE_NAME" > $IMAGES_DIR/$SERVICE_NAME/container_id.txt
+CONTAINER_ID=$(cat $IMAGES_DIR/$SERVICE_NAME/container_id.txt)
 
-podman cp "$CONTAINER_ID:/service_manifest.binarypb" images/$SERVICE_NAME/service_manifest.binarypb
+podman cp "$CONTAINER_ID:/service_manifest.binarypb" $IMAGES_DIR/$SERVICE_NAME/service_manifest.binarypb
 
 
 for FILE in default_config.binarypb parameter-descriptor-set.proto.bin
 do
-  podman cp "$CONTAINER_ID:/$FILE" images/$SERVICE_NAME/$FILE 2>/dev/null || true
+  podman cp "$CONTAINER_ID:/$FILE" $IMAGES_DIR/$SERVICE_NAME/$FILE 2>/dev/null || true
 done
 
 podman rm $CONTAINER_ID
-chmod 644 images/$SERVICE_NAME/$SERVICE_NAME.tar
+chmod 644 $IMAGES_DIR/$SERVICE_NAME/$SERVICE_NAME.tar
 
 TAR_FILES="$SERVICE_NAME.tar service_manifest.binarypb"
 for FILE in default_config.binarypb parameter-descriptor-set.proto.bin
 do
-  if [ -f "images/$SERVICE_NAME/$FILE" ]; then
+  if [ -f "$IMAGES_DIR/$SERVICE_NAME/$FILE" ]; then
     TAR_FILES="$TAR_FILES $FILE"
   fi
 done
 
-tar -cvf images/$SERVICE_NAME.bundle.tar \
+tar -cvf $IMAGES_DIR/$SERVICE_NAME/$SERVICE_NAME.bundle.tar \
   --owner=0 \
   --group=0 \
   --no-same-owner \
   --no-same-permissions \
   -C \
-  images/$SERVICE_NAME/ \
+  $IMAGES_DIR/$SERVICE_NAME/ \
   $TAR_FILES
