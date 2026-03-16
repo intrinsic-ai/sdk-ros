@@ -57,7 +57,7 @@ do
   fi
 done
 
-tar -cvf $IMAGES_DIR/$SERVICE_NAME/$SERVICE_NAME.bundle.tar \
+tar -cvf $IMAGES_DIR/$SERVICE_NAME.bundle.tar \
   --owner=0 \
   --group=0 \
   --no-same-owner \
