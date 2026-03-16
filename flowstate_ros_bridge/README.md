@@ -72,5 +72,5 @@ The output of this command will be a tarball inside the `images` directory of th
 With a solution open in Flowstate, the generated service bundle can be sideloaded with `inctl`.
 
 ```bash
-./inctl service install images/flowstate_ros_bridge.bundle.tar --org $ORG --cluster $CLUSTER # replace with your org and cluster
+./inctl service install images/flowstate_ros_bridge/flowstate_ros_bridge.bundle.tar --org $ORG --cluster $CLUSTER # replace with your org and cluster
 ```
