@@ -27,8 +27,10 @@ include_guard(GLOBAL)
 # :type TARGET: string
 # :param SKILL_NAME: the name of the skill
 # :type SKILL_NAME: string
-# :param MANIFEST_PBBIN: the path to the manifest file
+# :param MANIFEST_PBBIN: deprecated, use MANIFEST instead
 # :type MANIFEST_PBBIN: string
+# :param MANIFEST: the path to the manifest file as a .textproto file
+# :type MANIFEST: string
 # :param PROTO_DESCRIPTOR_FILE: the path to the proto descriptor file
 # :type PROTO_DESCRIPTOR_FILE: string
 # :param SKILL_CONFIG_FILE_OUTPUT: the output path for the skill config file
@@ -42,7 +44,8 @@ function(intrinsic_sdk_generate_skill_config)
     TARGET
     # TODO(wjwwood): extract skill name from manifest
     SKILL_NAME
-    MANIFEST_PBBIN
+    MANIFEST_PBBIN  # deprecated
+    MANIFEST
     PROTO_DESCRIPTOR_FILE
     SKILL_CONFIG_FILE_OUTPUT
   )
@@ -58,19 +61,29 @@ function(intrinsic_sdk_generate_skill_config)
 
   set(OUT_DIR ${CMAKE_CURRENT_BINARY_DIR})
 
+  if(arg_MANIFEST_PBBIN)
+    message(FATAL_ERROR "MANIFEST_PBBIN is no longer supported, use MANIFEST")
+  endif()
+
+  set(manifest_textproto "${arg_MANIFEST}")
+  if(NOT IS_ABSOLUTE "${manifest_textproto}")
+    set(manifest_textproto "${CMAKE_CURRENT_SOURCE_DIR}/${manifest_textproto}")
+  endif()
+
   # Generate the binary proto skill config
   add_custom_command(
     OUTPUT ${arg_SKILL_CONFIG_FILE_OUTPUT}
     # TODO(wjwwood): figure out why the alias does not work...
-    # COMMAND intrinsic_sdk_cmake::skillserviceconfiggen_main
-    COMMAND skillserviceconfiggen_main_import
+    # COMMAND intrinsic_sdk_cmake::inbuild
+    COMMAND inbuild_import
     ARGS
-      --manifest_pbbin_filename=${arg_MANIFEST_PBBIN}
-      --proto_descriptor_filename=${arg_PROTO_DESCRIPTOR_FILE}
-      --output_config_filename=${arg_SKILL_CONFIG_FILE_OUTPUT}
+      skill generate config
+      --manifest=${manifest_textproto}
+      --file_descriptor_set=${arg_PROTO_DESCRIPTOR_FILE}
+      --output=${arg_SKILL_CONFIG_FILE_OUTPUT}
     COMMENT "Generating skill config for ${arg_SKILL_NAME}"
     DEPENDS
-      ${arg_MANIFEST_PBBIN}
+      ${manifest_textproto}
       ${arg_PROTO_DESCRIPTOR_FILE}
   )
 
