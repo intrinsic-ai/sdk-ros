@@ -5,11 +5,17 @@ if [ ! -d "src/sdk-ros" ]; then
   exit
 fi
 
+IMAGES_DIR=./images
 SKILL_ASSET_ID_ORG=com.example
 CONTAINER_TAG_NAME=latest
 
 while [[ $# -gt 0 ]]; do
   case $1 in
+    --images_dir)
+      IMAGES_DIR="$2"
+      shift # past argument
+      shift # past value
+      ;;
     --skill_name)
       SKILL_NAME="$2"
       shift # past argument
@@ -59,8 +65,8 @@ fi
 
 DOCKERFILE=$(pwd)/src/sdk-ros/intrinsic_sdk_cmake/cmake/api/skill/resource/skill.Dockerfile
 
-mkdir -p "images/$SKILL_NAME"
-IMAGE_DIR=$(pwd)/images/$SKILL_NAME
+mkdir -p "$IMAGES_DIR/$SKILL_NAME"
+IMAGE_DIR=$(pwd)/$IMAGES_DIR/$SKILL_NAME
 
 cd "$PACKAGE_DIR"
 
