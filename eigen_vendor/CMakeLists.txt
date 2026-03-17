@@ -12,11 +12,7 @@ find_package(ament_cmake_vendor_package REQUIRED)
 
 ament_vendor(eigen_vendor
   VCS_URL https://gitlab.com/libeigen/eigen
-  # TODO(wjwwood): in our bazel builds we use a custom version which is
-  #   unreleased by upstream, however 3.4.0 seems to work as well, so we're
-  #   using that for now...
-  # VCS_VERSION 4.0.0-20241125
-  VCS_VERSION 3.4.0
+  VCS_VERSION 5.0.1
 )
 
 ament_package()
