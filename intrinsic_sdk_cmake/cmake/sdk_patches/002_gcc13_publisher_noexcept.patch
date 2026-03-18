@@ -1,0 +1,29 @@
+diff --git a/intrinsic/platform/pubsub/publisher.h b/intrinsic/platform/pubsub/publisher.h
+index d1b8b80..f8f2e7f 100644
+--- a/intrinsic/platform/pubsub/publisher.h
++++ b/intrinsic/platform/pubsub/publisher.h
+@@ -25,10 +25,10 @@ class Publisher {
+ 
+-  ~Publisher();
++  ~Publisher() noexcept;
+ 
+   Publisher(const Publisher&) = delete;
+   Publisher& operator=(const Publisher&) = delete;
+-  Publisher(Publisher&&);
+-  Publisher& operator=(Publisher&&);
++  Publisher(Publisher&&) noexcept;
++  Publisher& operator=(Publisher&&) noexcept;
+ 
+   absl::Status Publish(const google::protobuf::Message& message,
+                        absl::Time event_time) const;
+@@ -49,8 +49,8 @@ class Publisher {
+   absl::StatusOr<bool> HasMatchingSubscribers();
+ 
+  private:
+-  std::string topic_name_ = {};
+-  std::unique_ptr<PublisherData> publisher_data_ = {};
++  std::string topic_name_;
++  std::unique_ptr<PublisherData> publisher_data_;
+ };
+ 
+ }  // namespace intrinsic
