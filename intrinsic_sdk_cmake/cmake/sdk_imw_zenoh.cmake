@@ -2,7 +2,7 @@
 # committed to the SDK as a binary, but only amd64.
 if(CMAKE_HOST_SYSTEM_PROCESSOR STREQUAL "x86_64")
   set(intrinsic_sdk_IMW_ZENOH_LIBRARY_DIRNAME
-    "intrinsic/insrc/middleware")
+    "intrinsic/middleware")
   set(intrinsic_sdk_IMW_ZENOH_LIBRARY_RELPATH
     "${intrinsic_sdk_IMW_ZENOH_LIBRARY_DIRNAME}/libimw_zenoh.so.1")
   set(intrinsic_sdk_IMW_ZENOH_LIBRARY_PATH

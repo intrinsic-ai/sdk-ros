@@ -77,18 +77,23 @@ set(grpc_gateway_SRCS
   ${grpc_gateway_SOURCE_DIR}/protoc-gen-openapiv2/options/annotations.proto
   ${grpc_gateway_SOURCE_DIR}/protoc-gen-openapiv2/options/openapiv2.proto
 )
+set(cel_spec_SRCS
+  ${cel_spec_SOURCE_DIR}/proto/cel/expr/syntax.proto
+)
 
 set(sdk_protos
   ${intrinsic_proto_SRCS}
   ${googleapis_SRCS}
   ${grpc_gateway_SRCS}
   ${grpc_SRCS}
+  ${cel_spec_SRCS}
 )
 set(sdk_proto_import_dirs
   ${intrinsic_sdk_SOURCE_DIR}
   ${googleapis_SOURCE_DIR}
   ${grpc_gateway_SOURCE_DIR}
   ${grpc_SOURCE_DIR}
+  ${cel_spec_SOURCE_DIR}/proto
 )
 
 # Generate code from protos and build into a library.
@@ -274,6 +279,7 @@ add_custom_command(
     -I${googleapis_SOURCE_DIR}
     -I${grpc_gateway_SOURCE_DIR}
     -I${grpc_SOURCE_DIR}
+    -I${cel_spec_SOURCE_DIR}/proto
     --include_imports
     --experimental_editions
     --descriptor_set_out=${CMAKE_CURRENT_BINARY_DIR}/intrinsic_proto.desc

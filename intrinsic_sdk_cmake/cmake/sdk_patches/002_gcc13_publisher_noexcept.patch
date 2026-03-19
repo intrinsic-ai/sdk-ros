@@ -1,0 +1,15 @@
+diff --git a/intrinsic/platform/pubsub/publisher.h b/intrinsic/platform/pubsub/publisher.h
+index d1b8b80..f8f2e7f 100644
+--- a/intrinsic/platform/pubsub/publisher.h
++++ b/intrinsic/platform/pubsub/publisher.h
+@@ -49,8 +49,8 @@ class Publisher {
+   absl::StatusOr<bool> HasMatchingSubscribers();
+ 
+  private:
+-  std::string topic_name_ = {};
+-  std::unique_ptr<PublisherData> publisher_data_ = {};
++  std::string topic_name_;
++  std::unique_ptr<PublisherData> publisher_data_;
+ };
+ 
+ }  // namespace intrinsic
