@@ -60,6 +60,32 @@ target_link_libraries(shared_memory_manager
 target_include_directories(shared_memory_manager PUBLIC
     "$<BUILD_INTERFACE:${icon_hwm_gen_dir}>")
 
+generate_parameter_library(icon_hwm_controller_parameters
+  src/icon_hwm_controller_parameters.yaml
+)
+
+add_library( icon_hwm_controller
+  src/icon_hwm_controller.cpp
+)
+
+target_include_directories(icon_hwm_controller PUBLIC
+  $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>
+  $<INSTALL_INTERFACE:include/icon_hwm_controller>
+)
+target_link_libraries(icon_hwm_controller PUBLIC
+  icon_hwm_controller_parameters
+  shared_memory_manager
+  controller_interface::controller_interface
+  hardware_interface::hardware_interface
+  pluginlib::pluginlib
+  rclcpp::rclcpp
+  rclcpp_lifecycle::rclcpp_lifecycle
+  realtime_tools::realtime_tools
+  ${std_msgs_TARGETS}
+)
+
+pluginlib_export_plugin_description_file(controller_interface icon_hwm_controller.xml)
+
 
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)
@@ -139,4 +165,17 @@ if(BUILD_TESTING)
 
 endif()
 
+ament_export_dependencies(
+  flatbuffers_vendor
+  tl_expected_vendor
+  eigen_vendor
+  controller_interface
+  hardware_interface
+  pluginlib
+  rclcpp
+  rclcpp_lifecycle
+  realtime_tools
+  std_msgs
+  generate_parameter_library
+)
 ament_package()

@@ -1,0 +1,9 @@
+<library path="icon_hwm_controller">
+  <class name="icon_hwm_controller/IconHwmController"
+         type="icon_hwm_controller::IconHwmController"
+         base_class_type="controller_interface::ControllerInterface">
+  <description>
+    Makes a ros2_control hardware interface available to the ICON realtime control service as a hardware module (HWM)
+  </description>
+  </class>
+</library>

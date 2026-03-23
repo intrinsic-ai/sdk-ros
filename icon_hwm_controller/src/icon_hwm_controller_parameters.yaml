@@ -1,0 +1,58 @@
+icon_hwm_controller:
+  
+  name: {
+    type: string,
+    default_value: "",
+    description: "The ICON hardware module name that this Controller uses to talk to the ICON service. The name has to be unique across all hardware module instances that are connecting to the same ICON instance.
+
+    Shared memory modules are indexed by this name.",
+    read_only: true,
+    validation: {
+      not_empty<>: null
+    }
+  }
+  context_name: {
+    type: string,
+    default_value: "",
+    description: "The context name. Used for error reporting. This is typically the instance name of the module under which the hardware module is shown in Flowstate.
+
+    If omitted, this defaults to `name`.",
+    read_only: true
+  }
+  drives_realtime_clock: {
+    type: bool,
+    description: "Does this hardware module drive ICON's realtime clock? If true, then the hardware module's Init method will be provided a RealtimeClockInterface (via module_config.GetRealtimeClock()), and the hardware module is expected to call TickBlocking every control cycle. If false, then the hardware module_config.GetRealtimeClock() will return nullptr.
+
+    Should always be true."
+  }
+  dof_names: {
+    type: string_array,
+    default_value: [],
+    description: "Specifies dof_names or axes used by the controller. If 'reference_and_state_dof_names' parameter is defined, then only command dof names are defined with this parameter.",
+    read_only: true,
+    validation: {
+      unique<>: null,
+      not_empty<>: null,
+    }
+  }
+  command_interface: {
+    type: string,
+    default_value: "",
+    description: "Name of the interface used by the controller for writing commands to the hardware.",
+    read_only: true,
+    validation: {
+      not_empty<>: null,
+    }
+  }
+  reference_and_state_interfaces: {
+    type: string_array,
+    default_value: [],
+    description: "Name of the interfaces used by the controller getting hardware states and reference commands. The second interface should be the derivative of the first.",
+    read_only: true,
+    validation: {
+      not_empty<>: null,
+      size_gt<>: 0,
+      size_lt<>: 3,
+    }
+  }
+  

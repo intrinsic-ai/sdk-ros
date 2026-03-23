@@ -8,10 +8,18 @@
   <license>Apache-2.0</license>
 
   <buildtool_depend>ament_cmake</buildtool_depend>
+  <build_depend>generate_parameter_library</build_depend>
 
   <depend>flatbuffers_vendor</depend>
   <depend>tl_expected_vendor</depend>
   <depend>eigen_vendor</depend>
+  <depend>controller_interface</depend>
+  <depend>hardware_interface</depend>
+  <depend>pluginlib</depend>
+  <depend>rclcpp</depend>
+  <depend>rclcpp_lifecycle</depend>
+  <depend>realtime_tools</depend>
+  <depend>std_msgs</depend>
 
   <test_depend>ament_lint_auto</test_depend>
   <test_depend>ament_lint_common</test_depend>
