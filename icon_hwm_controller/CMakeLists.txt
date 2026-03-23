@@ -123,6 +123,13 @@ if(BUILD_TESTING)
   )
   target_link_libraries(joint_limits_utils_test shared_memory_manager)
 
+  ament_add_gmock(joint_limits_test test/joint_limits_test.cpp)
+  target_include_directories(joint_limits_test PUBLIC
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+    $<INSTALL_INTERFACE:include>
+  )
+  target_link_libraries(joint_limits_test shared_memory_manager)
+
   ament_add_gmock(hardware_interface_registry_test test/hardware_interface_registry_test.cpp)
   target_include_directories(hardware_interface_registry_test PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
