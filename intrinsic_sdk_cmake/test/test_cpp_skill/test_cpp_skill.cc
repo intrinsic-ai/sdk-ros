@@ -28,6 +28,7 @@
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
 #include "absl/synchronization/notification.h"
+#include "intrinsic/connect/cc/grpc/channel.h"
 #include "intrinsic/perception/proto/camera_config.pb.h"
 #include "intrinsic/perception/service/proto/camera_server.grpc.pb.h"
 #include "intrinsic/skills/cc/skill_utils.h"
@@ -41,7 +42,7 @@ using ::com::example::TestCppSkillResult;
 using ::intrinsic::skills::ExecuteRequest;
 using ::intrinsic::skills::SkillInterface;
 using ::intrinsic::skills::ExecuteContext;
-using ::intrinsic::WaitForChannelConnected;
+using ::intrinsic::connect::WaitForChannelConnected;
 
 // -----------------------------------------------------------------------------
 // Skill signature.

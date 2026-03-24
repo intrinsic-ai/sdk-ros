@@ -11,7 +11,7 @@
 
   <maintainer email="wjwwood@intrinsic.ai">William Woodall</maintainer>
 
-  <license>Intrinsic License</license>  <!-- This package has a custom license -->
+  <license>Apache-2.0</license>
   <license>MIT</license>  <!-- The contents of prometheus-cpp are MIT -->
 
   <author email="wjwwood@intrinsic.ai">William Woodall</author>
