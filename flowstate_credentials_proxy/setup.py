@@ -15,7 +15,7 @@ setup(
     maintainer="koonpeng",
     maintainer_email="koonpeng@intrinsic.ai",
     description="websocket proxy to authenticate to flowstate",
-    license="Intrinsic License",
+    license="Apache-2.0",
     entry_points={
         "console_scripts": [
             "credentials_proxy = flowstate_credentials_proxy.__main__:main",

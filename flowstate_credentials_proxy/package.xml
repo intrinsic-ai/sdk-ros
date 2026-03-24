@@ -5,7 +5,7 @@
   <version>0.0.1</version>
   <description>websocket proxy to authenticate to flowstate</description>
   <maintainer email="koonpeng@intrinsic.ai">koonpeng</maintainer>
-  <license>Intrinsic License</license>
+  <license>Apache-2.0</license>
 
   <depend>python3-aiohttp</depend>
 
