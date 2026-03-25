@@ -38,6 +38,7 @@ ament_vendor(grpc_vendor
     -DgRPC_BUILD_GRPC_PYTHON_PLUGIN=ON
     -DgRPC_PROTOBUF_PROVIDER:STRING=module
     -DPROTOBUF_ROOT_DIR=${PROTOBUF_ROOT_DIR}
+  GLOBAL_HOOK
 )
 
 if (TARGET grpc_vendor)

@@ -17,6 +17,7 @@ ament_vendor(abseil_cpp_vendor
     -DCMAKE_CXX_STANDARD=${CMAKE_CXX_STANDARD}
     -DABSL_BUILD_TESTING:BOOL=OFF
     -DABSL_ENABLE_INSTALL:BOOL=ON
+  GLOBAL_HOOK
 )
 
 ament_package()
