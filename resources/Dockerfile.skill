@@ -77,7 +77,8 @@ COPY --from=overlay /opt/ros/overlay/install /opt/ros/overlay/install
 # Copy the pybind11_abseil binary module
 COPY --from=overlay /opt/ros/underlay/build/pybind11_abseil_vendor/pybind11_abseil_vendor-prefix/src/pybind11_abseil_vendor-build /opt/ros/underlay/bindings/pybind11_abseil
 
-ENV PYTHONPATH="${PYTHONPATH}:/opt/ros/underlay/bindings/pybind11_abseil:/opt/ros/overlay/install/lib/python3.12/site-packages:/opt/ros/underlay/install/lib/python3.12/site-packages"
+ENV PYTHONPATH="/opt/ros/underlay/bindings/pybind11_abseil:/opt/ros/overlay/install/lib/python3.12/site-packages:/opt/ros/underlay/install/lib/python3.12/site-packages"
+ENV LD_LIBRARY_PATH="/opt/ros/underlay/bindings/pybind11_abseil:/opt/ros/overlay/install/lib:/opt/ros/underlay/install/lib"
 
 ENV SKILL_EXEC_PATH="/opt/ros/overlay/install/lib/${SKILL_PACKAGE}/${SKILL_EXECUTABLE_NAME}"
 ENV SKILL_CONFIG=share/${SKILL_PACKAGE}/${SKILL_NAME}_config.pbbin
@@ -86,10 +87,14 @@ RUN sed -i '1i #!/usr/bin/env python3' "$SKILL_EXEC_PATH" && chmod +x "$SKILL_EX
 
 # Setup the runner
 RUN echo '#!/bin/bash' > /run_skill.sh \
+    && echo 'set -x' >> /run_skill.sh \
+    && echo 'echo "DEBUG: Checking environment..."' >> /run_skill.sh \
+    && echo 'ls -l "$SKILL_EXEC_PATH" || echo "ERROR: Executable not found at $SKILL_EXEC_PATH"' >> /run_skill.sh \
+    && echo 'head -n 2 "$SKILL_EXEC_PATH"' >> /run_skill.sh \
     && echo 'source /opt/ros/jazzy/setup.bash' >> /run_skill.sh \
     && echo 'source /opt/ros/underlay/install/setup.bash' >> /run_skill.sh \
     && echo 'source /opt/ros/overlay/install/setup.bash' >> /run_skill.sh \
-    && echo 'python3 "$SKILL_EXEC_PATH" "$@"' >> /run_skill.sh \
+    && echo 'exec python3 "$SKILL_EXEC_PATH" "$@"' >> /run_skill.sh \
     && chmod +x /run_skill.sh
 
 RUN set -x \
@@ -98,7 +103,8 @@ RUN set -x \
     && ln -sf /opt/ros/overlay/install/$SKILL_CONFIG /skills/skill_service_config.proto.bin \
     && sed --in-place --expression '$isource "/opt/ros/overlay/install/setup.bash"' /ros_entrypoint.sh \
     && sed --in-place --expression '$iexport RMW_IMPLEMENTATION=rmw_zenoh_cpp' /ros_entrypoint.sh \
-    && sed --in-place --expression '$iexport ROS_HOME=/tmp' /ros_entrypoint.sh
+    && sed --in-place --expression '$iexport ROS_HOME=/tmp' /ros_entrypoint.sh \
+    && sed --in-place --expression '$iexport ZENOH_CONFIG_OVERRIDE="connect/endpoints=[\"tcp/zenoh-router.app-intrinsic-base.svc.cluster.local:7447\"]"' /ros_entrypoint.sh
 
 LABEL "ai.intrinsic.asset-id"="ai.intrinsic.${SKILL_PACKAGE}"
 ENV ZENOH_ROUTER_CHECK_ATTEMPTS=-1
