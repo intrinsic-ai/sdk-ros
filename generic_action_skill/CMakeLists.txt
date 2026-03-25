@@ -19,16 +19,10 @@ add_custom_command(
 )
 add_custom_target(generate_python_proto ALL DEPENDS "${CMAKE_CURRENT_BINARY_DIR}/generic_action_skill_pb2.py")
 
-intrinsic_sdk_generate_skill_manifest_pbbin(
-  TARGET generic_action_skill_manifest
-  MANIFEST_TEXTPROTO src/generic_action_skill.manifest.textproto
-  MANIFEST_PBBIN_OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/generic_action_skill.manifest.pbbin"
-)
-
 intrinsic_sdk_generate_skill_config(
   TARGET generic_action_skill_skill_config
   SKILL_NAME generic_action_skill
-  MANIFEST_PBBIN "${CMAKE_CURRENT_BINARY_DIR}/generic_action_skill.manifest.pbbin"
+  MANIFEST "${CMAKE_CURRENT_SOURCE_DIR}/src/generic_action_skill.manifest.textproto"
   PROTO_DESCRIPTOR_FILE "${CMAKE_CURRENT_BINARY_DIR}/generic_action_skill_protos.desc"
   SKILL_CONFIG_FILE_OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/generic_action_skill_config.pbbin"
 )
@@ -37,7 +31,6 @@ add_custom_target(force_manifest_generation ALL)
 add_dependencies(force_manifest_generation 
   generic_action_skill_protos
   generate_python_proto
-  generic_action_skill_manifest
   generic_action_skill_skill_config
 )
 
