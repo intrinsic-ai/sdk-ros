@@ -1,27 +1,16 @@
 // Copyright 2024 Intrinsic Innovation LLC
 //
-// You are hereby granted a non-exclusive, worldwide, royalty-free license to
-// use, copy, modify, and distribute this Intrinsic SDK in source code or binary
-// form for use in connection with the services and APIs provided by Intrinsic
-// Innovation LLC (“Intrinsic”).
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
 //
-// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-// SOFTWARE.
+//     http://www.apache.org/licenses/LICENSE-2.0
 //
-// If you use this Intrinsic SDK with any Intrinsic services, your use is
-// subject to the Intrinsi Platform Terms of Service
-// [https://intrinsic.ai/platform-terms].  If you create works that call
-// Intrinsic APIs, you must agree to the terms of service for those APIs
-// separately. This license does not grant you any special rights to use the
-// services.
-//
-// This copyright notice shall be included in all copies or substantial portions
-// of the software.
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
 #ifndef FLOWSTATE_ROS_BRIDGE__EXECUTIVE_HPP_
 #define FLOWSTATE_ROS_BRIDGE__EXECUTIVE_HPP_
@@ -138,12 +127,39 @@ class Executive : public std::enable_shared_from_this<Executive> {
     std::shared_ptr<bool> cancelled_;
   };
   // Start a process.
-  absl::StatusOr<ProcessHandlePtr> start(const BehaviorTree &bt,
-                                         const ExecutionMode &execution_mode,
-                                         const SimulationMode &simulation_mode,
-                                         const nlohmann::json &process_params,
-                                         ProcessFeedbackCallback feedback_cb,
-                                         ProcessCompletedCallback completed_cb);
+  /**
+   * @brief Starts a new process based on a given behavior tree.
+   *
+   * Initiates the execution of a specified behavior tree with defined execution
+   * and simulation modes, along with any necessary process parameters. It
+   * returns a `ProcessHandlePtr` which can be used to monitor and control the
+   * running process.
+   *
+   * @param bt The behavior tree to be executed.
+   * @param execution_mode The mode in which the behavior tree should be
+   * executed (e.g., real-time, step-by-step).
+   * @param simulation_mode The simulation mode to use for the execution.
+   * @param process_params A JSON object containing parameters for the process.
+   * These parameters are dynamically resolved and packed into the request.
+   * @param feedback_cb A callback function to be invoked with feedback on the
+   * process's status.
+   * @param completed_cb A callback function to be invoked when the process
+   * completes, providing the final status.
+   * @param scene_id An optional identifier for the scene in which the process
+   * is to be started.
+   * @return absl::StatusOr<ProcessHandlePtr> A status or a shared pointer to a
+   * `ProcessHandle` if the process was successfully started. The
+   * `ProcessHandle` allows for interaction with the running process (e.g.,
+   * cancellation, status checks).
+   * @error absl::Status An error status if the process could not be started,
+   * e.g., due to connection issues, invalid parameters, or service errors.
+   */
+  absl::StatusOr<ProcessHandlePtr> start(
+      const BehaviorTree &bt, const ExecutionMode &execution_mode,
+      const SimulationMode &simulation_mode,
+      const nlohmann::json &process_params, ProcessFeedbackCallback feedback_cb,
+      ProcessCompletedCallback completed_cb,
+      const std::optional<std::string> scene_id = std::nullopt);
 
  private:
   mutable std::recursive_mutex mutex_;

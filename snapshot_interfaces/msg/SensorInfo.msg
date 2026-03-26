@@ -14,6 +14,8 @@ uint32 IMAGE=1
 uint32 POINT_CLOUD=2
 uint32 IMU=3
 uint32 TEMPERATURE=4
+uint32 DEPTH=5
+uint32 NORMAL=6
 
 # Each sensor within a camera typically has a static transform from
 # a "base link" of the camera to the sensor frame of interest, such

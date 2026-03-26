@@ -1,27 +1,16 @@
 // Copyright 2025 Intrinsic Innovation LLC
 //
-// You are hereby granted a non-exclusive, worldwide, royalty-free license to
-// use, copy, modify, and distribute this Intrinsic SDK in source code or binary
-// form for use in connection with the services and APIs provided by Intrinsic
-// Innovation LLC (“Intrinsic”).
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
 //
-// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-// SOFTWARE.
+//     http://www.apache.org/licenses/LICENSE-2.0
 //
-// If you use this Intrinsic SDK with any Intrinsic services, your use is
-// subject to the Intrinsi Platform Terms of Service
-// [https://intrinsic.ai/platform-terms].  If you create works that call
-// Intrinsic APIs, you must agree to the terms of service for those APIs
-// separately. This license does not grant you any special rights to use the
-// services.
-//
-// This copyright notice shall be included in all copies or substantial portions
-// of the software.
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
 #include "flowstate_ros_bridge/world.hpp"
 
@@ -30,6 +19,7 @@
 #include "absl/container/flat_hash_set.h"
 #include "absl/log/log.h"
 #include "absl/status/status.h"
+#include "intrinsic/connect/cc/grpc/channel.h"
 #include "intrinsic/geometry/proto/geometry_service.grpc.pb.h"
 #include "intrinsic/util/grpc/grpc.h"
 #include "intrinsic/util/status/status_conversion_grpc.h"
@@ -65,7 +55,7 @@ absl::Status World::connect() {
     return absl::OkStatus();
   }
 
-  grpc::ChannelArguments channel_args = intrinsic::DefaultGrpcChannelArgs();
+  grpc::ChannelArguments channel_args = intrinsic::connect::DefaultGrpcChannelArgs();
   // We might eventually need a retry policy here, like in executive (?)
   // Some of the meshes that we'll receive in the geometry client are large,
   // like a few 10's of MB.
@@ -75,10 +65,10 @@ absl::Status World::connect() {
   LOG(INFO) << "Connecting to world service at " << world_service_address_;
   INTR_ASSIGN_OR_RETURN(
       std::shared_ptr<grpc::Channel> world_channel,
-      intrinsic::CreateClientChannel(
+      intrinsic::connect::CreateClientChannel(
           world_service_address_,
           absl::Now() + absl::Seconds(deadline_seconds_), channel_args));
-  INTR_RETURN_IF_ERROR(intrinsic::WaitForChannelConnected(
+  INTR_RETURN_IF_ERROR(intrinsic::connect::WaitForChannelConnected(
       world_service_address_, world_channel,
       absl::Now() + absl::Seconds(deadline_seconds_)));
   std::shared_ptr<ObjectWorldService::StubInterface> object_world_stub =
@@ -91,10 +81,10 @@ absl::Status World::connect() {
             << geometry_service_address_;
   INTR_ASSIGN_OR_RETURN(
       std::shared_ptr<grpc::Channel> geometry_channel,
-      intrinsic::CreateClientChannel(
+      intrinsic::connect::CreateClientChannel(
           geometry_service_address_,
           absl::Now() + absl::Seconds(deadline_seconds_), channel_args));
-  INTR_RETURN_IF_ERROR(intrinsic::WaitForChannelConnected(
+  INTR_RETURN_IF_ERROR(intrinsic::connect::WaitForChannelConnected(
       geometry_service_address_, geometry_channel,
       absl::Now() + absl::Seconds(deadline_seconds_)));
   geometry_stub_ = GeometryService::NewStub(std::move(geometry_channel));
@@ -141,9 +131,9 @@ absl::StatusOr<std::vector<intrinsic::world::WorldObject>> World::GetObjects(
 absl::StatusOr<std::string> World::GetGltf(const std::string& geometry_ref,
                                            const std::string& renderable_ref) {
   intrinsic_proto::geometry::GetRenderableRequest request;
-  *(request.mutable_geometry_storage_refs()->mutable_geometry_ref()) =
+  *(request.mutable_geometry_storage_refs_v0()->mutable_geometry_ref()) =
       geometry_ref;
-  *(request.mutable_geometry_storage_refs()->mutable_renderable_ref()) =
+  *(request.mutable_geometry_storage_refs_v0()->mutable_renderable_ref()) =
       renderable_ref;
 
   auto client_context = std::make_unique<grpc::ClientContext>();
@@ -155,7 +145,7 @@ absl::StatusOr<std::string> World::GetGltf(const std::string& geometry_ref,
   INTR_RETURN_IF_ERROR(intrinsic::ToAbslStatus(
       geometry_stub_->GetRenderable(client_context.get(), request, &response)));
 
-  return response.renderable().gltf_string();
+  return response.renderable_v0().gltf_string();
 }
 
 }  // namespace flowstate_ros_bridge

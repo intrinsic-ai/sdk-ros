@@ -1,13 +1,6 @@
 cmake_minimum_required(VERSION 3.10)
 project(ortools_vendor CXX)
 
-if(NOT CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-  message(FATAL_ERROR
-  "Clang is required. Detected: ${CMAKE_CXX_COMPILER_ID}. "
-  "'sudo apt install clang-19' and invoke colcon with --cmake-args as shown in "
-  "https://github.com/intrinsic-ai/sdk-ros?tab=readme-ov-file#getting-started")
-endif()
-
 # Default to C++20
 if(NOT CMAKE_CXX_STANDARD)
   set(CMAKE_CXX_STANDARD 20)

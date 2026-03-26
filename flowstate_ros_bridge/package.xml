@@ -6,7 +6,7 @@
   <description>A bridge between Flowstate services and ROS applications</description>
   <maintainer email="morganquigley@intrinsic.ai">Morgan Quigley</maintainer>
   <maintainer email="yadunund@intrinsic.ai">Yadunund Vijay</maintainer>
-  <license>Intrinsic License</license>
+  <license>Apache-2.0</license>
 
   <buildtool_depend>ament_cmake</buildtool_depend>
   <buildtool_depend>ament_cmake_python</buildtool_depend>

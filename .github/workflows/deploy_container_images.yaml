@@ -1,82 +1,107 @@
 name: Deploy the Container Images
 run-name: ${{ github.actor }}'s changes have triggered a deploy of the container images.
 on:
+  # Deploy can happen on demand, with workflow_dispatch, or...
   workflow_dispatch:
+  # Whenever code is pushed to the main branch.
   push:
     branches:
       - main
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  # Cancel all but the latest run of this workflow, because only the latest run of this
+  # workflow matters, as it overwrites the latest tag of the container images.
+  cancel-in-progress: true
 jobs:
   build-test:
     uses: ./.github/workflows/test_container_images.yaml
   push:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04-8core
     needs: [build-test]
+    permissions:
+      contents: read
+      packages: write
+      # TODO(wjwwood): these are needed if we do attestation for image provenance
+      # attestations: write
+      # id-toke: write
     steps:
       - run: echo "The job was automatically triggered by a ${{ github.event_name }} event."
       - run: echo "This job is now running on a ${{ runner.os }} server."
       - run: echo "The name of your branch is ${{ github.ref }} and your repository is ${{ github.repository }}."
 
+      # Extract the intrinsic sdk version being used.
+      - name: Get intrinsic-ai/sdk Version
+        run: echo "INTRINSIC_AI_SDK_VERSION=${{ needs.build-test.outputs.intrinsic_ai_sdk_version }}" >> $GITHUB_ENV
+      - run: echo "The Intrinsic SDK version being used is ${{ env.INTRINSIC_AI_SDK_VERSION }}"
+
       # Login to ghcr.io.
       - name: Login to GitHub Container Registry
-        uses: docker/login-action@v3
+        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # was: docker/login-action@v3
         with:
           registry: ghcr.io/intrinsic-ai
-          username: ${{ github.actor }}
+          username: ${{ github.repository_owner }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
       # Download images from build workflow and load them into the local docker for tagging and pushing.
       - name: Download intrinsic_sdk_cmake_base container image
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # was: actions/download-artifact@v4
         with:
           name: intrinsic_sdk_cmake_base_image
           path: ${{ runner.temp }}
       - name: Load intrinsic_sdk_cmake_base container image into docker
         run: docker load --input ${{ runner.temp }}/intrinsic_sdk_cmake_base.tar
       - name: Download intrinsic_sdk_cmake container image
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # was: actions/download-artifact@v4
         with:
           name: intrinsic_sdk_cmake_image
           path: ${{ runner.temp }}
       - name: Load intrinsic_sdk_cmake container image into docker
         run: docker load --input ${{ runner.temp }}/intrinsic_sdk_cmake.tar
       - name: Download intrinsic_sdk_cmake_run container image
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # was: actions/download-artifact@v4
         with:
           name: intrinsic_sdk_cmake_run_image
           path: ${{ runner.temp }}
       - name: Load intrinsic_sdk_cmake_run container image into docker
         run: docker load --input ${{ runner.temp }}/intrinsic_sdk_cmake_run.tar
 
+      # TODO(wjwwood): consider using docker/metadata-action to create image tags and labels.
+      #   https://github.com/docker/metadata-action#about
+
       # Tag the images and deploy them.
       - name: Tag intrinsic_sdk_cmake_base Container Image
         run: |
           docker image tag \
-            host.docker.internal/intrinsic_sdk_cmake_base:temp \
-            ghcr.io/intrinsic-ai/intrinsic_sdk_cmake_base:${{ needs.build-test.outputs.intrinsic_ai_sdk_version }}
+            localhost:5000/intrinsic_sdk_cmake_base:temp \
+            ghcr.io/intrinsic-ai/intrinsic_sdk_cmake_base:${{ env.INTRINSIC_AI_SDK_VERSION }}
           docker image tag \
-            host.docker.internal/intrinsic_sdk_cmake_base:temp \
+            localhost:5000/intrinsic_sdk_cmake_base:temp \
             ghcr.io/intrinsic-ai/intrinsic_sdk_cmake_base:latest
-          docker push ghcr.io/intrinsic-ai/intrinsic_sdk_cmake_base:${{ needs.build-test.outputs.intrinsic_ai_sdk_version }}
+          docker push ghcr.io/intrinsic-ai/intrinsic_sdk_cmake_base:${{ env.INTRINSIC_AI_SDK_VERSION }}
           docker push ghcr.io/intrinsic-ai/intrinsic_sdk_cmake_base:latest
       - name: Tag intrinsic_sdk_cmake Container Image
         run: |
           docker image tag \
-            host.docker.internal/intrinsic_sdk_cmake:temp \
-            ghcr.io/intrinsic-ai/intrinsic_sdk_cmake:${{ needs.build-test.outputs.intrinsic_ai_sdk_version }}
+            localhost:5000/intrinsic_sdk_cmake:temp \
+            ghcr.io/intrinsic-ai/intrinsic_sdk_cmake:${{ env.INTRINSIC_AI_SDK_VERSION }}
           docker image tag \
-            host.docker.internal/intrinsic_sdk_cmake:temp \
+            localhost:5000/intrinsic_sdk_cmake:temp \
             ghcr.io/intrinsic-ai/intrinsic_sdk_cmake:latest
-          docker push ghcr.io/intrinsic-ai/intrinsic_sdk_cmake:${{ needs.build-test.outputs.intrinsic_ai_sdk_version }}
+          docker push ghcr.io/intrinsic-ai/intrinsic_sdk_cmake:${{ env.INTRINSIC_AI_SDK_VERSION }}
           docker push ghcr.io/intrinsic-ai/intrinsic_sdk_cmake:latest
       - name: Tag intrinsic_sdk_cmake_run Container Image
         run: |
           docker image tag \
-            host.docker.internal/intrinsic_sdk_cmake_run:temp \
-            ghcr.io/intrinsic-ai/intrinsic_sdk_cmake_run:${{ needs.build-test.outputs.intrinsic_ai_sdk_version }}
+            localhost:5000/intrinsic_sdk_cmake_run:temp \
+            ghcr.io/intrinsic-ai/intrinsic_sdk_cmake_run:${{ env.INTRINSIC_AI_SDK_VERSION }}
           docker image tag \
-            host.docker.internal/intrinsic_sdk_cmake_run:temp \
+            localhost:5000/intrinsic_sdk_cmake_run:temp \
             ghcr.io/intrinsic-ai/intrinsic_sdk_cmake_run:latest
-          docker push ghcr.io/intrinsic-ai/intrinsic_sdk_cmake_run:${{ needs.build-test.outputs.intrinsic_ai_sdk_version }}
+          docker push ghcr.io/intrinsic-ai/intrinsic_sdk_cmake_run:${{ env.INTRINSIC_AI_SDK_VERSION }}
           docker push ghcr.io/intrinsic-ai/intrinsic_sdk_cmake_run:latest
+
+      # TODO(wjwwood): use actions/attest-build-provenance to write the attestation info to the
+      #   container registry, see:
+      # https://docs.github.com/en/actions/how-tos/secure-your-work/use-artifact-attestations/use-artifact-attestations
 
       - run: echo "🍏 This job's status is ${{ job.status }}."

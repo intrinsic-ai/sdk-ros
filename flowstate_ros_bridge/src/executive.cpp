@@ -1,27 +1,16 @@
 // Copyright 2024 Intrinsic Innovation LLC
 //
-// You are hereby granted a non-exclusive, worldwide, royalty-free license to
-// use, copy, modify, and distribute this Intrinsic SDK in source code or binary
-// form for use in connection with the services and APIs provided by Intrinsic
-// Innovation LLC (“Intrinsic”).
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
 //
-// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-// SOFTWARE.
+//     http://www.apache.org/licenses/LICENSE-2.0
 //
-// If you use this Intrinsic SDK with any Intrinsic services, your use is
-// subject to the Intrinsi Platform Terms of Service
-// [https://intrinsic.ai/platform-terms].  If you create works that call
-// Intrinsic APIs, you must agree to the terms of service for those APIs
-// separately. This license does not grant you any special rights to use the
-// services.
-//
-// This copyright notice shall be included in all copies or substantial portions
-// of the software.
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
 #include "flowstate_ros_bridge/executive.hpp"
 
@@ -39,6 +28,7 @@
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
 #include "absl/synchronization/notification.h"
+#include "intrinsic/connect/cc/grpc/channel.h"
 #include "intrinsic/executive/proto/run_metadata.pb.h"
 #include "intrinsic/skills/proto/skills.pb.h"
 #include "intrinsic/util/grpc/grpc.h"
@@ -54,6 +44,8 @@ using GetSkillsResponse = intrinsic_proto::skills::GetSkillsResponse;
 
 static constexpr std::string PROCESS_PARAMS_KEY = "parameters";
 static constexpr std::string RESOURCE_PARAMS_KEY = "resources";
+static constexpr std::size_t kListBehaviorTreesPageSize = 50;
+static constexpr std::size_t kListOperationsPageSize = 100;
 
 ///=============================================================================
 Executive::Executive(const std::string& executive_service_address,
@@ -79,7 +71,7 @@ absl::Status Executive::connect() {
 
   std::lock_guard<std::recursive_mutex> lock(mutex_);
 
-  grpc::ChannelArguments channel_args = intrinsic::DefaultGrpcChannelArgs();
+  grpc::ChannelArguments channel_args = intrinsic::connect::DefaultGrpcChannelArgs();
   // The skill registry may need to call out to one or more skill information
   // services. Those services might not be ready at startup. We configure a
   // retry policy to mitigate b/283020857.
@@ -109,10 +101,10 @@ absl::Status Executive::connect() {
             << executive_service_address_;
   INTR_ASSIGN_OR_RETURN(
       std::shared_ptr<grpc::Channel> executive_channel,
-      intrinsic::CreateClientChannel(
+      intrinsic::connect::CreateClientChannel(
           executive_service_address_,
           absl::Now() + absl::Seconds(deadline_seconds_), channel_args));
-  INTR_RETURN_IF_ERROR(intrinsic::WaitForChannelConnected(
+  INTR_RETURN_IF_ERROR(intrinsic::connect::WaitForChannelConnected(
       executive_service_address_, executive_channel,
       absl::Now() + absl::Seconds(deadline_seconds_)));
   executive_stub_ = ExecutiveService::NewStub(std::move(executive_channel));
@@ -123,10 +115,10 @@ absl::Status Executive::connect() {
             << solution_service_address_;
   INTR_ASSIGN_OR_RETURN(
       std::shared_ptr<grpc::Channel> solution_channel,
-      intrinsic::CreateClientChannel(
+      intrinsic::connect::CreateClientChannel(
           solution_service_address_,
           absl::Now() + absl::Seconds(deadline_seconds_), channel_args));
-  INTR_RETURN_IF_ERROR(intrinsic::WaitForChannelConnected(
+  INTR_RETURN_IF_ERROR(intrinsic::connect::WaitForChannelConnected(
       solution_service_address_, solution_channel,
       absl::Now() + absl::Seconds(deadline_seconds_)));
   solution_stub_ = SolutionService::NewStub(std::move(solution_channel));
@@ -137,10 +129,10 @@ absl::Status Executive::connect() {
             << skill_registry_address_;
   INTR_ASSIGN_OR_RETURN(
       std::shared_ptr<grpc::Channel> skill_channel,
-      intrinsic::CreateClientChannel(
+      intrinsic::connect::CreateClientChannel(
           skill_registry_address_,
           absl::Now() + absl::Seconds(deadline_seconds_), channel_args));
-  INTR_RETURN_IF_ERROR(intrinsic::WaitForChannelConnected(
+  INTR_RETURN_IF_ERROR(intrinsic::connect::WaitForChannelConnected(
       skill_registry_address_, skill_channel,
       absl::Now() + absl::Seconds(deadline_seconds_)));
   skill_registry_stub_ = SkillRegistry::NewStub(std::move(skill_channel));
@@ -261,10 +253,16 @@ void Executive::clear_and_delete_operations() {
   // First list active operations.
   auto client_context = make_client_context(this->deadline_seconds_);
   google::longrunning::ListOperationsRequest list_request;
-  google::longrunning::ListOperationsResponse list_response;
-  auto status = executive_stub_->ListOperations(
-      client_context.get(), std::move(list_request), &list_response);
-  if (status.ok()) {
+  list_request.set_page_size(kListOperationsPageSize);
+  do {
+    google::longrunning::ListOperationsResponse list_response;
+    const auto status = executive_stub_->ListOperations(
+        client_context.get(), list_request, &list_response);
+
+    if (!status.ok()) {
+      LOG(INFO) << "Error while listing operations.";
+      return;
+    }
     for (const auto& operation : list_response.operations()) {
       // TODO(Yadunund): If we want this bridge to not override
       // all the operations started by users from the frontend, we might
@@ -272,7 +270,8 @@ void Executive::clear_and_delete_operations() {
       // state until completion before clearing.
       delete_operation(operation.name(), executive_stub_, deadline_seconds_);
     }
-  }
+    list_request.set_page_token(list_response.next_page_token());
+  } while (!list_request.page_token().empty());
 }
 
 ///=============================================================================
@@ -303,19 +302,24 @@ auto Executive::behavior_trees() const
     return absl::InvalidArgumentError("Not connected to solution service.");
   }
 
-  auto client_context = std::make_unique<grpc::ClientContext>();
-  client_context->set_deadline(std::chrono::system_clock::now() +
-                               std::chrono::seconds(deadline_seconds_));
   intrinsic_proto::solution::v1::ListBehaviorTreesRequest request;
-  intrinsic_proto::solution::v1::ListBehaviorTreesResponse response;
-  INTR_RETURN_IF_ERROR(
-      intrinsic::ToAbslStatus(solution_stub_->ListBehaviorTrees(
-          client_context.get(), request, &response)));
-
+  request.set_page_size(kListBehaviorTreesPageSize);
   std::vector<BehaviorTree> bts = {};
-  for (auto& bt : *response.mutable_behavior_trees()) {
-    bts.emplace_back(std::move(bt));
-  }
+  do {
+    auto client_context = std::make_unique<grpc::ClientContext>();
+    client_context->set_deadline(std::chrono::system_clock::now() +
+                                 std::chrono::seconds(deadline_seconds_));
+    
+    intrinsic_proto::solution::v1::ListBehaviorTreesResponse response;
+    INTR_RETURN_IF_ERROR(
+        intrinsic::ToAbslStatus(solution_stub_->ListBehaviorTrees(
+            client_context.get(), request, &response)));
+
+    for (auto& bt : *response.mutable_behavior_trees()) {
+      bts.emplace_back(std::move(bt));
+    }
+    request.set_page_token(response.next_page_token());
+  } while (!request.page_token().empty());
   return bts;
 }
 
@@ -337,12 +341,10 @@ auto Executive::ProcessHandle::make(
     std::shared_ptr<ExecutiveService::Stub> executive_stub,
     std::size_t deadline_seconds, google::longrunning::Operation operation,
     ProcessFeedbackCallback feedback_cb, ProcessCompletedCallback completed_cb,
-    std::size_t update_interval_millis)
-    -> ProcessHandlePtr {
-  auto handle = std::shared_ptr<ProcessHandle>(
-      new ProcessHandle(std::move(executive_stub), std::move(deadline_seconds),
-                        std::move(operation), std::move(feedback_cb),
-                        std::move(completed_cb)));
+    std::size_t update_interval_millis) -> ProcessHandlePtr {
+  auto handle = std::shared_ptr<ProcessHandle>(new ProcessHandle(
+      std::move(executive_stub), std::move(deadline_seconds),
+      std::move(operation), std::move(feedback_cb), std::move(completed_cb)));
 
   // Spawn a thread to monitor lifecycle of the process.
   handle->update_thread_ =
@@ -370,9 +372,8 @@ auto Executive::ProcessHandle::make(
                 handle->feedback_cb_(false, absl::UnavailableError(ss.str()));
               }
 
-              handle->feedback_cb_(
-                  handle->current_operation_.done(),
-                  intrinsic::ToAbslStatus(status));
+              handle->feedback_cb_(handle->current_operation_.done(),
+                                   intrinsic::ToAbslStatus(status));
 
               if (handle->current_operation_.done()) {
                 // The operation may be done because it succeeded or errored
@@ -440,7 +441,8 @@ absl::StatusOr<Executive::ProcessHandlePtr> Executive::start(
     const BehaviorTree& bt, const ExecutionMode& execution_mode,
     const SimulationMode& simulation_mode, const nlohmann::json& process_params,
     Executive::ProcessFeedbackCallback feedback_cb,
-    Executive::ProcessCompletedCallback completed_cb) {
+    Executive::ProcessCompletedCallback completed_cb,
+    const std::optional<std::string> scene_id) {
   std::lock_guard<std::recursive_mutex> lock(mutex_);
   if (!connected_) {
     return absl::InvalidArgumentError("Not connected to executive service.");
@@ -483,14 +485,17 @@ absl::StatusOr<Executive::ProcessHandlePtr> Executive::start(
   start_request.set_name(current_operation.name());
   start_request.set_execution_mode(execution_mode);
   start_request.set_simulation_mode(simulation_mode);
+  if (scene_id.has_value()) {
+    start_request.set_scene_id(scene_id.value());
+  }
   INTR_RETURN_IF_ERROR(intrinsic::ToAbslStatus(executive_stub_->StartOperation(
       start_client_context.get(), std::move(start_request),
       &current_operation)));
 
-  current_process_ = ProcessHandle::make(
-      executive_stub_, deadline_seconds_, std::move(current_operation),
-      std::move(feedback_cb), std::move(completed_cb),
-      this->update_rate_millis_);
+  current_process_ =
+      ProcessHandle::make(executive_stub_, deadline_seconds_,
+                          std::move(current_operation), std::move(feedback_cb),
+                          std::move(completed_cb), this->update_rate_millis_);
 
   return current_process_;
 }

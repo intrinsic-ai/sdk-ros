@@ -28,8 +28,13 @@ FROM source AS build
 ARG SKILL_PACKAGE
 
 # Install build and run dependencies for the user's packages.
-RUN . /opt/intrinsic/intrinsic_sdk_cmake/install/setup.sh \
+RUN \
+    --mount=type=cache,target=/var/cache/apt,sharing=locked \
+    --mount=type=cache,target=/var/lib/apt,sharing=locked \
+    . /opt/intrinsic/intrinsic_sdk_cmake/install/setup.sh \
     && set -x \
+    && rm -f /etc/apt/apt.conf.d/docker-clean \
+    && echo 'Binary::apt::APT::Keep-Downloaded-Packages "true";' >/etc/apt/apt.conf.d/keep-cache \
     && apt-get update \
     && (rosdep init || true) \
     && rosdep update \
@@ -44,18 +49,23 @@ RUN . /opt/intrinsic/intrinsic_sdk_cmake/install/setup.sh \
         --from-paths src \
         --ignore-src \
         --default-yes \
-    && rm -rf /var/lib/apt/lists/*
+    && apt-get install -y ccache \
+    && /usr/sbin/update-ccache-symlinks
 
 # Build the user's packages.
-RUN . /opt/intrinsic/intrinsic_sdk_cmake/install/setup.sh \
+RUN \
+    --mount=type=cache,target=/ccache/ \
+    . /opt/intrinsic/intrinsic_sdk_cmake/install/setup.sh \
     && set -x \
+    && export CCACHE_DIR=/ccache \
+    && export PATH="/usr/lib/ccache:$PATH" \
+    && ccache -z \
     && cd $SKILL_WORKSPACE \
     && colcon build \
         --cmake-args -DBUILD_TESTING=ON \
-        --event-handlers console_direct+ console_stderr- \
         --merge-install \
-        --executor=sequential \
-        --packages-up-to $SKILL_PACKAGE
+        --packages-up-to $SKILL_PACKAGE \
+    && ccache -s
 
 # exec_depends stage: capture just the exec depends using the source
 FROM ${REPOSITORY}/intrinsic_sdk_cmake_run:${TAG} AS exec_depends
@@ -67,8 +77,13 @@ COPY --from=source \
     $SKILL_WORKSPACE \
     $SKILL_WORKSPACE
 
-RUN . /opt/intrinsic/intrinsic_sdk_cmake/install/setup.sh \
+RUN \
+    --mount=type=cache,target=/var/cache/apt,sharing=locked \
+    --mount=type=cache,target=/var/lib/apt,sharing=locked \
+    . /opt/intrinsic/intrinsic_sdk_cmake/install/setup.sh \
     && set -x \
+    && rm -f /etc/apt/apt.conf.d/docker-clean \
+    && echo 'Binary::apt::APT::Keep-Downloaded-Packages "true";' >/etc/apt/apt.conf.d/keep-cache \
     && apt-get update \
     && (rosdep init || true) \
     && rosdep update \
@@ -78,8 +93,7 @@ RUN . /opt/intrinsic/intrinsic_sdk_cmake/install/setup.sh \
         --ignore-src \
         --default-yes \
         --dependency-types exec \
-    && dpkg --get-selections > /user_exec_apt_packages.txt \
-    && rm -rf /var/lib/apt/lists/*
+    && dpkg --get-selections > /user_exec_apt_packages.txt
 
 # run stage: install exec dependencies + copy install artifacts from build stage
 FROM ${REPOSITORY}/intrinsic_sdk_cmake_run:${TAG} AS run
@@ -95,12 +109,16 @@ ENV SKILL_WORKSPACE=/opt/${SKILL_NAME}_workspace
 COPY --from=exec_depends \
     /user_exec_apt_packages.txt \
     /user_exec_apt_packages.txt
-RUN set -x \
+RUN \
+    --mount=type=cache,target=/var/cache/apt,sharing=locked \
+    --mount=type=cache,target=/var/lib/apt,sharing=locked \
+    set -x \
+    && rm -f /etc/apt/apt.conf.d/docker-clean \
+    && echo 'Binary::apt::APT::Keep-Downloaded-Packages "true";' >/etc/apt/apt.conf.d/keep-cache \
     && apt-get update \
     && apt-cache dumpavail | dpkg --merge-avail \
     && dpkg --set-selections < /user_exec_apt_packages.txt \
-    && apt-get dselect-upgrade -y \
-    && rm -rf /var/lib/apt/lists/*
+    && apt-get dselect-upgrade -y
 
 # Copy build artifacts from user's packages.
 COPY --from=build $SKILL_WORKSPACE/install $SKILL_WORKSPACE/install
