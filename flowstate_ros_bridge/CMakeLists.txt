@@ -192,6 +192,10 @@ target_link_libraries(${SERVICE_NAME}_main
 )
 
 # installs
+install(DIRECTORY include/
+  DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+)
+
 install(TARGETS
   executive
   world
@@ -203,6 +207,7 @@ install(TARGETS
   RUNTIME DESTINATION lib/${PROJECT_NAME}
   LIBRARY DESTINATION lib
   ARCHIVE DESTINATION lib
+  INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
 )
 
 # Generate the manifest and default config binarypb files
