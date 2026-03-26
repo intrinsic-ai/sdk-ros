@@ -108,7 +108,7 @@ target_include_directories(flowstate_ros_builtin_bridges
     ${pluginlib_INCLUDE_DIRS}
     ${rclcpp_action_INCLUDE_DIRS}
 )
-target_compile_options(flowstate_ros_builtin_bridges PUBLIC INTERFACE cxx_std_17)
+target_compile_features(flowstate_ros_builtin_bridges PUBLIC INTERFACE cxx_std_17)
 target_link_libraries(flowstate_ros_builtin_bridges
   PUBLIC
     world
