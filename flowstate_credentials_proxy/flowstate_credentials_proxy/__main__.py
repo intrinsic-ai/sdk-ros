@@ -4,7 +4,6 @@ import sys
 
 import aiohttp
 from aiohttp import web
-
 from flowstate_credentials_proxy import auth
 from flowstate_credentials_proxy.auth import InvalidOrganizationError
 
@@ -65,10 +64,19 @@ async def proxy(
                     forward_to_upstream(ws_response, upstream),
                     forward_to_downstream(upstream, ws_response),
                 )
+    except aiohttp.ClientResponseError as e:
+        if e.status == 404:
+            print(f"Failed to connect to {e.request_info.url}. Make sure that the cluster and service name is correct.", file=sys.stderr)
+        else:
+            raise e
     except Exception as e:
         print(f"Error: {e}", file=sys.stderr)
     finally:
         return ws_response
+
+
+class TokenError(RuntimeError):
+    pass
 
 
 def main():
@@ -106,19 +114,37 @@ Download inctl here https://github.com/intrinsic-ai/sdk/releases""",
         print(f"Error: {e}", file=sys.stderr)
         return
 
+    print(f"Starting zenoh proxy on port {args.port}.")
+
+    async def check_token():
+        await token_source.get_token()
+        print(
+            f"""Successfully authenticated to flowstate.
+You may now start rmw_zenohd and connect it to the proxy by running:
+
+```
+ZENOH_CONFIG_OVERRIDE='connect/endpoints=["ws/localhost:{args.port}"];routing/router/peers_failover_brokering=true' ros2 run rmw_zenoh_cpp rmw_zenohd
+```"""
+        )
+
+    try:
+        asyncio.run(check_token())
+    except aiohttp.ClientResponseError as e:
+        if e.status == 401:
+            print(f"Failed to authenticate to flowstate: {e.message}", file=sys.stderr)
+            print(
+                f"Try refreshing your api key `inctl auth login --org={args.org}`",
+                file=sys.stderr,
+            )
+            sys.exit(401)
+        else:
+            raise e
+
     app = web.Application()
     app.add_routes(
         [web.get("/", lambda req: proxy(req, token_source, args.cluster, args.service))]
     )
 
-    print(f"Starting zenoh proxy on port {args.port}.")
-    print(
-        f"""Start rmw_zenohd and connect it to the proxy by running:
-```
-export ZENOH_CONFIG_OVERRIDE='connect/endpoints=["ws/localhost:{args.port}"];routing/router/peers_failover_brokering=true'
-ros2 run rmw_zenoh_cpp rmw_zenohd
-```"""
-    )
     web.run_app(app, port=args.port, handle_signals=True, print=None)
 
 
