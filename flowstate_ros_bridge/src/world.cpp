@@ -131,10 +131,9 @@ absl::StatusOr<std::vector<intrinsic::world::WorldObject>> World::GetObjects(
 absl::StatusOr<std::string> World::GetGltf(const std::string& geometry_ref,
                                            const std::string& renderable_ref) {
   intrinsic_proto::geometry::GetRenderableRequest request;
-  *(request.mutable_geometry_storage_refs_v0()->mutable_geometry_ref()) =
-      geometry_ref;
-  *(request.mutable_geometry_storage_refs_v0()->mutable_renderable_ref()) =
-      renderable_ref;
+  auto* refs = request.mutable_geometry_storage_refs();
+  refs->set_exact_geometry_ref(geometry_ref);
+  refs->set_renderable_ref(renderable_ref);
 
   auto client_context = std::make_unique<grpc::ClientContext>();
   client_context->set_deadline(std::chrono::system_clock::now() +
@@ -145,7 +144,7 @@ absl::StatusOr<std::string> World::GetGltf(const std::string& geometry_ref,
   INTR_RETURN_IF_ERROR(intrinsic::ToAbslStatus(
       geometry_stub_->GetRenderable(client_context.get(), request, &response)));
 
-  return response.renderable_v0().gltf_string();
+  return response.renderable().glb_bytes();
 }
 
 }  // namespace flowstate_ros_bridge
