@@ -7,7 +7,7 @@ find_package(ament_cmake_vendor_package REQUIRED)
 ament_vendor(gz_cmake_vendor
   VCS_URL https://github.com/gazebosim/gz-cmake
   # Target Intrinsic SDK version requires Gazebo Jetty packages.
-  VCS_VERSION gz-cmake5_5.0.0
+  VCS_VERSION gz-cmake5_5.0.1
   GLOBAL_HOOK
 )
 

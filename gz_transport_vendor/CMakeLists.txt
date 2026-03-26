@@ -18,7 +18,7 @@ find_package(gz_utils_vendor REQUIRED)
 ament_vendor(gz_transport_vendor
   VCS_URL https://github.com/gazebosim/gz-transport
   # Target Intrinsic SDK version requires Gazebo Jetty packages.
-  VCS_VERSION gz-transport15_15.0.0
+  VCS_VERSION gz-transport15_15.0.2
   GLOBAL_HOOK
 )
 

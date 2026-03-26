@@ -17,7 +17,7 @@ find_package(gz_utils_vendor REQUIRED)
 ament_vendor(gz_msgs_vendor
   VCS_URL https://github.com/gazebosim/gz-msgs
   # Target Intrinsic SDK version requires Gazebo Jetty packages.
-  VCS_VERSION gz-msgs12_12.0.0
+  VCS_VERSION gz-msgs12_12.0.1
   GLOBAL_HOOK
 )
 
