@@ -134,6 +134,9 @@ absl::StatusOr<std::string> World::GetGltf(const std::string& geometry_ref,
   auto* refs = request.mutable_geometry_storage_refs();
   refs->set_exact_geometry_ref(geometry_ref);
   refs->set_renderable_ref(renderable_ref);
+  // TODO(b-corry): Remove this when textures are automatically included in
+  // the glb file.
+  refs->set_keep_renderable(true);
 
   auto client_context = std::make_unique<grpc::ClientContext>();
   client_context->set_deadline(std::chrono::system_clock::now() +
