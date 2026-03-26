@@ -15,7 +15,7 @@ find_package(ament_cmake REQUIRED)
 
 # other dependencies
 set(dep_pkgs
-  absl
+  abseil_cpp_vendor
   flowstate_interfaces
   std_msgs
   tf2_msgs

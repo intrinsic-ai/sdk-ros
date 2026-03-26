@@ -21,6 +21,7 @@ ament_vendor(re2_vendor
   CMAKE_ARGS
     -DCMAKE_CXX_STANDARD=20
     -DRE2_BUILD_TESTING:BOOL=OFF
+  GLOBAL_HOOK
 )
 
 ament_package()

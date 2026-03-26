@@ -12,3 +12,10 @@ FetchContent_Declare(
   GIT_TAG        main
 )
 FetchContent_MakeAvailable(grpc_gateway)
+
+FetchContent_Declare(
+  cel_spec
+  GIT_REPOSITORY https://github.com/google/cel-spec
+  GIT_TAG        v0.25.1
+)
+FetchContent_MakeAvailable(cel_spec)
