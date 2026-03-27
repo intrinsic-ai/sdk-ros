@@ -25,6 +25,7 @@ RUN . /opt/ros/${ROS_DISTRO}/setup.sh \
     && rosdep install --from-paths src --ignore-src -r -y \
     && apt install -y ros-${ROS_DISTRO}-ament-cmake-vendor-package \
     && colcon build \
+        --cmake-args -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=/usr/bin/clang-19 -DCMAKE_CXX_COMPILER=/usr/bin/clang++-19 \
         --continue-on-error \
         --cmake-args -DCMAKE_BUILD_TYPE=Release \
         --event-handlers=console_direct+ \
