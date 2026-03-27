@@ -42,7 +42,10 @@ ARG DEPENDENCIES
 
 ARG ROS_DISTRO=jazzy
 RUN apt-get update \
-    && apt install -y ros-${ROS_DISTRO}-rmw-zenoh-cpp python3-protobuf ${DEPENDENCIES} \
+    && apt install -y \
+        ros-${ROS_DISTRO}-rmw-zenoh-cpp \
+        python3-protobuf \
+        ${DEPENDENCIES} \
     && rm -rf /var/lib/apt/lists/*
 
 ADD src /opt/ros/overlay/src
@@ -66,8 +69,14 @@ ARG SKILL_EXECUTABLE_NAME
 ARG DEPENDENCIES
 
 ARG ROS_DISTRO=jazzy
+
+# Re-install any system dependencies (ROS or Python)
+# so they exist in this final image.
 RUN apt-get update \
-    && apt-get install -y ros-${ROS_DISTRO}-rmw-zenoh-cpp python3-pip ${DEPENDENCIES} \
+    && apt-get install -y \
+       ros-${ROS_DISTRO}-rmw-zenoh-cpp \
+       python3-pip \
+       ${DEPENDENCIES} \
     && rm -rf /var/lib/apt/lists/* \
     && pip3 install --upgrade protobuf grpcio --break-system-packages
 
@@ -87,24 +96,20 @@ RUN sed -i '1i #!/usr/bin/env python3' "$SKILL_EXEC_PATH" && chmod +x "$SKILL_EX
 
 # Setup the runner
 RUN echo '#!/bin/bash' > /run_skill.sh \
-    && echo 'set -x' >> /run_skill.sh \
-    && echo 'echo "DEBUG: Checking environment..."' >> /run_skill.sh \
-    && echo 'ls -l "$SKILL_EXEC_PATH" || echo "ERROR: Executable not found at $SKILL_EXEC_PATH"' >> /run_skill.sh \
-    && echo 'head -n 2 "$SKILL_EXEC_PATH"' >> /run_skill.sh \
+    && echo 'set -e' >> /run_skill.sh \
     && echo 'source /opt/ros/jazzy/setup.bash' >> /run_skill.sh \
     && echo 'source /opt/ros/underlay/install/setup.bash' >> /run_skill.sh \
     && echo 'source /opt/ros/overlay/install/setup.bash' >> /run_skill.sh \
+    && echo 'export RMW_IMPLEMENTATION=rmw_zenoh_cpp' >> /run_skill.sh \
+    && echo 'export ROS_HOME=/tmp' >> /run_skill.sh \
+    && echo 'export ZENOH_CONFIG_OVERRIDE="connect/endpoints=[\"tcp/zenoh-router.app-intrinsic-base.svc.cluster.local:7447\"]"' >> /run_skill.sh \
     && echo 'exec python3 "$SKILL_EXEC_PATH" "$@"' >> /run_skill.sh \
     && chmod +x /run_skill.sh
 
 RUN set -x \
     && mkdir -p /skills \
     && ln -sf /run_skill.sh /skills/skill_service \
-    && ln -sf /opt/ros/overlay/install/$SKILL_CONFIG /skills/skill_service_config.proto.bin \
-    && sed --in-place --expression '$isource "/opt/ros/overlay/install/setup.bash"' /ros_entrypoint.sh \
-    && sed --in-place --expression '$iexport RMW_IMPLEMENTATION=rmw_zenoh_cpp' /ros_entrypoint.sh \
-    && sed --in-place --expression '$iexport ROS_HOME=/tmp' /ros_entrypoint.sh \
-    && sed --in-place --expression '$iexport ZENOH_CONFIG_OVERRIDE="connect/endpoints=[\"tcp/zenoh-router.app-intrinsic-base.svc.cluster.local:7447\"]"' /ros_entrypoint.sh
+    && ln -sf /opt/ros/overlay/install/$SKILL_CONFIG /skills/skill_service_config.proto.bin
 
 LABEL "ai.intrinsic.asset-id"="ai.intrinsic.${SKILL_PACKAGE}"
 ENV ZENOH_ROUTER_CHECK_ATTEMPTS=-1
