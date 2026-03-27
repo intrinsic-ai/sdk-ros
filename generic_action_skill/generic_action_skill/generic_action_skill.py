@@ -1,160 +1,278 @@
 import yaml
 import sys
-import rclpy
-import pkgutil
 import importlib
-import time
-import os
+import grpc
+from datetime import timedelta
+from concurrent import futures
+from typing import Any
+
+# ROS 2 Imports
+import rclpy
 from rclpy.node import Node
 from rclpy.action import ActionClient
 from rosidl_runtime_py.utilities import get_action
 from rosidl_runtime_py.set_message import set_message_fields
+from rosidl_runtime_py.convert import message_to_yaml
 
+# Intrinsic / ABSL Imports
 from absl import logging, app, flags
 from intrinsic.skills.python import skill_interface
 from intrinsic.util.decorators import overrides
 from generic_action_skill import generic_action_skill_pb2
 
-
-# To solve unkwon flag errors form Flowstate. 
 FLAGS = flags.FLAGS
+flags.DEFINE_integer("port", 8003, "Port to listen on.", allow_override=True)
+flags.DEFINE_string(
+    "skill_service_config_filename", "", "Path to config.", allow_override=True
+)
+flags.DEFINE_string(
+    "world_service_address", "", "World service address.", allow_override=True
+)
+flags.DEFINE_string(
+    "geometry_service_address", "", "Geometry service address.", allow_override=True
+)
+flags.DEFINE_string(
+    "motion_planner_service_address", "", "Motion planner address.", allow_override=True
+)
 
-# Primary Platform Flags
-flags.DEFINE_integer('port', 8003, 'Port to listen on.', allow_override=True)
-flags.DEFINE_string('skill_service_config_filename', '', 'Path to config.', allow_override=True)
-flags.DEFINE_boolean('logtostderr', False, 'Log to stderr.', allow_override=True)
-flags.DEFINE_boolean('alsologtostderr', False, 'Log to stderr and files.', allow_override=True)
-flags.DEFINE_integer('v', 0, 'Verbosity level.', allow_override=True)
-flags.DEFINE_string('log_dir', '/tmp', 'Directory for logs.', allow_override=True)
-flags.DEFINE_integer('grpc_connect_timeout_secs', 60, 'gRPC connect timeout.', allow_override=True)
-
-# Platform Service Addresses
-flags.DEFINE_string('data_logger_grpc_service_address', '', 'Data logger address.', allow_override=True)
-flags.DEFINE_string('world_service_address', '', 'World service address.', allow_override=True)
-flags.DEFINE_string('geometry_service_address', '', 'Geometry service address.', allow_override=True)
-flags.DEFINE_string('motion_planner_service_address', '', 'Motion planner address.', allow_override=True)
-flags.DEFINE_string('skill_registry_service_address', '', 'Skill registry address.', allow_override=True)
-
-# Telemetry and Monitoring
-flags.DEFINE_boolean('opencensus_tracing', False, 'Enable OpenCensus tracing.', allow_override=True)
-flags.DEFINE_float('opencensus_sampling_rate', 1.0, 'Sampling rate for tracing.', allow_override=True)
-flags.DEFINE_integer('opencensus_metrics_port', 0, 'Port for OpenCensus metrics.', allow_override=True)
-flags.DEFINE_string('opencensus_address', '', 'Address for OpenCensus exporter.', allow_override=True)
-flags.DEFINE_string('statsd_address', '', 'Address for StatsD exporter.', allow_override=True)
-flags.DEFINE_integer('statsd_port', 0, 'Port for StatsD exporter.', allow_override=True)
-
-_GLOBAL_SERVER_HANDLE = None
 
 class GenericActionSkill(skill_interface.Skill):
     """
-    A generic skill to call any ROS 2 Action Server.
-    Initialization of ROS is lazy to ensure the gRPC server starts.
+    A generic skill to call any ROS 2 Action Server and return results to Flowstate.
     """
 
     def __init__(self, *args, **kwargs):
         super().__init__()
         self.node = None
-        logging.info("GenericActionSkill created. ROS initialization will be lazy.")
+        self._skill_proto = None
+        logging.info("GenericActionSkill instance initialized.")
 
-    def _ensure_ros_initialized(self):
-        """Ensures ROS 2 is initialized and the node is created."""
-        if self.node is not None:
-            return
+    def _ensure_ros(self):
+        """Lazy-initialization of the ROS 2 node."""
+        if self.node is None:
+            if not rclpy.ok():
+                rclpy.init()
+            self.node = Node("generic_action_skill_node")
+            logging.info("ROS 2 Node ready.")
 
-        logging.info("Initializing ROS 2 and creating node...")
-        if not rclpy.ok():
-            rclpy.init()
-        
-        self.node = Node('generic_action_skill_node')
-        logging.info("ROS 2 Node 'generic_action_skill_node' is ready.")
+    def get_skill_runtime_data(self, skill_name: str):
+        """
+        Dynamically satisfies SDK metadata requirements.
+        Uses an internal helper class to satisfy platform probes (Full_name, Descriptor, etc.)
+        """
+
+        class SmartContainer:
+            def __init__(self, **kwargs):
+                self.__dict__.update(kwargs)
+
+            def __getattr__(self, name):
+                lower = name.lower()
+                if "timeout" in lower:
+                    return timedelta(seconds=180)
+                if "ready" in lower:
+                    return timedelta(seconds=60)
+                if "supports" in lower:
+                    return True
+                if any(x in lower for x in ["topics", "resources", "specs"]):
+                    return [] if "topics" in lower else {}
+                return SmartContainer()
+
+        # Provide descriptors from generated pb2 so Flowstate can map UI inputs
+        params = SmartContainer(
+            descriptor=generic_action_skill_pb2.GenericActionSkillParams.DESCRIPTOR,
+            default_value=None,
+        )
+        returns = SmartContainer(
+            message_full_name=generic_action_skill_pb2.GenericActionSkillResult.DESCRIPTOR.full_name
+        )
+
+        return SmartContainer(
+            skill=self._skill_proto,
+            skill_id="com.example.generic_action_skill",
+            parameter_data=params,
+            return_type_data=returns,
+            execution_options=SmartContainer(),
+            topic_data=SmartContainer(),
+            status_specs=SmartContainer(),
+            resource_data=SmartContainer(),
+        )
+
+    def get_skill_execute(self, name):
+        return self
+
+    def get_skill_project(self, name):
+        return self
+
+    def predict(self, request: Any, context: Any) -> Any:
+        """Probes the container for action type availability."""
+        params = getattr(request, "params", request)
+        action_type = getattr(params, "action_type", "")
+        try:
+            pb2 = importlib.import_module("intrinsic.skills.proto.skill_service_pb2")
+            result = pb2.PredictResult()
+            if action_type:
+                get_action(action_type)
+            return result
+        except Exception:
+            logging.warning(f"Action type '{action_type}' not available.")
+            return pb2.PredictResult() if "pb2" in locals() else None
 
     @overrides(skill_interface.Skill)
     def execute(
-        self,
-        request: skill_interface.ExecuteRequest,
-        context: skill_interface.ExecuteContext,
+        self, request, context
     ) -> generic_action_skill_pb2.GenericActionSkillResult:
-        
-        self._ensure_ros_initialized()
+        self._ensure_ros()
+        p = request.params
+        logging.info(f"Goal: {p.action_name} [{p.action_type}]")
 
-        action_name = request.params.action_name
-        action_type_str = request.params.action_type
-        goal_yaml_str = request.params.goal_yaml
-        timeout_sec = request.params.timeout_sec
-
-        logging.info(f"Executing ROS 2 Action: {action_name} of type {action_type_str}")
+        skill_result = generic_action_skill_pb2.GenericActionSkillResult()
 
         try:
-            action_class = get_action(action_type_str)
-            client = ActionClient(self.node, action_class, action_name)
+            # 1. Load Action and Create Client
+            action_class = get_action(p.action_type)
+            client = ActionClient(self.node, action_class, p.action_name)
 
-            if not client.wait_for_server(timeout_sec=timeout_sec):
-                raise skill_interface.SkillError(f"Action server {action_name} not found after {timeout_sec}s.")
+            if not client.wait_for_server(timeout_sec=p.timeout_sec):
+                raise skill_interface.SkillError(
+                    2, f"Action server {p.action_name} timed out."
+                )
 
-            goal_dict = yaml.safe_load(goal_yaml_str)
+            # 2. Build Goal from YAML string
             goal_msg = action_class.Goal()
-            set_message_fields(goal_msg, goal_dict)
+            set_message_fields(goal_msg, yaml.safe_load(p.goal_yaml))
 
-            send_goal_future = client.send_goal_async(goal_msg)
-            rclpy.spin_until_future_complete(self.node, send_goal_future)
-            
-            goal_handle = send_goal_future.result()
-            if not goal_handle.accepted:
-                raise skill_interface.SkillError("Goal was rejected by the ROS 2 action server.")
+            # 3. Send Goal
+            future = client.send_goal_async(goal_msg)
+            rclpy.spin_until_future_complete(self.node, future)
 
-            result_future = goal_handle.get_result_async()
-            rclpy.spin_until_future_complete(self.node, result_future)
+            handle = future.result()
+            if not handle.accepted:
+                skill_result.status = "REJECTED"
+                return skill_result
 
-            logging.info(f"Action finished with status: {result_future.result().status}")
+            # 4. Wait for Result
+            res_future = handle.get_result_async()
+            rclpy.spin_until_future_complete(self.node, res_future)
+
+            # 5. Extract Result and Payload
+            action_res = res_future.result()
+            status_map = {4: "SUCCEEDED", 5: "CANCELED", 6: "ABORTED"}
+
+            skill_result.status = status_map.get(
+                action_res.status, f"UNKNOWN({action_res.status})"
+            )
+            skill_result.result_yaml = message_to_yaml(action_res.result)
+
+            logging.info(f"Finished: {skill_result.status}")
 
         except Exception as e:
-            logging.error(f"Generic Action Skill execution failed: {e}")
-            raise skill_interface.SkillError(str(e))
+            logging.error(f"Execution Error: {e}")
+            raise skill_interface.SkillError(4, str(e))
 
-        return generic_action_skill_pb2.GenericActionSkillResult()
+        return skill_result
 
-def main(argv):
+
+def start_runner(argv):
     """
-    Entry point for the skill service.
+    Manual gRPC runner. This is necessary because standard SDK app.run
+    can fail in specific ROS 2 Jazzy cluster environments.
     """
-    global _GLOBAL_SERVER_HANDLE
-    logging.info(f"Starting skill service on port: {FLAGS.port}")
-    
+    from intrinsic.skills.internal import skill_service_impl
+
+    # Helper to find pb2 modules in various SDK namespaces
+    def find_mod(name):
+        for p in [
+            "intrinsic.skills.v1",
+            "intrinsic.skills.proto",
+            "intrinsic.proto.skills",
+        ]:
+            try:
+                return importlib.import_module(f"{p}.{name}")
+            except:
+                continue
+        return None
+
+    skills_pb2 = find_mod("skills_pb2")
+    skill_proto = skills_pb2.Skill() if skills_pb2 else None
+
+    # Helper to wrap Platform Service Stubs (World, Motion, Geometry)
+    def wrap_stub(patterns, addr):
+        if not addr:
+            return None
+        for p in [
+            "intrinsic.world.v1",
+            "intrinsic.motion_planning.public.proto.v1",
+            "intrinsic.geometry.v1",
+        ]:
+            try:
+                mod = importlib.import_module(f"{p}.{patterns[0]}_pb2_grpc")
+                return getattr(mod, f"{patterns[1]}Stub")(grpc.insecure_channel(addr))
+            except:
+                continue
+        return None
+
+    world = wrap_stub(
+        ["object_world_service", "ObjectWorldService"], FLAGS.world_service_address
+    )
+    motion = wrap_stub(
+        ["motion_planner_service", "MotionPlannerService"],
+        FLAGS.motion_planner_service_address,
+    )
+    geom = wrap_stub(
+        ["geometry_service", "GeometryService"], FLAGS.geometry_service_address
+    )
+
+    skill_instance = GenericActionSkill()
+    skill_instance._skill_proto = skill_proto
+    server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
+
+    class UnifiedServicerProxy(object):
+        """Bridges gRPC requests to the internal servicers."""
+
+        def __init__(self, inst, proto, world, motion, geom):
+            self._skill = inst
+            try:
+                self._executor = skill_service_impl.SkillExecutorServicer(
+                    inst, world, motion, geom
+                )
+            except TypeError:
+                self._executor = skill_service_impl.SkillExecutorServicer(
+                    inst, world, motion, geom, None
+                )
+            self._info = skill_service_impl.SkillInformationServicer(proto)
+
+        def Predict(self, r, c):
+            return self._skill.predict(r, c)
+
+        def __getattr__(self, name):
+            # Fallback to executor or info servicers for standard Intrinsic calls
+            for target in [self._executor, self._info]:
+                if hasattr(target, name):
+                    return getattr(target, name)
+            return lambda r, c: self._skill.predict(r, c)
+
+    proxy = UnifiedServicerProxy(skill_instance, skill_proto, world, motion, geom)
+
+    # Register all gRPC interfaces (Discovery loop for v1 vs proto namespaces)
+    mods = ["skill_service", "skill_executor", "skill_information", "skill"]
+    for m in mods:
+        for p in ["intrinsic.skills.v1", "intrinsic.skills.proto"]:
+            try:
+                mod = importlib.import_module(f"{p}.{m}_pb2_grpc")
+                for attr in dir(mod):
+                    if "add_" in attr and "_to_server" in attr:
+                        getattr(mod, attr)(proxy, server)
+            except:
+                continue
+
+    server.add_insecure_port(f"[::]:{FLAGS.port}")
+    server.start()
+    logging.info(f"gRPC Server listening on port {FLAGS.port}")
+    server.wait_for_termination()
+
+
+if __name__ == "__main__":
     try:
-        from intrinsic.skills.generator import app as generator_app
-        logging.info("Starting Intrinsic generator-based runner...")
-        _GLOBAL_SERVER_HANDLE = generator_app.run(GenericActionSkill)
-        logging.info(f"Skill runner initialized. Handle type: {type(_GLOBAL_SERVER_HANDLE)}")
-
-        if _GLOBAL_SERVER_HANDLE is not None:
-            if hasattr(_GLOBAL_SERVER_HANDLE, 'wait_for_termination'):
-                _GLOBAL_SERVER_HANDLE.wait_for_termination()
-        return 0
-    except (ImportError, AttributeError) as e:
-        logging.error(f"Generator runner failed: {e}")
-        try:
-            from intrinsic.skills.internal import single_skill_factory
-            logging.info("Falling back to single_skill_factory...")
-            _GLOBAL_SERVER_HANDLE = single_skill_factory.run(GenericActionSkill)
-            return 0
-        except Exception as e2:
-            logging.error(f"Fallback failed: {e2}")
-
-    raise RuntimeError("Could not successfully start any Intrinsic Skill Runner.")
-
-if __name__ == '__main__':
-    def parse_flags(argv):
-        return FLAGS(argv, known_only=True)
-    
-    try:
-        # Run the main application
-        app.run(main, flags_parser=parse_flags)
-    except SystemExit:
-        # Catch sys.exit calls from within absl.app.run to prevent process termination.
-        # This keeps the background gRPC server alive.
-        logging.info("Service initialized. Hard-blocking process to keep gRPC port 8003 active.")
-    except KeyboardInterrupt:
-        logging.info("Skill service stopped by user.")
+        app.run(start_runner, flags_parser=lambda argv: FLAGS(argv, known_only=True))
+    except (SystemExit, KeyboardInterrupt):
         sys.exit(0)
-    while True:
-        time.sleep(3600)
