@@ -48,7 +48,8 @@ class World : public std::enable_shared_from_this<World> {
 
   // Robot States subscription
   absl::StatusOr<std::shared_ptr<intrinsic::Subscription>> CreateRobotStateSubscription(
-      intrinsic::SubscriptionOkCallback<intrinsic_proto::data_logger::LogItem> callback);
+      intrinsic::SubscriptionOkCallback<intrinsic_proto::data_logger::LogItem> callback,
+      const std::string& robot_controller_name = "robot_controller");
 
   // Establish connections with various services.
   absl::Status connect();

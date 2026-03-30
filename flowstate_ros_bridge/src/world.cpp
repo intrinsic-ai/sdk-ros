@@ -17,6 +17,7 @@
 #include <utility>
 
 #include "absl/container/flat_hash_set.h"
+#include "absl/strings/str_format.h"
 #include "absl/log/log.h"
 #include "absl/status/status.h"
 #include "intrinsic/connect/cc/grpc/channel.h"
@@ -51,9 +52,11 @@ World::CreateTfSubscription(
 }
 
 absl::StatusOr<std::shared_ptr<intrinsic::Subscription>> World::CreateRobotStateSubscription(
-    intrinsic::SubscriptionOkCallback<intrinsic_proto::data_logger::LogItem> callback)
+    intrinsic::SubscriptionOkCallback<intrinsic_proto::data_logger::LogItem> callback,
+    const std::string& robot_controller_name)
 {
-  auto sub = pubsub_->CreateSubscription("/icon/robot_controller/robot_status_throttle", intrinsic::TopicConfig(),
+  const std::string topic_name = absl::StrFormat("/icon/%s/robot_status_throttle", robot_controller_name);
+  auto sub = pubsub_->CreateSubscription(topic_name, intrinsic::TopicConfig(),
                                          callback);
   if (!sub.ok()) {
     return sub.status();

@@ -26,7 +26,7 @@ The following topics are now available for publishing sensor data:
 
 | Topic | Type | Description |
 | :--- | :--- | :--- |
-| `robot_state` | `sensor_msgs/msg/JointState` | Robot joint positions, velocities, and effort. |
+| `robot_joint_state` | `sensor_msgs/msg/JointState` | Robot joint positions, velocities, and effort. |
 | `force_torque_sensors` | `geometry_msgs/msg/WrenchStamped` | Force and torque (wrench) data in the part's frame. |
 
 ### 2.2 Logic Mapping Details (Proto → ROS)
@@ -65,7 +65,7 @@ These parameters are defined in the `SensorPublisherConfig` message and can be m
 
 | Parameter Name | Default | Description |
 | :--- | :--- | :--- |
-| `enable_robot_state_topic` | `true` | Enables publishing of robot joint states. |
+| `enable_robot_joint_state_topic` | `true` | Enables publishing of robot joint states. |
 | `enable_force_torque_topic` | `true` | Enables publishing of F/T sensor data. |
 
 ---
@@ -91,6 +91,6 @@ Verify your settings in Flowstate `ROS bridge` or in `flowstate_ros_bridge_defau
 3. **Verify ROS Output:** Use standard ROS 2 tools to inspect the sensor data:
 
     ```bash
-    ros2 topic echo /robot_state
+    ros2 topic echo /robot_joint_state
     ros2 topic echo /force_torque_sensors
     ```

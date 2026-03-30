@@ -86,9 +86,9 @@ class WorldBridge : public BridgeInterface {
 
     // Robot state and force torque functionality
     std::shared_ptr<intrinsic::Subscription> robot_state_sub_;
-    std::shared_ptr<rclcpp::Publisher<sensor_msgs::msg::JointState>> robot_state_pub_;
+    std::shared_ptr<rclcpp::Publisher<sensor_msgs::msg::JointState>> robot_joint_state_pub_;
     std::shared_ptr<rclcpp::Publisher<geometry_msgs::msg::WrenchStamped>> force_torque_pub_;
-    bool robot_state_topic_enabled_;
+    bool robot_joint_state_topic_enabled_;
     bool force_torque_topic_enabled_;
     int world_update_rate_millis_{ 1000 };
     // Cached part names to avoid repeated map iteration

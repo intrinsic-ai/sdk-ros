@@ -5,10 +5,11 @@ package intrinsic;
 // Configuration to control which sensors are enabled to publish ROS 2 messages.
 // Robot state (joints) and force/torque sensor data.
 message SensorPublisherConfig {
-  bool enable_robot_state = 1;
+  bool enable_robot_joint_state = 1;
   bool enable_force_torque = 2;
-  string robot_state_topic = 3;
+  string robot_joint_state_topic = 3;
   string force_torque_topic = 4;
+  string robot_controller_name = 5;
 }
 
 message FlowstateRosBridgeConfig {

@@ -95,10 +95,11 @@ int main(int argc, char* argv[]) {
   params.push_back(std::move(bridge_plugins_param));
 
   const auto& s = ros_config.sensors();
-  params.emplace_back("enable_robot_state_topic", s.enable_robot_state());
+  params.emplace_back("enable_robot_joint_state_topic", s.enable_robot_joint_state());
   params.emplace_back("enable_force_torque_topic", s.enable_force_torque());
-  params.emplace_back("robot_state_topic", s.robot_state_topic());
+  params.emplace_back("robot_joint_state_topic", s.robot_joint_state_topic());
   params.emplace_back("force_torque_topic", s.force_torque_topic());
+  params.emplace_back("robot_controller_name", s.robot_controller_name());
 
   options.parameter_overrides(params);
 

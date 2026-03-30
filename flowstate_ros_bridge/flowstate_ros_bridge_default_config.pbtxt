@@ -18,9 +18,10 @@
   executive_update_rate_millis: 1000
   world_update_rate_millis: 1000
   sensors: {
-    enable_robot_state: true
+    enable_robot_joint_state: true
     enable_force_torque: true
-    robot_state_topic: "/robot_state"
+    robot_joint_state_topic: "/robot_joint_state"
     force_torque_topic: "/force_torque_sensor"
+    robot_controller_name: "robot_controller"
   },
 }
