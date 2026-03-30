@@ -1,3 +1,4 @@
+#include "intrinsic/utils/strerror.hpp"
 #include "intrinsic/shared_memory_manager/domain_socket_utils.hpp"
 
 #include <sys/time.h>
@@ -70,7 +71,7 @@ Status ConnectToServer(
     if (!logged_connection_retry) {
       LOG(WARNING)
             << "Failed to connect to socket '" << absolute_socket_path.native()
-            << "' with error: " << strerror(errno) << " Retrying until "
+            << "' with error: " << intrinsic::StrError(errno).data() << " Retrying until "
             << deadline;
       logged_connection_retry = true;
     }
@@ -83,7 +84,7 @@ Status ConnectToServer(
   if (close(to_server_sock) == -1) {
     LOG(WARNING)
           << "Failed to close socket fd for '" << absolute_socket_path.native()
-          << "' with error: " << strerror(errno) << ".";
+          << "' with error: " << intrinsic::StrError(errno).data() << ".";
   }
 
   return Status {
@@ -168,7 +169,7 @@ tl::expected<sockaddr_un, Status> AddressFromAbsolutePath(
           .code = StatusCode::kInternal,
           .message = (std::stringstream()
                       << "Failed to copy socket path '" << absolute_socket_path
-                      << "' to sockaddr_un struct with error: " << strerror(errno)).str(),
+                      << "' to sockaddr_un struct with error: " << intrinsic::StrError(errno).data()).str(),
       });
   }
   return addr;
@@ -237,7 +238,7 @@ tl::expected<domain_socket_internal::ShmDescriptors, Status> GetSingleMessage(
       return tl::unexpected(Status {
           .code = StatusCode::kInternal,
           .message = (std::stringstream() <<
-            "Failed to receive data with error: " << strerror(errno) << ".").str(),
+            "Failed to receive data with error: " << intrinsic::StrError(errno).data() << ".").str(),
         });
     }
 
@@ -350,7 +351,7 @@ tl::expected<domain_socket_internal::ShmDescriptors, Status> GetSingleMessage(
                         << "File descriptor for segment '" << (*segment_names)[i]
                         << "' is not valid. Either the receiving process can't open any more "
                         << "files, or the server sent a closed file descriptor. Error: "
-                        << strerror(errno) << "."
+                        << intrinsic::StrError(errno).data() << "."
           ).str(),
         });
     }
@@ -378,7 +379,7 @@ GetSegmentNameToFileDescriptorMap(
         .code = StatusCode::kInternal,
         .message = (std::stringstream()
                       << "Failed to create GetShmDescriptors client socket with error: "
-                      << strerror(errno) << "."
+                      << intrinsic::StrError(errno).data() << "."
         ).str(),
       });
   }
@@ -407,7 +408,7 @@ GetSegmentNameToFileDescriptorMap(
       if (close(to_server_sock) == -1) {
         LOG(ERROR)
           << "Failed to close GetShmDescriptors client socket with error: "
-          << strerror(errno) << ".";
+          << intrinsic::StrError(errno).data() << ".";
       }
     });
 
@@ -425,7 +426,7 @@ GetSegmentNameToFileDescriptorMap(
     return tl::unexpected(Status {
         .code = StatusCode::kInternal,
         .message = (std::stringstream()
-                      << "Failed to set socket timeout with error: " << strerror(errno) << "."
+                      << "Failed to set socket timeout with error: " << intrinsic::StrError(errno).data() << "."
         ).str(),
       });
   }

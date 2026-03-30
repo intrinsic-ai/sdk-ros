@@ -1,3 +1,4 @@
+#include "intrinsic/utils/strerror.hpp"
 #include "icon_hwm_controller/icon_hwm_controller.hpp"
 
 #include <cmath>
@@ -191,7 +192,7 @@ controller_interface::CallbackReturn IconHwmController::on_configure(const rclcp
           .code=intrinsic::StatusCode::kInternal,
           .message=(std::stringstream() 
               << "Failed to set realtime priority with error " << errno 
-              << " (" << strerror(errno) << ")").str(),
+              << " (" << intrinsic::StrError(errno).data() << ")").str(),
         };
       }
     }

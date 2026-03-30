@@ -1,3 +1,4 @@
+#include "intrinsic/utils/strerror.hpp"
 #include "intrinsic/shared_memory_manager/shared_memory_manager.hpp"
 
 #include <algorithm>
@@ -129,11 +130,11 @@ SharedMemoryManager::~SharedMemoryManager()
     if (close(fd) == -1) {
         // TODO(nilsb): Proper logging
       std::cerr   << "Failed to close shm_fd for '" << segment_name
-                  << "'. with error: " << strerror(errno)
+                  << "'. with error: " << intrinsic::StrError(errno).data()
                   << ". Continuing anyways." << std::endl;
         /*
           LOG(WARNING) << "Failed to close shm_fd for '" << segment_name
-          << "'. with error: " << strerror(errno)
+          << "'. with error: " << intrinsic::StrError(errno).data()
           << ". Continuing anyways.";
         */
     }
@@ -141,11 +142,11 @@ SharedMemoryManager::~SharedMemoryManager()
       if (munmap(segment.second.data, segment.second.length) == -1) {
           // TODO(nilsb): Proper logging
         std::cerr   << "Failed to unmap memory for '" << segment_name
-                    << "'. with error: " << strerror(errno)
+                    << "'. with error: " << intrinsic::StrError(errno).data()
                     << ". Continuing anyways.";
           /*
             LOG(WARNING) << "Failed to unmap memory for '" << segment_name
-            << "'. with error: " << strerror(errno)
+            << "'. with error: " << intrinsic::StrError(errno).data()
             << ". Continuing anyways.";
           */
       }
@@ -206,7 +207,7 @@ Status SharedMemoryManager::InitSegment(
       .message = (
         std::stringstream()
                    << "Failed to create shm segment \"" << name
-                   << "\" with error: " << strerror(errno) << ".")
+                   << "\" with error: " << intrinsic::StrError(errno).data() << ".")
         .str(),
     };
   }
@@ -219,7 +220,7 @@ Status SharedMemoryManager::InitSegment(
       .message = (
         std::stringstream()
                    << "Unable to resize shared memory segment \"" << name
-                   << "\" with error: " << strerror(errno) << ".")
+                   << "\" with error: " << intrinsic::StrError(errno).data() << ".")
         .str(),
     };
   }
@@ -232,7 +233,7 @@ Status SharedMemoryManager::InitSegment(
       .message = (
         std::stringstream()
                    << "Failed to read size of segment \"" << name
-                   << "\". 'fstat' failed with:" << strerror(errno)
+                   << "\". 'fstat' failed with:" << intrinsic::StrError(errno).data()
       ).str(),
     };
   }
@@ -258,7 +259,7 @@ Status SharedMemoryManager::InitSegment(
       .message = (
         std::stringstream()
                    << "Unable to map shared memory segment \"" << name <<
-          "\" with error: " << strerror(errno) << "."
+          "\" with error: " << intrinsic::StrError(errno).data() << "."
       ).str(),
     };
   }
@@ -272,7 +273,7 @@ Status SharedMemoryManager::InitSegment(
       .message = (
         std::stringstream()
                    << "Unable to mlock shared memory segment \"" << name <<
-          "\" with error: " << strerror(errno) << "."
+          "\" with error: " << intrinsic::StrError(errno).data() << "."
       ).str(),
     };
   }

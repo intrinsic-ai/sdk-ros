@@ -1,3 +1,4 @@
+#include "intrinsic/utils/strerror.hpp"
 #include "intrinsic/shared_memory_manager/memory_segment.hpp"
 
 #include <errno.h>
@@ -72,7 +73,7 @@ tl::expected<MemorySegment::SegmentDescriptor, Status> MemorySegment::Get(
         .code = StatusCode::kInternal,
         .message = (std::stringstream()
                       << "Failed to read size of segment '" << name
-                      << "'. 'fstat' failed with:" << strerror(errno)
+                      << "'. 'fstat' failed with:" << intrinsic::StrError(errno).data()
         ).str(),
       });
   }
@@ -102,7 +103,7 @@ tl::expected<MemorySegment::SegmentDescriptor, Status> MemorySegment::Get(
         .code = StatusCode::kInternal,
         .message = (std::stringstream()
                       << "Unable to map shared memory segment: " << name << " with error:"
-                      << strerror(errno) << "."
+                      << intrinsic::StrError(errno).data() << "."
         ).str(),
       });
   }
@@ -117,7 +118,7 @@ tl::expected<MemorySegment::SegmentDescriptor, Status> MemorySegment::Get(
         .code = StatusCode::kInternal,
         .message = (std::stringstream()
                       << "Unable to mlock shared memory segment \"" << name
-                      << "\" with error: " << strerror(errno) << "."
+                      << "\" with error: " << intrinsic::StrError(errno).data() << "."
         ).str(),
       });
   }
@@ -205,7 +206,7 @@ void MemorySegment::CleanUpSharedMemory() noexcept
     // This automatically releases the mlock on that memory too.
     if (munmap(header_, size_) == -1) {
       LOG(WARNING)   << "Failed to unmap memory for '" << name_
-                     << "'. with error: " << strerror(errno)
+                     << "'. with error: " << intrinsic::StrError(errno).data()
                      << ". Continuing anyways.";
     }
   }

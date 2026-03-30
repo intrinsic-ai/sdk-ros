@@ -1,3 +1,4 @@
+#include "intrinsic/utils/strerror.hpp"
 #include "intrinsic/shared_memory_manager/domain_socket_server.hpp"
 
 #include <sys/file.h>
@@ -94,7 +95,7 @@ tl::expected<int, Status> TryLockPath(
           .code = StatusCode::kInternal,
           .message = (std::stringstream()
                       << "Unable to open lock '" << absolute_lock_path.native()
-                      << "' with error: " << strerror(errno)).str(),
+                      << "' with error: " << intrinsic::StrError(errno).data()).str(),
       });
   }
 
@@ -102,7 +103,7 @@ tl::expected<int, Status> TryLockPath(
     [&lock_fd, absolute_lock_path]() {
       if (close(lock_fd) == -1) {
         LOG(WARNING)   << "Failed to close lock fd for '" << absolute_lock_path.native()
-                       << "' with error: " << strerror(errno) << ".";
+                       << "' with error: " << intrinsic::StrError(errno).data() << ".";
       }
     });
   // Try once even if the deadline has passed.
@@ -132,7 +133,7 @@ tl::expected<int, Status> TryLockPath(
               .code = StatusCode::kInternal,
               .message = (std::stringstream()
                           << "Unable to lock '" << absolute_lock_path.native()
-                          << "' with error: " << strerror(errno)).str(),
+                          << "' with error: " << intrinsic::StrError(errno).data()).str(),
           });
       }
     }
@@ -162,14 +163,14 @@ Status UnlockPathCloseLockfile(int lockfile_fd)
     return Status {
       .code = StatusCode::kInternal,
       .message = (std::stringstream() << "Unable to unlock with error: " <<
-        strerror(errno)).str(),
+        intrinsic::StrError(errno).data()).str(),
     };
   }
 
   if (close(lockfile_fd) == -1) {
     // TODO(nilsb): proper logging
     std::cerr     << "WARN: Failed to close lockfile fd with error: "
-                  << strerror(errno) << "." << std::endl;
+                  << intrinsic::StrError(errno).data() << "." << std::endl;
   }
   return OkStatus();
 }
@@ -382,7 +383,7 @@ Status DomainSocketServer::ServeShmDescriptors(
       .message = (std::stringstream() <<
         "Failed to get limit of in-flight file descriptors "
         "(RLIMIT_NOFILE) with error: " <<
-        strerror(errno)).str(),
+        intrinsic::StrError(errno).data()).str(),
     };
   }
   // rlim_cur is one greater than the maximum number of FDs.
@@ -417,7 +418,7 @@ Status DomainSocketServer::ServeShmDescriptors(
     return Status {
       .code = StatusCode::kInternal,
       .message = (std::stringstream()
-                 << "Failed to listen to socket with error: " << strerror(errno)
+                 << "Failed to listen to socket with error: " << intrinsic::StrError(errno).data()
       ).str(),
     };
   }
@@ -447,7 +448,7 @@ Status DomainSocketServer::ServeShmDescriptors(
         if (to_client_sock == -1) {
             // TODO(nilsb): proper logging
           std::cerr   << "ERROR: " << "Error while calling accept on '"
-                      << absolute_socket_path_.native() << "': " << strerror(errno)
+                      << absolute_socket_path_.native() << "': " << intrinsic::StrError(errno).data()
                       << ". Exiting. This is expected during shutdown." << std::endl;
           return;
         }
@@ -466,7 +467,7 @@ Status DomainSocketServer::ServeShmDescriptors(
         {
             // TODO(nilsb): proper logging
           std::cerr   << "ERROR: " << "Failed to set socket timeout with error: "
-                      << strerror(errno) << std::endl;
+                      << intrinsic::StrError(errno).data() << std::endl;
         }
 
         for (const auto & message : messages_) {
@@ -474,7 +475,7 @@ Status DomainSocketServer::ServeShmDescriptors(
           ssize_t bytes_sent = sendmsg(to_client_sock, &message->msgh, 0);
           if (bytes_sent == -1) {
               // TODO(nilsb): proper logging
-            std::cerr   << "ERROR: " << "sendmsg failed with error: " << strerror(errno)
+            std::cerr   << "ERROR: " << "sendmsg failed with error: " << intrinsic::StrError(errno).data()
                         << "." << std::endl;
             continue;
           }
@@ -509,7 +510,7 @@ Status DomainSocketServer::ServeShmDescriptors(
             // TODO(nilsb): proper logging
           std::cerr   << "ERROR: "
                       << "Failed to close socket to client with error: "
-                      << strerror(errno) << "." << std::endl;
+                      << intrinsic::StrError(errno).data() << "." << std::endl;
           continue;
         }
       }
@@ -546,7 +547,7 @@ DomainSocketServer::~DomainSocketServer()
     if (shutdown(socket_fd_, SHUT_RDWR) == -1) {
       // TODO(nilsb): proper logging
       std::cerr   << "ERROR: "
-                  << "Failed to shutdown socket with error: " << strerror(errno) << "." <<
+                  << "Failed to shutdown socket with error: " << intrinsic::StrError(errno).data() << "." <<
         std::endl;
       std::exit(1);
     }
@@ -555,7 +556,7 @@ DomainSocketServer::~DomainSocketServer()
       // TODO(nilsb): proper logging
       std::cerr   << "WARN: "
                   << "Failed to close socket fd for '" << absolute_socket_path_.native()
-                  << "'. with error: " << strerror(errno) << "." << std::endl;
+                  << "'. with error: " << intrinsic::StrError(errno).data() << "." << std::endl;
     }
   }
   if (!absolute_socket_path_.empty()) {
@@ -563,7 +564,7 @@ DomainSocketServer::~DomainSocketServer()
       // TODO(nilsb): proper logging
       std::cerr   << "WARN: "
                   << "Failed to unlink socket file '" << absolute_socket_path_.native()
-                  << "'. with error: " << strerror(errno) << "." << std::endl;
+                  << "'. with error: " << intrinsic::StrError(errno).data() << "." << std::endl;
     }
   }
 
@@ -627,7 +628,7 @@ tl::expected<std::unique_ptr<DomainSocketServer>, Status> DomainSocketServer::Cr
           .code = StatusCode::kInternal,
           .message = (std::stringstream()
                         << "Failed to unlink socket file '" << absolute_socket_path->native()
-                        << "'. with error: " << strerror(errno)).str(),
+                        << "'. with error: " << intrinsic::StrError(errno).data()).str(),
         });
     }
   }
@@ -647,19 +648,19 @@ tl::expected<std::unique_ptr<DomainSocketServer>, Status> DomainSocketServer::Cr
     // TODO(nilsb): proper logging
     std::cerr   << "ERROR: "
                 << "Failed to bind to socket with error: "
-                << strerror(savedErrno)
+                << intrinsic::StrError(savedErrno).data()
                 << ". Cleaning up, then returning error." << std::endl;
     if (close(socket_fd) == -1) {
     // TODO(nilsb): proper logging
       std::cerr   << "WARN: "
                   << "Failed to close socket fd for '" << absolute_socket_path->native()
-                  << "'. with error: " << strerror(errno) << "." << std::endl;
+                  << "'. with error: " << intrinsic::StrError(errno).data() << "." << std::endl;
     }
     return tl::unexpected(Status {
         .code = StatusCode::kInternal,
         .message = (std::stringstream()
                       << "Failed to bind socket file '" << absolute_socket_path->native()
-                      << "'. with error: " << strerror(savedErrno)).str(),
+                      << "'. with error: " << intrinsic::StrError(savedErrno).data()).str(),
       });
   }
   std::move(clear_flock).Cancel();

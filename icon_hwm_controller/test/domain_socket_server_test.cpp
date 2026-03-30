@@ -1,3 +1,4 @@
+#include "intrinsic/utils/strerror.hpp"
 #include "intrinsic/shared_memory_manager/domain_socket_server.hpp"
 
 #include <fcntl.h>
@@ -194,7 +195,7 @@ tl::expected<std::string, Status> ReadFile(int fd)
     return tl::unexpected(Status{
           .code = StatusCode::kInternal,
           .message = (std::stringstream() <<
-            "Failed to read file with error: " << strerror(errno)
+            "Failed to read file with error: " << intrinsic::StrError(errno).data()
           ).str(),
       });
   }
