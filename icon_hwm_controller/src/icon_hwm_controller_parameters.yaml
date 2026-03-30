@@ -11,6 +11,31 @@ icon_hwm_controller:
       not_empty<>: null
     }
   }
+  shm_namespace: {
+    type: string,
+    default_value: "",
+    description: "The shared memory namespace. If empty, uses the default namespace."
+  }
+  lock_memory: {
+    type: bool,
+    default_value: false,
+    description: "Whether or not to lock the memory in realtime threads that this controller spawns. On non-realtime kernels, this option has no effect."
+  }
+  cpu_core: {
+    type: int,
+    default_value: -1,
+    description: "The CPU core to pin the controller to. If -1, the controller will not be pinned to any CPU core."
+  }
+  realtime_priority_low: {
+    type: int,
+    default_value: -1,
+    description: "The realtime priority of the controller's low priority threads. If -1, all controller threads will run at default priority."
+  }
+  realtime_priority_high: {
+    type: int,
+    default_value: -1,
+    description: "The realtime priority of the controller's high priority threads. If -1, all controller threads will run at default priority."
+  }
   context_name: {
     type: string,
     default_value: "",
@@ -55,4 +80,18 @@ icon_hwm_controller:
       size_lt<>: 3,
     }
   }
-  
+  hardware_interface_name: {
+    type: string,
+    default_value: "",
+    description: "The name of the ros2_control hardware interface to manage lifecycle for."
+  }
+  controllers_to_activate: {
+    type: string_array,
+    default_value: [],
+    description: "List of controllers to activate during EnableMotion."
+  }
+  controllers_to_deactivate: {
+    type: string_array,
+    default_value: [],
+    description: "List of controllers to deactivate during EnableMotion."
+  }

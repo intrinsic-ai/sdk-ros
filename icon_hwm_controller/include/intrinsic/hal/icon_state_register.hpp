@@ -18,7 +18,7 @@ namespace hardware_interface_traits
 // files.
 //
 // Usage:
-// #include "intrinsic/icon/hal/icon_state_register.h"  // IWYU pragma: keep
+// #include "intrinsic/hal/icon_state_register.hpp"  // IWYU pragma: keep
 INTRINSIC_ADD_HARDWARE_INTERFACE(intrinsic_fbs::IconState,
                                  intrinsic_fbs::BuildIconState,
                                  "intrinsic_fbs.IconState")

@@ -20,9 +20,6 @@ include(cmake/hwm_flatbuffers.cmake)
 
 # find dependencies
 find_package(ament_cmake REQUIRED)
-# uncomment the following section in order to fill in
-# further dependencies manually.
-# find_package(<dependency> REQUIRED)
 
 include_directories(
   include
@@ -50,6 +47,15 @@ add_library(shared_memory_manager
   src/joint_limits.cpp
   src/joint_limits_utils.cpp
   src/hardware_interface_registry.cpp
+  src/binary_futex.cpp
+  src/lockstep.cpp
+  src/realtime_clock.cpp
+  src/remote_trigger_server.cpp
+  src/hardware_module_state_utils.cpp
+  src/joint_command_utils.cpp
+  src/joint_state_utils.cpp
+  src/realtime_clock_interface.cpp
+  src/shared_memory_lockstep.cpp
 )
 
 add_dependencies(shared_memory_manager icon_hwm_fbs)
@@ -81,6 +87,8 @@ target_link_libraries(icon_hwm_controller PUBLIC
   rclcpp::rclcpp
   rclcpp_lifecycle::rclcpp_lifecycle
   realtime_tools::realtime_tools
+  ${controller_manager_msgs_TARGETS}
+  ${lifecycle_msgs_TARGETS}
   ${std_msgs_TARGETS}
 )
 
@@ -175,6 +183,8 @@ ament_export_dependencies(
   rclcpp
   rclcpp_lifecycle
   realtime_tools
+  controller_manager_msgs
+  lifecycle_msgs
   std_msgs
   generate_parameter_library
 )

@@ -123,7 +123,7 @@ inline RealtimeStatus WasUpdatedThisCycle(
   const HardwareInterfaceHandle<intrinsic_fbs::IconState> & icon_state,
   const HardwareInterfaceT & hw_interface)
 {
-  if (icon_state.LastUpdatedCycle() != icon_state->current_cycle())
+  if (static_cast<int64_t>(icon_state.LastUpdatedCycle()) != icon_state->current_cycle())
   [[unlikely]] {
     return {
       .code = StatusCode::kFailedPrecondition,
@@ -131,7 +131,7 @@ inline RealtimeStatus WasUpdatedThisCycle(
     };
   }
 
-  if (hw_interface.LastUpdatedCycle() != icon_state->current_cycle())
+  if (static_cast<int64_t>(hw_interface.LastUpdatedCycle()) != icon_state->current_cycle())
   [[unlikely]] {
     RealtimeStatus status;
     status.code = StatusCode::kFailedPrecondition;
@@ -140,7 +140,7 @@ inline RealtimeStatus WasUpdatedThisCycle(
         status.message.size(),
         "Command was not updated this cycle. icon_cycle (%ld) != command_cycle (%ld)",
         icon_state->current_cycle(),
-        hw_interface.LastUpdatedCycle());
+        static_cast<int64_t>(hw_interface.LastUpdatedCycle()));
     return status;
   }
   return RtOkStatus();

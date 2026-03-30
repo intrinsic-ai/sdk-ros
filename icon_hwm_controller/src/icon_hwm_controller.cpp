@@ -1,37 +1,508 @@
 #include "icon_hwm_controller/icon_hwm_controller.hpp"
 
+#include <cmath>
+#include <algorithm>
+
+#include "intrinsic/thread/thread.hpp"
+#include "intrinsic/utils/log.hpp"
+#include "intrinsic/utils/time.hpp"
+#include "intrinsic/hal/joint_command_utils.hpp"
+#include "intrinsic/hal/joint_state_utils.hpp"
+#include "intrinsic/hal/joint_limits_utils.hpp"
+#include "intrinsic/hal/hardware_module_state_utils.hpp"
+#include "intrinsic/hal/hardware_interface_traits.hpp"
+#include "intrinsic/hal/hardware_interface_registry.hpp"
+#include "intrinsic/hal/icon_state_register.hpp"
+
+#include "realtime_tools/realtime_helpers.hpp"
+
+namespace intrinsic::hal::hardware_interface_traits {
+
+INTRINSIC_ADD_HARDWARE_INTERFACE(intrinsic_fbs::JointPositionCommand,
+                                 intrinsic_fbs::BuildJointPositionCommand,
+                                 "intrinsic_fbs.JointPositionCommand")
+
+INTRINSIC_ADD_HARDWARE_INTERFACE(intrinsic_fbs::JointCommandedPosition,
+                                 intrinsic_fbs::BuildJointCommandedPosition,
+                                 "intrinsic_fbs.JointCommandedPosition")
+
+INTRINSIC_ADD_HARDWARE_INTERFACE(intrinsic_fbs::JointPositionState,
+                                 intrinsic_fbs::BuildJointPositionState,
+                                 "intrinsic_fbs.JointPositionState")
+
+INTRINSIC_ADD_HARDWARE_INTERFACE(intrinsic_fbs::JointVelocityState,
+                                 intrinsic_fbs::BuildJointVelocityState,
+                                 "intrinsic_fbs.JointVelocityState")
+
+INTRINSIC_ADD_HARDWARE_INTERFACE(intrinsic_fbs::JointLimits,
+                                 intrinsic_fbs::BuildJointLimits,
+                                 "intrinsic_fbs.JointLimits")
+
+INTRINSIC_ADD_HARDWARE_INTERFACE(intrinsic_fbs::HardwareModuleState,
+                                 intrinsic_fbs::BuildHardwareModuleState,
+                                 "intrinsic_fbs.HardwareModuleState")
+
+#if 0
+INTRINSIC_ADD_HARDWARE_INTERFACE(::intrinsic_fbs::PayloadCommand,
+                                 intrinsic_fbs::BuildPayloadCommand,
+                                 "intrinsic_fbs.PayloadCommand")
+
+INTRINSIC_ADD_HARDWARE_INTERFACE(::intrinsic_fbs::PayloadState,
+                                 intrinsic_fbs::BuildPayloadState,
+                                 "intrinsic_fbs.PayloadState")
+#endif
+}
+
 namespace icon_hwm_controller {
 
 controller_interface::InterfaceConfiguration IconHwmController::command_interface_configuration() const {
-  return {};
+  controller_interface::InterfaceConfiguration config;
+  config.type = controller_interface::interface_configuration_type::INDIVIDUAL;
+  for (const auto & dof_name : params_.dof_names) {
+    config.names.push_back(dof_name + "/" + params_.command_interface);
+  }
+  return config;
 }
 
 controller_interface::InterfaceConfiguration IconHwmController::state_interface_configuration() const {
-  return {};
+  controller_interface::InterfaceConfiguration config;
+  config.type = controller_interface::interface_configuration_type::INDIVIDUAL;
+  for (const auto & dof_name : params_.dof_names) {
+    for (const auto & interface_type : params_.reference_and_state_interfaces) {
+      config.names.push_back(dof_name + "/" + interface_type);
+    }
+  }
+  return config;
 }
 
 controller_interface::CallbackReturn IconHwmController::on_init() {
-  return {};
+  try {
+    param_listener_ = std::make_unique<ParamListener>(get_node());
+    params_ = param_listener_->get_params();
+  } catch (const std::exception & e) {
+    RCLCPP_ERROR(get_node()->get_logger(), "Exception thrown during init stage with message: %s", e.what());
+    return controller_interface::CallbackReturn::ERROR;
+  }
+  return controller_interface::CallbackReturn::SUCCESS;
 }
 
-controller_interface::CallbackReturn IconHwmController::on_configure(const rclcpp_lifecycle::State & previous_state) {
-  return {};
+controller_interface::CallbackReturn IconHwmController::on_configure(const rclcpp_lifecycle::State & /*previous_state*/) {
+  params_ = param_listener_->get_params();
+
+  if (params_.name.empty()) {
+    RCLCPP_ERROR(get_node()->get_logger(), "Parameter 'name' (ICON module name) is empty.");
+    return controller_interface::CallbackReturn::ERROR;
+  }
+
+  // Create Shared Memory Manager
+  std::string shm_namespace = params_.shm_namespace;
+  auto shared_memory_manager = intrinsic::hal::SharedMemoryManager::Create(shm_namespace, params_.name);
+  if (!shared_memory_manager.has_value()) {
+    RCLCPP_ERROR(get_node()->get_logger(), "Failed to create SharedMemoryManager: %s", shared_memory_manager.error().message.c_str());
+    return controller_interface::CallbackReturn::ERROR;
+  }
+  shm_manager_ = std::move(shared_memory_manager.value());
+
+ intrinsic::hal::HardwareInterfaceRegistry registry(*shm_manager_);
+  // Advertise IconState
+  auto icon_state = registry.AdvertiseInterface<intrinsic_fbs::IconState>(intrinsic::hal::kIconStateInterfaceName);
+  if (!icon_state.has_value()){
+    RCLCPP_ERROR(get_node()->get_logger(), "Failed to advertise IconState: %s", icon_state.error().message.c_str());
+    return controller_interface::CallbackReturn::ERROR;
+  }
+  icon_state_ = std::move(icon_state.value());
+
+  // Advertise JointPositionState
+  // Build a default flatbuffer for JointPositionState with the correct number of DOFs
+  auto joint_position_state = registry.AdvertiseMutableStrictInterface<intrinsic_fbs::JointPositionState>(
+    "joint_position_state",
+    params_.dof_names.size()
+  );
+  if (!joint_position_state.has_value()){
+    RCLCPP_ERROR(get_node()->get_logger(), "Failed to advertise JointPositionState: %s", joint_position_state.error().message.c_str());
+    return controller_interface::CallbackReturn::ERROR;
+  }
+  joint_position_state_ = std::move(joint_position_state).value();
+
+  // Advertise JointPositionCommand
+  auto joint_position_command = registry.AdvertiseStrictInterface<intrinsic_fbs::JointPositionCommand>(
+    "joint_position_command",
+    params_.dof_names.size());
+  if (!joint_position_command.has_value()){
+    RCLCPP_ERROR(get_node()->get_logger(), "Failed to advertise JointPositionCommand: %s", joint_position_command.error().message.c_str());
+    return controller_interface::CallbackReturn::ERROR;
+  }
+  joint_position_command_ = std::move(joint_position_command).value();
+
+  // Advertise HardwareModuleState
+  {
+    auto hardware_module_state = registry.AdvertiseMutableInterface<intrinsic_fbs::HardwareModuleState>(
+      "hardware_module_state");
+    if (!hardware_module_state.has_value()){
+      RCLCPP_ERROR(get_node()->get_logger(), "Failed to advertise HardwareModuleState: %s", hardware_module_state.error().message.c_str());
+      return controller_interface::CallbackReturn::ERROR;
+    }
+    hardware_module_state_ = std::move(hardware_module_state).value();
+  }
+  
+  // Service Clients
+  switch_controller_client_ = get_node()->create_client<controller_manager_msgs::srv::SwitchController>("/controller_manager/switch_controller");
+  set_hw_state_client_ = get_node()->create_client<controller_manager_msgs::srv::SetHardwareComponentState>("/controller_manager/set_hardware_component_state");
+
+  // Remote Trigger Servers
+  
+  auto lock_memory = params_.lock_memory;
+  auto cpu_core = params_.cpu_core;
+  auto realtime_priority_low = params_.realtime_priority_low;
+  auto realtime_priority_high = params_.realtime_priority_high;
+  if (realtime_priority_low != -1 && realtime_priority_high != -1 && realtime_priority_low > realtime_priority_high) {
+    RCLCPP_ERROR(get_node()->get_logger(), "realtime_priority_low is greater than realtime_priority_high. Ensure that the parameter configuration sets low to be lower than high.");
+    return controller_interface::CallbackReturn::ERROR;
+  }
+  bool has_realtime_kernel = realtime_tools::has_realtime_kernel();
+
+  auto setup_rt_thread = [=](int priority) -> intrinsic::Status {
+    if (!has_realtime_kernel) {
+      return intrinsic::OkStatus();
+    }
+    if (lock_memory) {
+      auto lock_memory_result = realtime_tools::lock_memory();
+      if (!lock_memory_result.first) {
+        return intrinsic::Status{
+          .code=intrinsic::StatusCode::kInternal,
+          .message=(std::stringstream() 
+              << "Failed to lock memory: " << lock_memory_result.second).str(),
+        };
+      }
+    }
+    if (cpu_core >= 0) {
+     const auto affinity_result = realtime_tools::set_current_thread_affinity({cpu_core});
+     if (!affinity_result.first) {
+       return intrinsic::Status{
+         .code=intrinsic::StatusCode::kInternal,
+         .message=(std::stringstream() 
+             << "Failed to set thread affinity: " << affinity_result.second).str(),
+       };
+     }
+    }
+    if (priority >= 0) {
+      if (!realtime_tools::configure_sched_fifo(priority)){
+        return intrinsic::Status{
+          .code=intrinsic::StatusCode::kInternal,
+          .message=(std::stringstream() 
+              << "Failed to set realtime priority with error " << errno 
+              << " (" << strerror(errno) << ")").str(),
+        };
+      }
+    }
+    return intrinsic::OkStatus();
+  };
+  {
+    auto activate_server_result = intrinsic::hal::RemoteTriggerServer::Create(*shm_manager_, "activate", [this](){ (void)Activate(); });
+    if (!activate_server_result.has_value()) {
+      RCLCPP_ERROR(get_node()->get_logger(), "Failed to create activate server: %s", activate_server_result.error().message.c_str());
+      return controller_interface::CallbackReturn::ERROR;
+    }
+    activate_server_ = std::make_unique<intrinsic::hal::RemoteTriggerServer>(
+      std::move(activate_server_result.value()));
+  }
+  {
+    auto deactivate_server_result = intrinsic::hal::RemoteTriggerServer::Create(*shm_manager_, "deactivate", [this](){ (void)Deactivate(); });
+    if (!deactivate_server_result.has_value()) {
+      RCLCPP_ERROR(get_node()->get_logger(), "Failed to create deactivate server: %s", deactivate_server_result.error().message.c_str());
+      return controller_interface::CallbackReturn::ERROR;
+    }
+    deactivate_server_ = std::make_unique<intrinsic::hal::RemoteTriggerServer>(
+      std::move(deactivate_server_result.value()));
+  }
+  {
+    auto enable_motion_server_result = intrinsic::hal::RemoteTriggerServer::Create(*shm_manager_, "enable_motion", [this](){ (void)EnableMotion(); });
+    if (!enable_motion_server_result.has_value()) {
+      RCLCPP_ERROR(get_node()->get_logger(), "Failed to create enable_motion server: %s", enable_motion_server_result.error().message.c_str());
+      return controller_interface::CallbackReturn::ERROR;
+    }
+    enable_motion_server_ = std::make_unique<intrinsic::hal::RemoteTriggerServer>(
+      std::move(enable_motion_server_result.value()));
+  }
+  {
+    auto disable_motion_server_result = intrinsic::hal::RemoteTriggerServer::Create(*shm_manager_, "disable_motion", [this](){ (void)DisableMotion(); });
+    if (!disable_motion_server_result.has_value()) {
+      RCLCPP_ERROR(get_node()->get_logger(), "Failed to create disable_motion server: %s", disable_motion_server_result.error().message.c_str());
+      return controller_interface::CallbackReturn::ERROR;
+    }
+    disable_motion_server_ = std::make_unique<intrinsic::hal::RemoteTriggerServer>(
+      std::move(disable_motion_server_result.value()));
+  }
+  {
+    auto clear_faults_server_result = intrinsic::hal::RemoteTriggerServer::Create(*shm_manager_, "clear_faults", [this](){ (void)ClearFaults(); });
+    if (!clear_faults_server_result.has_value()) {
+      RCLCPP_ERROR(get_node()->get_logger(), "Failed to create clear_faults server: %s", clear_faults_server_result.error().message.c_str());
+      return controller_interface::CallbackReturn::ERROR;
+    }
+    clear_faults_server_ = std::make_unique<intrinsic::hal::RemoteTriggerServer>(
+      std::move(clear_faults_server_result.value()));
+  }
+  {
+    auto shutdown_server_result = intrinsic::hal::RemoteTriggerServer::Create(*shm_manager_, "shutdown", [this](){ (void)Shutdown(); });
+    if (!shutdown_server_result.has_value()) {
+      RCLCPP_ERROR(get_node()->get_logger(), "Failed to create shutdown server: %s", shutdown_server_result.error().message.c_str());
+      return controller_interface::CallbackReturn::ERROR;
+    }
+    shutdown_server_ = std::make_unique<intrinsic::hal::RemoteTriggerServer>(
+      std::move(shutdown_server_result.value()));
+  }
+  {
+    auto read_status_server_result = intrinsic::hal::RemoteTriggerServer::Create(*shm_manager_, "read_status", [this](){ (void)ReadStatus(); });
+    if (!read_status_server_result.has_value()) {
+      RCLCPP_ERROR(get_node()->get_logger(), "Failed to create read_status server: %s", read_status_server_result.error().message.c_str());
+      return controller_interface::CallbackReturn::ERROR;
+    }
+    read_status_server_ = std::make_unique<intrinsic::hal::RemoteTriggerServer>(
+      std::move(read_status_server_result.value()));
+  }
+  {
+    auto apply_command_server_result = intrinsic::hal::RemoteTriggerServer::Create(*shm_manager_, "apply_command", [this](){ (void)ApplyCommand(); });
+    if (!apply_command_server_result.has_value()) {
+      RCLCPP_ERROR(get_node()->get_logger(), "Failed to create apply_command server: %s", apply_command_server_result.error().message.c_str());
+      return controller_interface::CallbackReturn::ERROR;
+    }
+    apply_command_server_ = std::make_unique<intrinsic::hal::RemoteTriggerServer>(
+      std::move(apply_command_server_result.value()));
+  }
+  // Start the background threads for remote trigger servers.
+  activate_server_->StartAsync(std::bind_front(setup_rt_thread, realtime_priority_low));
+  deactivate_server_->StartAsync(std::bind_front(setup_rt_thread, realtime_priority_low));
+  // ReadStatus and ApplyCommand run much more often than the others, so they get higher priority.
+  read_status_server_->StartAsync(std::bind_front(setup_rt_thread, realtime_priority_high));
+  apply_command_server_->StartAsync(std::bind_front(setup_rt_thread, realtime_priority_high));
+  // The remaining servers *MUST NOT* run at realtime priority, since they can block and must not delay the execution of any of the realtime threads.
+  auto state_change_query_thread_body = [this](){
+    while (!stop_requested_){
+      enable_motion_server_->Query();
+      disable_motion_server_->Query();
+      clear_faults_server_->Query();
+      shutdown_server_->Query();
+    }
+  };
+  state_change_query_thread_ = intrinsic::Thread(state_change_query_thread_body);
+  // Must be clock driver. If not, return an error.
+  if (!params_.drives_realtime_clock) {
+    RCLCPP_ERROR(get_node()->get_logger(), "This controller must be a clock driver.");
+    return controller_interface::CallbackReturn::ERROR;
+  }
+  auto clock_res = intrinsic::RealtimeClock::Create(*shm_manager_);
+  if (!clock_res.has_value()) {
+    RCLCPP_ERROR(get_node()->get_logger(), "Failed to create RealtimeClock.");
+    return controller_interface::CallbackReturn::ERROR;
+  }
+  clock_ = std::move(clock_res.value());
+
+  return controller_interface::CallbackReturn::SUCCESS;
 }
 
-controller_interface::CallbackReturn IconHwmController::on_activate(const rclcpp_lifecycle::State & previous_state) {
-  return {};
+controller_interface::CallbackReturn IconHwmController::on_activate(const rclcpp_lifecycle::State & /*previous_state*/) {
+  cycle_counter_ = 0;
+  faulted_ = false;
+  return controller_interface::CallbackReturn::SUCCESS;
 }
 
-controller_interface::CallbackReturn IconHwmController::on_deactivate(const rclcpp_lifecycle::State & previous_state) {
-  return {};
+controller_interface::CallbackReturn IconHwmController::on_deactivate(const rclcpp_lifecycle::State & /*previous_state*/) {
+  return controller_interface::CallbackReturn::SUCCESS;
 }
 
-controller_interface::return_type IconHwmController::update(const rclcpp::Time & time, const rclcpp::Duration & period) {
-  return {};
+controller_interface::return_type IconHwmController::update(const rclcpp::Time & /*time*/, const rclcpp::Duration & period) {
+  cycle_counter_++;
+  
+  update_hwm_state();
+
+  detect_faults();
+
+  // clock_ must not be nullptr here (if it is, the initialization failed)
+  if (!clock_) {
+    RCLCPP_ERROR(get_node()->get_logger(), "Clock driver not initialized.");
+    return controller_interface::return_type::ERROR;
+  }
+  auto now_shm = intrinsic::Now();
+  auto deadline = now_shm + period.to_chrono<std::chrono::nanoseconds>();
+  (void)clock_->TickBlockingWithDeadline(now_shm, deadline);
+  // After TickBlocking returns, ICON has finished ReadStatus/ApplyCommand
+
+  joint_position_state_.UpdatedAt(now_shm);
+
+  return controller_interface::return_type::OK;
 }
 
+void IconHwmController::detect_faults() {
+  faulted_ = false;
+  for (size_t i = 0; i < state_interfaces_.size(); ++i) {
+    if (std::isnan(state_interfaces_[i].get_optional().value_or(std::numeric_limits<double>::quiet_NaN()))) {
+      faulted_ = true;
+      break;
+    }
+  }
 }
 
+intrinsic::RealtimeStatus IconHwmController::Activate() {
+  state_code_.store(intrinsic_fbs::StateCode::kActivated);
+  return intrinsic::RtOkStatus();
+}
+
+intrinsic::RealtimeStatus IconHwmController::Deactivate() {
+  state_code_.store(intrinsic_fbs::StateCode::kDeactivated);
+  return intrinsic::RtOkStatus();
+}
+
+intrinsic::Status IconHwmController::EnableMotion() {
+  state_code_.store(intrinsic_fbs::StateCode::kMotionEnabling);
+  
+  if (!params_.hardware_interface_name.empty()) {
+    auto res = call_set_hw_state(params_.hardware_interface_name, 3); // 3 = ACTIVE
+    if (!res.ok()) {
+       state_code_.store(intrinsic_fbs::StateCode::kFaulted);
+       fault_reason_ = "Failed to activate hardware interface: " + res.message;
+       return res;
+    }
+  }
+
+  if (!params_.controllers_to_activate.empty() || !params_.controllers_to_deactivate.empty()) {
+    auto res = call_switch_controller(params_.controllers_to_activate, params_.controllers_to_deactivate);
+    if (!res.ok()) {
+       state_code_.store(intrinsic_fbs::StateCode::kFaulted);
+       fault_reason_ = "Failed to switch controllers: " + res.message;
+       return res;
+    }
+  }
+
+  state_code_.store(intrinsic_fbs::StateCode::kMotionEnabled);
+  return intrinsic::OkStatus();
+}
+
+intrinsic::Status IconHwmController::DisableMotion() {
+  state_code_.store(intrinsic_fbs::StateCode::kMotionDisabling);
+  
+  if (!params_.controllers_to_activate.empty()) {
+     // Deactivate the controllers we activated
+     (void)call_switch_controller({}, params_.controllers_to_activate);
+  }
+
+  state_code_.store(intrinsic_fbs::StateCode::kActivated);
+  return intrinsic::OkStatus();
+}
+
+intrinsic::Status IconHwmController::ClearFaults() {
+  faulted_ = false;
+  fault_reason_ = "";
+  state_code_.store(intrinsic_fbs::StateCode::kActivated);
+  return intrinsic::OkStatus();
+}
+
+intrinsic::Status IconHwmController::Shutdown() {
+  state_code_.store(intrinsic_fbs::StateCode::kDeactivated);
+  return intrinsic::OkStatus();
+}
+
+intrinsic::RealtimeStatus IconHwmController::ReadStatus() {
+  auto * mutable_state = joint_position_state_.MutableValue();
+  auto * pos_vec = mutable_state->mutable_position();
+  
+  size_t num_dofs = params_.dof_names.size();
+  for (size_t i = 0; i < num_dofs; ++i) {
+    // We assume state_interfaces_ has the primary state (position) at the beginning of each joint's block
+    // Or we should find it by name.
+    // For now, let's assume the first interface is position.
+    auto val = state_interfaces_[i * params_.reference_and_state_interfaces.size()].get_optional().value_or(std::numeric_limits<double>::quiet_NaN());
+    pos_vec->Mutate(i, val);
+  }
+  
+  return intrinsic::RtOkStatus();
+}
+
+intrinsic::RealtimeStatus IconHwmController::ApplyCommand() {
+  if (faulted_) {
+    return {intrinsic::StatusCode::kFailedPrecondition, "Hardware is in fault state."};
+  }
+
+  auto cmd_res = joint_position_command_.Value();
+  if (!cmd_res.has_value()) {
+    // Command not updated this cycle?
+    return cmd_res.error();
+  }
+
+  const auto * cmd = cmd_res.value();
+  const auto * pos_vec = cmd->position();
+  
+  if (pos_vec->size() != command_interfaces_.size()) {
+    return {intrinsic::StatusCode::kInternal, "Command vector size mismatch."};
+  }
+
+  for (size_t i = 0; i < pos_vec->size(); ++i) {
+    (void)command_interfaces_[i].set_value(pos_vec->Get(i));
+  }
+
+  return intrinsic::RtOkStatus();
+}
+
+void IconHwmController::update_hwm_state() {
+  auto * mutable_state = *hardware_module_state_;
+  
+  mutable_state->mutate_code(state_code_.load());
+  
+  // Update message if faulted
+  if (state_code_.load() == intrinsic_fbs::StateCode::kFaulted || 
+      state_code_.load() == intrinsic_fbs::StateCode::kFatallyFaulted) {
+     auto * msg_bytes = mutable_state->mutable_message();
+     size_t len = std::min(fault_reason_.length(), (size_t)255);
+     for (size_t i = 0; i < len; ++i) msg_bytes->Mutate(i, fault_reason_[i]);
+     for (size_t i = len; i < 256; ++i) msg_bytes->Mutate(i, 0);
+  }
+  
+  hardware_module_state_.UpdatedAt(intrinsic::Now());
+}
+
+intrinsic::Status IconHwmController::call_switch_controller(const std::vector<std::string>& activate, const std::vector<std::string>& deactivate) {
+  if (!switch_controller_client_->wait_for_service(std::chrono::seconds(1))) {
+    return {intrinsic::StatusCode::kUnavailable, "SwitchController service not available"};
+  }
+  
+  auto request = std::make_shared<controller_manager_msgs::srv::SwitchController::Request>();
+  request->activate_controllers = activate;
+  request->deactivate_controllers = deactivate;
+  request->strictness = controller_manager_msgs::srv::SwitchController::Request::STRICT;
+  
+  auto result_future = switch_controller_client_->async_send_request(request);
+  if (result_future.wait_for(std::chrono::seconds(5)) != std::future_status::ready) {
+    return {intrinsic::StatusCode::kDeadlineExceeded, "SwitchController timeout"};
+  }
+  
+  auto response = result_future.get();
+  if (!response->ok) {
+    return {intrinsic::StatusCode::kInternal, "SwitchController failed"};
+  }
+  return intrinsic::OkStatus();
+}
+
+intrinsic::Status IconHwmController::call_set_hw_state(const std::string& name, uint8_t state) {
+  if (!set_hw_state_client_->wait_for_service(std::chrono::seconds(1))) {
+    return {intrinsic::StatusCode::kUnavailable, "SetHardwareComponentState service not available"};
+  }
+  
+  auto request = std::make_shared<controller_manager_msgs::srv::SetHardwareComponentState::Request>();
+  request->name = name;
+  request->target_state.id = state;
+  
+  auto result_future = set_hw_state_client_->async_send_request(request);
+  if (result_future.wait_for(std::chrono::seconds(5)) != std::future_status::ready) {
+    return {intrinsic::StatusCode::kDeadlineExceeded, "SetHardwareComponentState timeout"};
+  }
+  
+  auto response = result_future.get();
+  if (!response->ok) {
+    return {intrinsic::StatusCode::kInternal, "SetHardwareComponentState failed"};
+  }
+  return intrinsic::OkStatus();
+}
+
+} // namespace icon_hwm_controller
 
 #include "pluginlib/class_list_macros.hpp"
 
