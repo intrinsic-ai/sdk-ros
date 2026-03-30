@@ -35,7 +35,6 @@
   <depend>opencensus_cpp_vendor</depend>
   <depend>ortools_vendor</depend>
   <depend>ros_gz_bridge_vendor</depend>
-  <depend>ros_gz_interfaces_vendor</depend>
 
   <export>
     <build_type>cmake</build_type>
