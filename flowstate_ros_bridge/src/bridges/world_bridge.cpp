@@ -14,6 +14,7 @@
 
 #include "world_bridge.hpp"
 
+#include <limits>
 #include <string>
 #include <utility>
 
@@ -214,12 +215,12 @@ absl::Status WorldBridge::Data::SendObjectVisualizationMessages(
           const std::string object_name = object.Name().value();
           const std::vector<absl::string_view> parts = absl::StrSplit(object_name, '/');
           const absl::string_view short_name = parts.back();
-          
-          // In V1 SDK, the Flowstate TF stream appends the short object name again 
+
+          // In V1 SDK, the Flowstate TF stream appends the short object name again
           // between the full path and the entity name.
           std::string tf_frame_name = absl::StrFormat("%s%s/%s/%s", tf_prefix_.c_str(),
                                                       object_name, short_name, entity.second.name());
-          
+
           // Let's be smarter in the future. For now, just skip over
           // the intcas:// prefix
           const std::string gltf_path = absl::StrFormat(
@@ -486,9 +487,9 @@ void WorldBridge::PublishJointState(const std::string& part_name,
     std::string joint_name = absl::StrFormat("%s_joint_%d", part_name, i);
     robot_state_ros.name.push_back(joint_name);
 
-    double pos = joint_state.has_position_sensed() ? joint_state.position_sensed() : 0.0;
-    double vel = joint_state.has_velocity_sensed() ? joint_state.velocity_sensed() : 0.0;
-    double eff = joint_state.has_torque_sensed() ? joint_state.torque_sensed() : 0.0;
+    double pos = joint_state.has_position_sensed() ? joint_state.position_sensed() : std::numeric_limits<double>::quiet_NaN();
+    double vel = joint_state.has_velocity_sensed() ? joint_state.velocity_sensed() : std::numeric_limits<double>::quiet_NaN();
+    double eff = joint_state.has_torque_sensed() ? joint_state.torque_sensed() : std::numeric_limits<double>::quiet_NaN();
 
     robot_state_ros.position.push_back(pos);
     robot_state_ros.velocity.push_back(vel);
