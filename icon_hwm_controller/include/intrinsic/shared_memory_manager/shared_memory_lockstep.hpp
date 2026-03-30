@@ -1,7 +1,8 @@
 #pragma once
 
 #include <utility>
-#include <cassert>
+#include <cstdlib>
+#include <iostream>
 #include "intrinsic/shared_memory_manager/lockstep.hpp"
 #include "intrinsic/shared_memory_manager/memory_segment.hpp"
 #include "intrinsic/shared_memory_manager/shared_memory_manager.hpp"
@@ -37,19 +38,31 @@ class SharedMemoryLockstep {
   // Dereferencing returns the underlying Lockstep object. Check-fails if this
   // is null (default-constructed).
   Lockstep* operator*() {
-    assert(lockstep_ != nullptr && "null SharedMemoryLockstep dereferenced");
+    if (lockstep_ == nullptr) {
+      std::cerr << "null SharedMemoryLockstep dereferenced\n";
+      std::exit(EXIT_FAILURE);
+    }
     return lockstep_;
   }
   const Lockstep* operator*() const {
-    assert(lockstep_ != nullptr && "null SharedMemoryLockstep dereferenced");
+    if (lockstep_ == nullptr) {
+      std::cerr << "null SharedMemoryLockstep dereferenced\n";
+      std::exit(EXIT_FAILURE);
+    }
     return lockstep_;
   }
   Lockstep* operator->() {
-    assert(lockstep_ != nullptr && "null SharedMemoryLockstep dereferenced");
+    if (lockstep_ == nullptr) {
+      std::cerr << "null SharedMemoryLockstep dereferenced\n";
+      std::exit(EXIT_FAILURE);
+    }
     return lockstep_;
   }
   const Lockstep* operator->() const {
-    assert(lockstep_ != nullptr && "null SharedMemoryLockstep dereferenced");
+    if (lockstep_ == nullptr) {
+      std::cerr << "null SharedMemoryLockstep dereferenced\n";
+      std::exit(EXIT_FAILURE);
+    }
     return lockstep_;
   }
 
