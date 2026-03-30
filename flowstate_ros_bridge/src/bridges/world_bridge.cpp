@@ -469,13 +469,23 @@ void WorldBridge::HandleRobotStatus(const intrinsic_proto::icon::RobotStatus& ro
 
   // Use cached part names for publishing
   if (data_->robot_joint_state_topic_enabled_ && data_->robot_arm_part_name_.has_value()) {
-    const auto& part_status = robot_status.status_map().at(data_->robot_arm_part_name_.value());
-    PublishJointState(data_->robot_arm_part_name_.value(), part_status, time);
+    const std::string& part_name = data_->robot_arm_part_name_.value();
+    auto it = robot_status.status_map().find(part_name);
+    if (it != robot_status.status_map().end()) {
+      PublishJointState(part_name, it->second, time);
+    } else {
+      LOG_EVERY_N(ERROR, 100) << "Error: Robot arm part [" << part_name << "] not found!";
+    }
   }
 
   if (data_->force_torque_topic_enabled_ && data_->force_torque_part_name_.has_value()) {
-    const auto& part_status = robot_status.status_map().at(data_->force_torque_part_name_.value());
-    PublishWrench(data_->force_torque_part_name_.value(), part_status, time);
+    const std::string& part_name = data_->force_torque_part_name_.value();
+    auto it = robot_status.status_map().find(part_name);
+    if (it != robot_status.status_map().end()) {
+      PublishWrench(part_name, it->second, time);
+    } else {
+      LOG_EVERY_N(ERROR, 100) << "Error: Force torque part [" << part_name << "] not found!";
+    }
   }
 }
 
