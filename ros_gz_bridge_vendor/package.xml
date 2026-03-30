@@ -17,8 +17,7 @@
   <depend>nav_msgs</depend>
   <depend>rclcpp</depend>
   <depend>rclcpp_components</depend>
-  <!-- TODO(luca) verify whether we really need to vendor this -->
-  <depend>ros_gz_interfaces_vendor</depend>
+  <depend>ros_gz_interfaces</depend>
   <depend>rosgraph_msgs</depend>
   <depend>sensor_msgs</depend>
   <depend>std_msgs</depend>
