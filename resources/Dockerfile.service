@@ -23,7 +23,7 @@ RUN . /opt/ros/${ROS_DISTRO}/setup.sh \
     && apt-get update \
     && rosdep update \
     && rosdep install --from-paths src --ignore-src -r -y \
-    && apt install -y ros-${ROS_DISTRO}-ament-cmake-vendor-package \
+    && apt install -y ros-${ROS_DISTRO}-rmw-zenoh-cpp ros-${ROS_DISTRO}-ament-cmake-vendor-package \
     && colcon build \
         --continue-on-error \
         --cmake-args -DCMAKE_BUILD_TYPE=Release \
@@ -39,7 +39,7 @@ ARG DEPENDENCIES
 
 ARG ROS_DISTRO=jazzy
 RUN apt-get update \
-    && apt install -y ros-${ROS_DISTRO}-rmw-zenoh-cpp python3-protobuf ${DEPENDENCIES} \
+    && apt install -y python3-protobuf ${DEPENDENCIES} \
     && rm -rf /var/lib/apt/lists/*
 
 ADD src /opt/ros/overlay/src
