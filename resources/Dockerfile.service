@@ -24,6 +24,7 @@ RUN . /opt/ros/${ROS_DISTRO}/setup.sh \
     && rosdep update \
     && rosdep install --from-paths src --ignore-src -r -y \
     && apt install -y ros-${ROS_DISTRO}-rmw-zenoh-cpp ros-${ROS_DISTRO}-ament-cmake-vendor-package \
+    && . /opt/ros/${ROS_DISTRO}/setup.sh \
     && colcon build \
         --continue-on-error \
         --cmake-args -DCMAKE_BUILD_TYPE=Release \
