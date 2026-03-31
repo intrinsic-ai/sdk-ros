@@ -56,7 +56,7 @@ if (TARGET grpc_vendor)
   )
 
   ExternalProject_Add_Step(grpc_vendor checkout_submodules
-    COMMAND git submodule update --init third_party/cares/cares
+    COMMAND git submodule update --init --depth 1 third_party/cares/cares
     WORKING_DIRECTORY "${SOURCE_DIR}"
     DEPENDEES download   # Run after vcs finishes downloading
     DEPENDERS configure  # Run before CMake starts configuring the build
@@ -78,7 +78,7 @@ if (TARGET grpc_vendor)
 
   # Add a step to build and install the Python package
   # We install to INSTALL_DIR so it gets picked up by ament_vendor's install()
-  ExternalProject_Add_Step(grpc_vendor install_python
+  ExternalProject_Add_Step(grpc_vendor install_python_grpcio
     COMMAND ${CMAKE_COMMAND} -E env
             "GRPC_PYTHON_BUILD_SYSTEM_ABSL=TRUE"
             "GRPC_PYTHON_ABSL_INCLUDE=${ABSL_INCLUDE_STR}"
@@ -89,6 +89,13 @@ if (TARGET grpc_vendor)
             "GRPC_PYTHON_BUILD_SYSTEM_ZLIB=TRUE"
             python3 -m pip install . --prefix=${INSTALL_DIR} --root=/ --no-deps --no-build-isolation
     DEPENDEES install
+    WORKING_DIRECTORY ${SOURCE_DIR}
+  )
+
+  ExternalProject_Add_Step(grpc_vendor install_python_grpcio_tools
+    COMMAND ${SOURCE_DIR}/tools/distrib/python/make_grpcio_tools.py
+    COMMAND python3 -m pip install tools/distrib/python/grpcio_tools --prefix=${INSTALL_DIR} --root=/ --no-deps --no-build-isolation
+    DEPENDEES install_python_grpcio
     WORKING_DIRECTORY ${SOURCE_DIR}
   )
 endif()
