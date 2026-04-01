@@ -62,7 +62,7 @@ In the root of a colcon workspace first set up the docker engine:
 Then, create the bundle with the `build_service_bundle.sh` script. This will compile the packages in a docker container and bundle that container in a tarball.
 
 ```bash
-./src/sdk-ros/flowstate_ros_bridge/scripts/build_service_bundle.sh jazzy
+./src/sdk-ros/flowstate_ros_bridge/scripts/build_service_bundle.sh --ros_distro jazzy
 ```
 
 > [!NOTE]

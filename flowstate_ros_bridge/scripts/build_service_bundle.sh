@@ -4,8 +4,36 @@ if [ ! -d "src/sdk-ros" ]; then
   exit
 fi
 
-# Reads first argument as ROS_DISTRO, default to jazzy
-ROS_DISTRO=${1:-"jazzy"}
+ROS_DISTRO="jazzy"
+
+show_help() {
+  echo "Usage: $(basename "$0") [OPTIONS]"
+  echo ""
+  echo "Build and bundle the AIC model container image for Flowstate."
+  echo ""
+  echo "Options:"
+  echo "  -h, --help           Show this help message and exit"
+  echo "  --ros_distro ROS_DISTRO  Name of the ROS distro (default: jazzy)"
+  echo ""
+}
+
+while [[ $# -gt 0 ]]; do
+  case $1 in
+    -h|--help)
+      show_help
+      exit 0
+      ;;
+    --ros_distro)
+      ROS_DISTRO="$2"
+      shift
+      shift
+      ;;
+    -*|--*)
+      echo "Unknown option $1"
+      exit 1
+      ;;
+  esac
+done
 
 set -o errexit
 set -o verbose
