@@ -4,7 +4,7 @@ string(STRIP "${WHEEL_NAME}" WHEEL_NAME)
 
 # Execute the pip command
 execute_process(
-    COMMAND python3 -m pip install "bazel-bin/python/dist/${WHEEL_NAME}" --prefix="${INSTALL_DIR}" --root=/ --no-deps --no-build-isolation
+    COMMAND python3 -m pip install "bazel-bin/python/dist/${WHEEL_NAME}" --prefix="${INSTALL_DIR}" --no-deps --no-build-isolation
     RESULT_VARIABLE result
 )
 
