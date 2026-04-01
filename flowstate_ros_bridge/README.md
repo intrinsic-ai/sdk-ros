@@ -74,3 +74,7 @@ With a solution open in Flowstate, the generated service bundle can be sideloade
 ```bash
 ./inctl service install images/flowstate_ros_bridge/flowstate_ros_bridge.bundle.tar --org $ORG --cluster $CLUSTER # replace with your org and cluster
 ```
+
+## Documentation
+
+* [Flowstate Robot State and Sensor ROS Bridge:](docs/robot_state_sensor.md) Explains the translation of internal Flowstate data (joint states, force/torque) into standard ROS 2 messages, with setup and testing instructions.

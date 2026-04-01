@@ -14,11 +14,10 @@
 
 #include "flowstate_ros_bridge/world.hpp"
 
-#include <utility>
-
 #include "absl/container/flat_hash_set.h"
 #include "absl/log/log.h"
 #include "absl/status/status.h"
+#include "absl/strings/str_format.h"
 #include "intrinsic/connect/cc/grpc/channel.h"
 #include "intrinsic/geometry/proto/geometry_service.grpc.pb.h"
 #include "intrinsic/util/grpc/grpc.h"
@@ -50,12 +49,30 @@ World::CreateTfSubscription(
   return std::make_shared<intrinsic::Subscription>(std::move(*sub));
 }
 
+absl::StatusOr<std::shared_ptr<intrinsic::Subscription>>
+World::CreateRobotStateSubscription(
+    intrinsic::SubscriptionOkCallback<intrinsic_proto::data_logger::LogItem>
+        callback,
+    const std::string& robot_controller_instance, bool throttle_topic) {
+  const std::string topic_name =
+      absl::StrFormat("/icon/%s/robot_status%s", robot_controller_instance,
+                      throttle_topic ? "_throttle" : "");
+
+  auto sub = pubsub_->CreateSubscription(topic_name, intrinsic::TopicConfig(),
+                                         callback);
+  if (!sub.ok()) {
+    return sub.status();
+  }
+  return std::make_shared<intrinsic::Subscription>(std::move(*sub));
+}
+
 absl::Status World::connect() {
   if (connected_) {
     return absl::OkStatus();
   }
 
-  grpc::ChannelArguments channel_args = intrinsic::connect::DefaultGrpcChannelArgs();
+  grpc::ChannelArguments channel_args =
+      intrinsic::connect::DefaultGrpcChannelArgs();
   // We might eventually need a retry policy here, like in executive (?)
   // Some of the meshes that we'll receive in the geometry client are large,
   // like a few 10's of MB.
@@ -131,10 +148,12 @@ absl::StatusOr<std::vector<intrinsic::world::WorldObject>> World::GetObjects(
 absl::StatusOr<std::string> World::GetGltf(const std::string& geometry_ref,
                                            const std::string& renderable_ref) {
   intrinsic_proto::geometry::GetRenderableRequest request;
-  *(request.mutable_geometry_storage_refs_v0()->mutable_geometry_ref()) =
-      geometry_ref;
-  *(request.mutable_geometry_storage_refs_v0()->mutable_renderable_ref()) =
-      renderable_ref;
+  auto* refs = request.mutable_geometry_storage_refs();
+  refs->set_exact_geometry_ref(geometry_ref);
+  refs->set_renderable_ref(renderable_ref);
+  // TODO(b-corry): Remove this when textures are automatically included in
+  // the glb file.
+  refs->set_keep_renderable(true);
 
   auto client_context = std::make_unique<grpc::ClientContext>();
   client_context->set_deadline(std::chrono::system_clock::now() +
@@ -145,7 +164,7 @@ absl::StatusOr<std::string> World::GetGltf(const std::string& geometry_ref,
   INTR_RETURN_IF_ERROR(intrinsic::ToAbslStatus(
       geometry_stub_->GetRenderable(client_context.get(), request, &response)));
 
-  return response.renderable_v0().gltf_string();
+  return response.renderable().glb_bytes();
 }
 
 }  // namespace flowstate_ros_bridge
