@@ -12,6 +12,10 @@ find_package(ament_cmake REQUIRED)
 # Find the cmake wrapper around the Intrinsic SDK.
 find_package(intrinsic_sdk_cmake REQUIRED)
 
+add_test(NAME test_python
+  COMMAND python3 -m unittest discover -s ${CMAKE_CURRENT_SOURCE_DIR}/test/python
+)
+
 ament_export_dependencies(intrinsic_sdk_cmake)
 
 ament_package()
