@@ -92,7 +92,7 @@ if (TARGET grpc_vendor)
             "GRPC_PYTHON_RE2_INCLUDE=${RE2_INCLUDE_STR}"
             "GRPC_PYTHON_RE2_LIB_DIR=${RE2_LIB_DIR}"
             "GRPC_PYTHON_BUILD_SYSTEM_ZLIB=TRUE"
-            python3 -m pip install . --prefix=${INSTALL_DIR} --root=/ --no-deps --no-build-isolation
+            python3 -m pip install . --prefix=${INSTALL_DIR} --no-deps --no-build-isolation
     DEPENDEES install_python_protobuf
     WORKING_DIRECTORY ${SOURCE_DIR}
   )
@@ -101,7 +101,7 @@ if (TARGET grpc_vendor)
     COMMAND ${SOURCE_DIR}/tools/distrib/python/make_grpcio_tools.py
     COMMAND ${CMAKE_COMMAND} -E env
             "GRPC_PYTHON_BUILD_WITH_CYTHON=TRUE"
-            python3 -m pip install tools/distrib/python/grpcio_tools --prefix=${INSTALL_DIR} --root=/ --no-deps --no-build-isolation
+            python3 -m pip install tools/distrib/python/grpcio_tools --prefix=${INSTALL_DIR} --no-deps --no-build-isolation
     DEPENDEES install_python_grpcio
     WORKING_DIRECTORY ${SOURCE_DIR}
   )
