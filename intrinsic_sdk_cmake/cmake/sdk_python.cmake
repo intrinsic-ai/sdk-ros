@@ -23,10 +23,11 @@ add_custom_target(intrinsic_sdk_protos_python_rename_googleapis
 file(GLOB_RECURSE intrinsic_python_SRCS
   RELATIVE "${intrinsic_sdk_SOURCE_DIR}"
   "${intrinsic_sdk_SOURCE_DIR}/**/*.py"
+  "${intrinsic_sdk_SOURCE_DIR}/**/*.pyi"
 )
 list(FILTER intrinsic_python_SRCS EXCLUDE REGEX "/\\.github/")
 list(FILTER intrinsic_python_SRCS EXCLUDE REGEX "/examples/")
-list(FILTER intrinsic_python_SRCS EXCLUDE REGEX "_test\\.py$")
+list(FILTER intrinsic_python_SRCS EXCLUDE REGEX "_test\\.pyi?$")
 
 # Overlay sdk Python files on top of generated protobuf Python files.
 set(copied_python_sdk_files "")

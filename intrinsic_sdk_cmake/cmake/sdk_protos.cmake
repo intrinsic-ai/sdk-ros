@@ -178,6 +178,8 @@ foreach(sdk_proto ${sdk_protos})
     "${CMAKE_CURRENT_BINARY_DIR}/protos_gen_py/${_rel_dir}/${_basename}_pb2.py")
   list(APPEND _proto_generated_files
     "${CMAKE_CURRENT_BINARY_DIR}/protos_gen_py/${_rel_dir}/${_basename}_pb2_grpc.py")
+  list(APPEND _proto_generated_files
+    "${CMAKE_CURRENT_BINARY_DIR}/protos_gen_py/${_rel_dir}/${_basename}_pb2.pyi")
   list(APPEND protoc_generated_files ${_proto_generated_files})
   add_custom_command(
     OUTPUT ${_proto_generated_files}
@@ -188,6 +190,7 @@ foreach(sdk_proto ${sdk_protos})
       ${protoc_include_flags}
       --python_out="${CMAKE_CURRENT_BINARY_DIR}/protos_gen_py"
       --grpc_python_out="${CMAKE_CURRENT_BINARY_DIR}/protos_gen_py"
+      --pyi_out="${CMAKE_CURRENT_BINARY_DIR}/protos_gen_py"
       "${sdk_proto}"
     COMMENT "Using 'grpc_tools.protoc' to generate Python code for '${sdk_proto}'..."
   )
