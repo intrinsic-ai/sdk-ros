@@ -62,8 +62,11 @@ In the root of a colcon workspace first set up the docker engine:
 Then, create the bundle with the `build_service_bundle.sh` script. This will compile the packages in a docker container and bundle that container in a tarball.
 
 ```bash
-./src/sdk-ros/flowstate_ros_bridge/scripts/build_service_bundle.sh
+./src/sdk-ros/flowstate_ros_bridge/scripts/build_service_bundle.sh jazzy
 ```
+
+> [!NOTE]
+> Replace `jazzy` with the target ROS 2 distro for building `flowstate_ros_bridge`. 
 
 The output of this command will be a tarball inside the `images` directory of the colcon workspace which can be pushed to Flowstate as a new service.
 
