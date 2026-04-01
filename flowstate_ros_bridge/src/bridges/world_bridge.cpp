@@ -164,30 +164,38 @@ absl::Status WorldBridge::Data::SendObjectVisualizationMessages(
       }
       for (const auto& named_geometry :
            entity.second.geometry_component().named_geometries()) {
-        // It seems the canonical constant for Intrinsic_Visual is not
-        // available externally, so it needs to be hard-coded here.
         if (named_geometry.first != "Intrinsic_Visual") continue;
-        for (const intrinsic_proto::world::GeometryComponent::Geometry&
-                 geometry : named_geometry.second.geometries()) {
-          const std::string renderable =
-              geometry.geometry_storage_refs().renderable_ref();
-          const std::string tf_frame_name =
-              absl::StrFormat("%s%s/%s", tf_prefix_.c_str(),
-                              object.Name().value(), entity.second.name());
+
+        const auto& named_geoms = named_geometry.second.named_geometries();
+
+        for (const auto& [inner_name, transformed_geometry] : named_geoms) {
+          const auto& geometry = transformed_geometry.geometry();
+          if (!geometry.has_geo_ref()) {
+            continue;
+          }
+          const auto& geo_ref = geometry.geo_ref();
+          const std::string object_name = object.Name().value();
+          const std::vector<absl::string_view> parts = absl::StrSplit(object_name, '/');
+          const absl::string_view short_name = parts.back();
+          
+          // In V1 SDK, the Flowstate TF stream appends the short object name again 
+          // between the full path and the entity name.
+          std::string tf_frame_name = absl::StrFormat("%s%s/%s/%s", tf_prefix_.c_str(),
+                                                      object_name, short_name, entity.second.name());
+          
           // Let's be smarter in the future. For now, just skip over
           // the intcas:// prefix
           const std::string gltf_path = absl::StrFormat(
               "gltf/%s_%s.glb",
-              geometry.geometry_storage_refs().geometry_ref().substr(9),
-              geometry.geometry_storage_refs().renderable_ref().substr(9));
+              geo_ref.exact_geometry_ref().substr(9),
+              geo_ref.renderable_ref().substr(9));
 
           const auto renderable_name = std::string("/") + gltf_path;
           auto renderables_it = renderables_.find(renderable_name);
 
           if (renderables_it == renderables_.end()) {
             const absl::StatusOr<std::string> gltf = world_->GetGltf(
-                geometry.geometry_storage_refs().geometry_ref(),
-                geometry.geometry_storage_refs().renderable_ref());
+                geo_ref.exact_geometry_ref(), geo_ref.renderable_ref());
             if (!gltf.ok()) {
               LOG(ERROR) << "Unable to fetch renderable for " << tf_frame_name
                          << ": " << gltf.status();
@@ -205,11 +213,15 @@ absl::Status WorldBridge::Data::SendObjectVisualizationMessages(
                     .first;
           }
 
+          const auto& ref_t_shape = transformed_geometry.ref_t_shape();
+          if (!ref_t_shape.has_matrix4d()) {
+            continue;
+          }
           const absl::StatusOr<intrinsic::eigenmath::MatrixXd> transform_xd =
-              intrinsic_proto::FromProto(geometry.ref_t_shape_aff());
-          if (!transform_xd.ok()) continue;
-          // An intermediate 4d matrix seems necessary for template inference to
-          // work as expected when converting to an AffineTransform3d later.
+              intrinsic_proto::FromProto(ref_t_shape.matrix4d());
+          if (!transform_xd.ok()) {
+            continue;
+          }
           const intrinsic::eigenmath::Matrix4d transform_4d = *transform_xd;
           const intrinsic::eigenmath::AffineTransform3d affine(transform_4d);
 

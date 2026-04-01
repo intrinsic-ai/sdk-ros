@@ -1,6 +1,8 @@
 cmake_minimum_required(VERSION 3.8)
 project(flowstate_ros_bridge)
 
+include(GNUInstallDirs)
+
 # Default to C++17
 if(NOT CMAKE_CXX_STANDARD)
   set(CMAKE_CXX_STANDARD 17)
@@ -15,7 +17,7 @@ find_package(ament_cmake REQUIRED)
 
 # other dependencies
 set(dep_pkgs
-  absl
+  abseil_cpp_vendor
   flowstate_interfaces
   std_msgs
   tf2_msgs
@@ -106,7 +108,7 @@ target_include_directories(flowstate_ros_builtin_bridges
     ${pluginlib_INCLUDE_DIRS}
     ${rclcpp_action_INCLUDE_DIRS}
 )
-target_compile_options(flowstate_ros_builtin_bridges PUBLIC INTERFACE cxx_std_17)
+target_compile_features(flowstate_ros_builtin_bridges PUBLIC INTERFACE cxx_std_17)
 target_link_libraries(flowstate_ros_builtin_bridges
   PUBLIC
     world
@@ -190,6 +192,10 @@ target_link_libraries(${SERVICE_NAME}_main
 )
 
 # installs
+install(DIRECTORY include/
+  DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+)
+
 install(TARGETS
   executive
   world
@@ -201,6 +207,7 @@ install(TARGETS
   RUNTIME DESTINATION lib/${PROJECT_NAME}
   LIBRARY DESTINATION lib
   ARCHIVE DESTINATION lib
+  INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
 )
 
 # Generate the manifest and default config binarypb files

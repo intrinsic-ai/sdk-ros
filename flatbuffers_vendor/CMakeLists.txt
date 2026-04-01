@@ -12,7 +12,7 @@ find_package(ament_cmake_vendor_package REQUIRED)
 
 ament_vendor(flatbuffers_vendor
   VCS_URL https://github.com/google/flatbuffers
-  VCS_VERSION v25.2.10
+  VCS_VERSION v25.12.19
 )
 
 ament_package()

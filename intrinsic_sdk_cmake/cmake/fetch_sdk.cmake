@@ -15,6 +15,7 @@ FetchContent_Declare(
   DOWNLOAD_EXTRACT_TIMESTAMP FALSE
   PATCH_COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/cmake/sdk_patches/apply_patch.sh
     ${CMAKE_CURRENT_SOURCE_DIR}/cmake/sdk_patches/001_zenoh_helpers_cc_no_runfiles.patch
+    ${CMAKE_CURRENT_SOURCE_DIR}/cmake/sdk_patches/002_gcc13_publisher_noexcept.patch
 )
 FetchContent_GetProperties(intrinsic_sdk)
 if(NOT intrinsic_sdk_POPULATED)
