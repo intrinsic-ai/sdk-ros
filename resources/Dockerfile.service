@@ -30,7 +30,8 @@ RUN . /opt/ros/${ROS_DISTRO}/setup.sh \
         --cmake-args -DCMAKE_BUILD_TYPE=Release \
         --event-handlers=console_direct+ \
         --merge-install \
-        --packages-up-to intrinsic_sdk
+        --packages-up-to intrinsic_sdk \
+    && dpkg --get-selections > /installed_dependencies.txt
 
 # overlay stage: underlay + service code built
 FROM underlay AS overlay
@@ -63,8 +64,13 @@ ARG SERVICE_NAME
 ARG DEPENDENCIES
 
 ARG ROS_DISTRO=jazzy
+
+COPY --from=underlay /installed_dependencies.txt /installed_dependencies.txt
+
 RUN apt-get update \
-    && apt-get install -y ros-${ROS_DISTRO}-rmw-zenoh-cpp \
+    && apt-cache dumpavail | sudo dpkg --merge-avail \
+    && dpkg --set-selections < /installed_dependencies.txt \
+    && apt-get dselect-upgrade -y \
     && rm -rf /var/lib/apt/lists/*
 
 COPY --from=overlay /opt/ros/underlay/install /opt/ros/underlay/install
