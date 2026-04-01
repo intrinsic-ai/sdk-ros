@@ -16,12 +16,13 @@
   ],
   executive_deadline_seconds: 5
   executive_update_rate_millis: 1000
-  world_update_rate_millis: 1000
   sensors: {
-    enable_robot_joint_state: true
-    enable_force_torque: true
+    enable_robot_joint_state_topic: true
+    enable_force_torque_topic: true
     robot_joint_state_topic: "/robot_joint_state"
     force_torque_topic: "/force_torque_sensor"
-    robot_controller_name: "robot_controller"
+    force_torque_sensor_frame_id: "force_torque_sensor/force_torque_sensor/AtiForceTorqueSensor"
+    robot_controller_instance: "robot_controller"
+    throttle_robot_state_topic: false
   },
 }

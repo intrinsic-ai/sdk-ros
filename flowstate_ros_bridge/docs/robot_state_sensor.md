@@ -8,7 +8,7 @@ This bridge facilitates the translation of internal Flowstate data—specificall
 **How it works:**
 
 * **Configurable Filtering:** The bridge utilizes a `SensorPublisherConfig` Protobuf message to manage data streams. Users can toggle specific sensor topics (robot state or force/torque) on or off via Flowstate `ROS bridge` service configuration, which prevents the instantiation of unnecessary ROS publishers and reduces network overhead.
-* **Zenoh-Based Subscriptions:** The bridge uses the `intrinsic::platform::pubsub` library to establish direct Zenoh subscriptions to Flowstate's internal telemetry topics, such as `/icon/robot_controller/robot_status_throttle`.
+* **Zenoh-Based Subscriptions:** The bridge uses the `intrinsic::platform::pubsub` library to establish direct Zenoh subscriptions to Flowstate's internal telemetry topics, such as the high-frequency `/icon/robot_controller/robot_status` topic. If the parameter `throttle_robot_state_topic` is set to `True`, then the frequency will be throttled by subscribing to the low-frequency equivalent of the topic which is `/icon/robot_controller/robot_status_throttle`.
 * **Callback-Driven Translation:** The bridge registers dedicated callback functions (e.g., `RobotStateCallback`) that are triggered whenever new data arrives on the subscribed topics. These handlers parse the high-frequency Protobuf payloads and map them into ROS-native messages `JointState` and `WrenchStamped`.
 
 The implementation is integrated into the following components:
@@ -41,9 +41,9 @@ The `sensor_msgs/msg/JointState` message is populated by iterating through each 
 | `header.stamp` | Provided `rclcpp::Time` | Synchronized to the callback trigger time. |
 | `header.frame_id` | N/A | Typically left empty or defined by global prefix. |
 | `name` | `part_name` + `_joint_` + `index` | Generated as `absl::StrFormat("%s_joint_%d", part_name, i)`. |
-| `position` | `joint_state.position_sensed()` | Defaults to `0.0` if position is not sensed. |
-| `velocity` | `joint_state.velocity_sensed()` | Defaults to `0.0` if velocity is not sensed. |
-| `effort` | `joint_state.torque_sensed()` | Defaults to `0.0` if torque is not sensed . |
+| `position` | `joint_state.position_sensed()` | Defaults to `NaN` if position is not sensed. |
+| `velocity` | `joint_state.velocity_sensed()` | Defaults to `NaN` if velocity is not sensed. |
+| `effort` | `joint_state.torque_sensed()` | Defaults to `NaN` if torque is not sensed . |
 
 #### **Wrench (Force/Torque) Mapping**
 The `geometry_msgs/msg/WrenchStamped` message maps 6-axis force and torque data directly from the `wrench_at_ft` field.
@@ -65,8 +65,13 @@ These parameters are defined in the `SensorPublisherConfig` message and can be m
 
 | Parameter Name | Default | Description |
 | :--- | :--- | :--- |
-| `enable_robot_joint_state_topic` | `true` | Enables publishing of robot joint states. |
-| `enable_force_torque_topic` | `true` | Enables publishing of F/T sensor data. |
+| `enable_robot_joint_state_topic` | `true` | Enables publishing of robot joint states in ROS. |
+| `enable_force_torque_topic` | `true` | Enables publishing of F/T sensor data in ROS. |
+| `robot_joint_state_topic` | `/robot_joint_state` | Topic to publish joint state data on. |
+| `force_torque_topic` | `/force_torque_sensor` | Topic to publish F/T sensor data on. |
+| `force_torque_sensor_frame_id` | `force_torque_sensor/force_torque_sensor/AtiForceTorqueSensor` | Frame ID of F/T sensor to be used in force_torque_topic. |
+| `robot_controller_instance` | `robot_controller` | Name of the ICON service/resource instance. |
+| `throttle_robot_state_topic` | `false` | By default, the bridge subscribes to the high-frequency `/icon/robot_controller/robot_status` state topic (~300 Hz). If this parameter is set to `True`, then the low-frequency equivalent (~25 Hz), topic  `/icon/robot_controller/robot_status_throttle`, will be used instead. |
 
 ---
 

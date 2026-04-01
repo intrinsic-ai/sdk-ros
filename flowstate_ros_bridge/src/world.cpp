@@ -14,12 +14,10 @@
 
 #include "flowstate_ros_bridge/world.hpp"
 
-#include <utility>
-
 #include "absl/container/flat_hash_set.h"
-#include "absl/strings/str_format.h"
 #include "absl/log/log.h"
 #include "absl/status/status.h"
+#include "absl/strings/str_format.h"
 #include "intrinsic/connect/cc/grpc/channel.h"
 #include "intrinsic/geometry/proto/geometry_service.grpc.pb.h"
 #include "intrinsic/util/grpc/grpc.h"
@@ -51,11 +49,15 @@ World::CreateTfSubscription(
   return std::make_shared<intrinsic::Subscription>(std::move(*sub));
 }
 
-absl::StatusOr<std::shared_ptr<intrinsic::Subscription>> World::CreateRobotStateSubscription(
-    intrinsic::SubscriptionOkCallback<intrinsic_proto::data_logger::LogItem> callback,
-    const std::string& robot_controller_name)
-{
-  const std::string topic_name = absl::StrFormat("/icon/%s/robot_status_throttle", robot_controller_name);
+absl::StatusOr<std::shared_ptr<intrinsic::Subscription>>
+World::CreateRobotStateSubscription(
+    intrinsic::SubscriptionOkCallback<intrinsic_proto::data_logger::LogItem>
+        callback,
+    const std::string& robot_controller_instance, bool throttle_topic) {
+  const std::string topic_name =
+      absl::StrFormat("/icon/%s/robot_status%s", robot_controller_instance,
+                      throttle_topic ? "_throttle" : "");
+
   auto sub = pubsub_->CreateSubscription(topic_name, intrinsic::TopicConfig(),
                                          callback);
   if (!sub.ok()) {
@@ -69,7 +71,8 @@ absl::Status World::connect() {
     return absl::OkStatus();
   }
 
-  grpc::ChannelArguments channel_args = intrinsic::connect::DefaultGrpcChannelArgs();
+  grpc::ChannelArguments channel_args =
+      intrinsic::connect::DefaultGrpcChannelArgs();
   // We might eventually need a retry policy here, like in executive (?)
   // Some of the meshes that we'll receive in the geometry client are large,
   // like a few 10's of MB.
