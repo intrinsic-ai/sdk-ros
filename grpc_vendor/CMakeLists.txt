@@ -105,6 +105,13 @@ if (TARGET grpc_vendor)
     DEPENDEES install_python_grpcio
     WORKING_DIRECTORY ${SOURCE_DIR}
   )
+
+  add_test(NAME test_grpc_import
+    COMMAND python3 ${CMAKE_CURRENT_SOURCE_DIR}/test/test_grpc_import.py
+  )
+  set_tests_properties(test_grpc_import PROPERTIES ENVIRONMENT
+    "PYTHONPATH=${INSTALL_DIR}/local/lib/python3.12/dist-packages:$ENV{PYTHONPATH}"
+  )
 endif()
 
 ament_environment_hooks(
