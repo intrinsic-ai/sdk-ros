@@ -16,9 +16,7 @@
 #define BRIDGES__WORLD_BRIDGE_HPP_
 
 #include <memory>
-#include <set>
 #include <thread>
-#include <utility>
 
 #include "absl/container/flat_hash_map.h"
 #include "absl/container/flat_hash_set.h"
@@ -26,7 +24,9 @@
 #include "absl/synchronization/mutex.h"
 #include "flowstate_interfaces/srv/get_resource.hpp"
 #include "flowstate_ros_bridge/bridge_interface.hpp"
+#include "geometry_msgs/msg/wrench_stamped.hpp"
 #include "rclcpp/rclcpp.hpp"
+#include "sensor_msgs/msg/joint_state.hpp"
 #include "tf2_msgs/msg/tf_message.hpp"
 #include "visualization_msgs/msg/marker_array.hpp"
 
@@ -52,6 +52,22 @@ class WorldBridge : public BridgeInterface {
  private:
   void TfCallback(const intrinsic_proto::TFMessage&);
 
+  void RobotStateCallback(const intrinsic_proto::data_logger::LogItem&);
+
+  // Helper method for unpacking data in the RobotStatus proto and publishing
+  // them
+  void HandleRobotStatus(const intrinsic_proto::icon::RobotStatus& robot_status,
+                         const rclcpp::Time& time);
+
+  void PublishJointState(const std::string& part_name,
+                         const intrinsic_proto::icon::PartStatus& part_status,
+                         const rclcpp::Time& time);
+
+  void PublishForceTorqueSensor(
+      const std::string& frame_id,
+      const intrinsic_proto::icon::PartStatus& part_status,
+      const rclcpp::Time& time);
+
   struct Data : public std::enable_shared_from_this<Data> {
     /**
      * @brief Send visualization messages for Flowstate sceneObjects
@@ -66,8 +82,24 @@ class WorldBridge : public BridgeInterface {
 
     ROSNodeInterfaces node_interfaces_;
     std::shared_ptr<World> world_;
+
+    // TF functionality
     std::shared_ptr<intrinsic::Subscription> tf_sub_;
     std::shared_ptr<rclcpp::Publisher<tf2_msgs::msg::TFMessage>> tf_pub_;
+
+    // Robot state and force torque functionality
+    std::shared_ptr<intrinsic::Subscription> robot_state_sub_;
+    std::shared_ptr<rclcpp::Publisher<sensor_msgs::msg::JointState>>
+        robot_joint_state_pub_;
+    std::shared_ptr<rclcpp::Publisher<geometry_msgs::msg::WrenchStamped>>
+        force_torque_pub_;
+    bool robot_joint_state_topic_enabled_;
+    bool force_torque_topic_enabled_;
+    std::string ft_sensor_frame_id_;
+    // Cached part names to avoid repeated map iteration
+    std::optional<std::string> robot_arm_part_name_;
+    std::optional<std::string> force_torque_part_name_;
+
     std::shared_ptr<rclcpp::Publisher<visualization_msgs::msg::MarkerArray>>
         workcell_markers_pub_;
     std::string tf_prefix_;
