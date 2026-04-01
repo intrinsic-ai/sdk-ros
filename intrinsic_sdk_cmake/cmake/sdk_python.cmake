@@ -62,6 +62,7 @@ set(python_packages_to_install
   "googleapis"  # This one is a re-namespacing of the generated googleapis proto python packages
   "intrinsic"
   "protoc_gen_openapiv2"  # This one should be fixed to have a better python package name
+  "cel"
   # "src"  # This one is disabled because it isn't being used atm and is a weird layout
   # "third_party"  # This one contains protobuf versions of ROS messages and is unused atm
 )
