@@ -3,10 +3,16 @@ import asyncio
 import sys
 
 import aiohttp
+import grpc
 from aiohttp import web
 from flowstate_credentials_proxy import auth
 from flowstate_credentials_proxy.auth import InvalidOrganizationError
-from flowstate_credentials_proxy.grpc import create_channel
+from flowstate_credentials_proxy.grpc import create_onprem_channel_async
+from intrinsic.assets.proto.id_pb2 import Id
+from intrinsic.assets.proto.installed_assets_pb2 import (
+    GetInstalledAssetRequest,
+    InstalledAsset,
+)
 from intrinsic.assets.proto.installed_assets_pb2_grpc import InstalledAssetsStub
 
 
@@ -80,8 +86,54 @@ async def proxy(
         return ws_response
 
 
-class TokenError(RuntimeError):
+class InitFlowstateRosBridgeError(Exception):
     pass
+
+
+async def init_flowstate_ros_bridge(token_source: auth.TokenSource, cluster: str):
+    #     token = await token_source.get_token()
+    #     print(
+    #         f"""Successfully authenticated to flowstate.
+    # You may now start rmw_zenohd and connect it to the proxy by running:
+
+    # ```
+    # ZENOH_CONFIG_OVERRIDE='connect/endpoints=["ws/localhost:{args.port}"];routing/router/peers_failover_brokering=true' ros2 run rmw_zenoh_cpp rmw_zenohd
+    # ```"""
+    #     )
+
+    # try:
+    #     loop.run_until_complete(check_token())
+    # except aiohttp.ClientResponseError as e:
+    #     if e.status == 401:
+    #         print(f"Failed to authenticate to flowstate: {e.message}", file=sys.stderr)
+    #         print(
+    #             f"Try refreshing your api key `inctl auth login --org={args.org}`",
+    #             file=sys.stderr,
+    #         )
+    #         sys.exit(401)
+    #     else:
+    #         raise e
+
+    channel = create_onprem_channel_async(token_source, cluster)
+    async with channel:
+        installed_assets_client = InstalledAssetsStub(channel)
+        try:
+            installed_asset: InstalledAsset = (
+                await installed_assets_client.GetInstalledAsset(
+                    GetInstalledAssetRequest(
+                        id=Id(package="ai.intrinsic", name="flowstate_ros_bridgea")
+                    )
+                )
+            )
+            print(installed_asset)
+        except grpc.aio.AioRpcError as e:
+            if e.code() == grpc.StatusCode.NOT_FOUND:
+                # TODO: ask user if they want to install
+                raise InitFlowstateRosBridgeError(
+                    "flowstate_ros_bridge is not installed"
+                ) from e
+            else:
+                raise e
 
 
 def main():
@@ -119,42 +171,20 @@ Download inctl here https://github.com/intrinsic-ai/sdk/releases""",
         print(f"Error: {e}", file=sys.stderr)
         return
 
+    try:
+        asyncio.run(init_flowstate_ros_bridge(token_source, args.cluster))
+    except InitFlowstateRosBridgeError as e:
+        print(e)
+        exit(1)
+
     print(f"Starting zenoh proxy on port {args.port}.")
 
-    async def check_token():
-        await token_source.get_token()
-        print(
-            f"""Successfully authenticated to flowstate.
-You may now start rmw_zenohd and connect it to the proxy by running:
+    # app = web.Application()
+    # app.add_routes(
+    #     [web.get("/", lambda req: proxy(req, token_source, args.cluster, args.service))]
+    # )
 
-```
-ZENOH_CONFIG_OVERRIDE='connect/endpoints=["ws/localhost:{args.port}"];routing/router/peers_failover_brokering=true' ros2 run rmw_zenoh_cpp rmw_zenohd
-```"""
-        )
-
-    try:
-        asyncio.run(check_token())
-    except aiohttp.ClientResponseError as e:
-        if e.status == 401:
-            print(f"Failed to authenticate to flowstate: {e.message}", file=sys.stderr)
-            print(
-                f"Try refreshing your api key `inctl auth login --org={args.org}`",
-                file=sys.stderr,
-            )
-            sys.exit(401)
-        else:
-            raise e
-
-    channel = create_channel(token_source.project)
-    installed_assets = InstalledAssetsStub(channel)
-    installed_assets.ListInstalledAssets()
-
-    app = web.Application()
-    app.add_routes(
-        [web.get("/", lambda req: proxy(req, token_source, args.cluster, args.service))]
-    )
-
-    web.run_app(app, port=args.port, handle_signals=True, print=None)
+    # web.run_app(app, port=args.port, handle_signals=True, print=None)
 
 
 if __name__ == "__main__":
