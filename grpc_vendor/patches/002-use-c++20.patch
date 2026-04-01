@@ -1,0 +1,57 @@
+diff --git a/setup.py b/setup.py
+index 2c0ce86..1d70690 100644
+--- a/setup.py
++++ b/setup.py
+@@ -216,7 +216,7 @@ def check_linker_need_libatomic():
+     )
+     cxx = shlex.split(os.environ.get("CXX", "c++"))
+     cpp_test = subprocess.Popen(
+-        cxx + ["-x", "c++", "-std=c++17", "-"],
++        cxx + ["-x", "c++", "-std=c++20", "-"],
+         stdin=PIPE,
+         stdout=PIPE,
+         stderr=PIPE,
+@@ -227,7 +227,7 @@ def check_linker_need_libatomic():
+     # Double-check to see if -latomic actually can solve the problem.
+     # https://github.com/grpc/grpc/issues/22491
+     cpp_test = subprocess.Popen(
+-        cxx + ["-x", "c++", "-std=c++17", "-", "-latomic"],
++        cxx + ["-x", "c++", "-std=c++20", "-", "-latomic"],
+         stdin=PIPE,
+         stdout=PIPE,
+         stderr=PIPE,
+@@ -237,7 +237,7 @@ def check_linker_need_libatomic():
+ 
+ 
+ # When building extensions for macOS on a system running macOS 11.0 or newer,
+-# make sure they target macOS 11.0 or newer to use C++17 stdlib properly.
++# make sure they target macOS 11.0 or newer to use c++20 stdlib properly.
+ # This overrides the default behavior of distutils, which targets the macOS
+ # version Python was built on. You can further customize the target macOS
+ # version by setting the MACOSX_DEPLOYMENT_TARGET environment variable before
+@@ -264,20 +264,20 @@ if EXTRA_ENV_COMPILE_ARGS is None:
+     EXTRA_ENV_COMPILE_ARGS = ""
+     if "win32" in sys.platform:
+         # MSVC by defaults uses C++14 and C89 so both needs to be configured.
+-        EXTRA_ENV_COMPILE_ARGS += " /std:c++17"
++        EXTRA_ENV_COMPILE_ARGS += " /std:c++20"
+         EXTRA_ENV_COMPILE_ARGS += " /std:c11"
+         # We need to statically link the C++ Runtime, only the C runtime is
+         # available dynamically
+         EXTRA_ENV_COMPILE_ARGS += " /MT"
+     elif "linux" in sys.platform:
+-        # GCC by defaults uses C17 so only C++17 needs to be specified.
+-        EXTRA_ENV_COMPILE_ARGS += " -std=c++17"
++        # GCC by defaults uses C17 so only c++20 needs to be specified.
++        EXTRA_ENV_COMPILE_ARGS += " -std=c++20"
+         EXTRA_ENV_COMPILE_ARGS += (
+             " -fvisibility=hidden -fno-wrapv -fno-exceptions"
+         )
+     elif "darwin" in sys.platform:
+-        # AppleClang by defaults uses C17 so only C++17 needs to be specified.
+-        EXTRA_ENV_COMPILE_ARGS += " -std=c++17"
++        # AppleClang by defaults uses C17 so only c++20 needs to be specified.
++        EXTRA_ENV_COMPILE_ARGS += " -std=c++20"
+         EXTRA_ENV_COMPILE_ARGS += (
+             " -stdlib=libc++ -fvisibility=hidden -fno-wrapv -fno-exceptions"
+             " -DHAVE_UNISTD_H"

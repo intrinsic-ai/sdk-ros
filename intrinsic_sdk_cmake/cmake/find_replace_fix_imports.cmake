@@ -7,6 +7,7 @@ set(python_package_to_install_package_dir_fixed
 file(GLOB_RECURSE python_package_sources
   RELATIVE "${python_package_to_install_package_dir}"
   "${python_package_to_install_package_dir}/**/*.py"
+  "${python_package_to_install_package_dir}/**/*.pyi"
 )
 
 set(FIND_LIST
