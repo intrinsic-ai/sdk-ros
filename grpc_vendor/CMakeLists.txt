@@ -65,7 +65,7 @@ if (TARGET grpc_vendor)
   )
   ExternalProject_Add_Step(grpc_vendor install_python_protobuf
     COMMAND ${CMAKE_COMMAND} -DINSTALL_DIR=${INSTALL_DIR} -P ${CMAKE_CURRENT_SOURCE_DIR}/cmake/install_protobuf_wheel.cmake
-    DEPENDEES install
+    DEPENDEES build_python_protobuf
     WORKING_DIRECTORY ${SOURCE_DIR}/third_party/protobuf
 )
 
