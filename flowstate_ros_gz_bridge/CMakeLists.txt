@@ -9,7 +9,7 @@ endif()
 
 # find dependencies
 find_package(ament_cmake REQUIRED)
-find_package(intrinsic_sdk_ros REQUIRED)
+find_package(intrinsic_sdk_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(ros_gz_bridge REQUIRED)
 

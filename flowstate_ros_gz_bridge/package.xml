@@ -11,7 +11,7 @@
 
   <depend>rclcpp</depend>
   <depend>ros_gz_bridge_vendor</depend>
-  <depend>intrinsic_sdk_ros</depend>
+  <depend>intrinsic_sdk_cmake</depend>
 
   <export>
     <build_type>ament_cmake</build_type>
