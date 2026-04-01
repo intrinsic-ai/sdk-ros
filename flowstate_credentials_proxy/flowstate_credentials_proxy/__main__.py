@@ -6,6 +6,8 @@ import aiohttp
 from aiohttp import web
 from flowstate_credentials_proxy import auth
 from flowstate_credentials_proxy.auth import InvalidOrganizationError
+from flowstate_credentials_proxy.grpc import create_channel
+from intrinsic.assets.proto.installed_assets_pb2_grpc import InstalledAssetsStub
 
 
 async def proxy(
@@ -66,7 +68,10 @@ async def proxy(
                 )
     except aiohttp.ClientResponseError as e:
         if e.status == 404:
-            print(f"Failed to connect to {e.request_info.url}. Make sure that the cluster and service name is correct.", file=sys.stderr)
+            print(
+                f"Failed to connect to {e.request_info.url}. Make sure that the cluster and service name is correct.",
+                file=sys.stderr,
+            )
         else:
             raise e
     except Exception as e:
@@ -139,6 +144,10 @@ ZENOH_CONFIG_OVERRIDE='connect/endpoints=["ws/localhost:{args.port}"];routing/ro
             sys.exit(401)
         else:
             raise e
+
+    channel = create_channel(token_source.project)
+    installed_assets = InstalledAssetsStub(channel)
+    installed_assets.ListInstalledAssets()
 
     app = web.Application()
     app.add_routes(

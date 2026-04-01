@@ -7,6 +7,7 @@
   <maintainer email="koonpeng@intrinsic.ai">koonpeng</maintainer>
   <license>Apache-2.0</license>
 
+  <depend>intrinsic_sdk_ros</depend>
   <depend>python3-aiohttp</depend>
 
   <export>
