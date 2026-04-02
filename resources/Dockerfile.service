@@ -23,13 +23,15 @@ RUN . /opt/ros/${ROS_DISTRO}/setup.sh \
     && apt-get update \
     && rosdep update \
     && rosdep install --from-paths src --ignore-src -r -y \
-    && apt install -y ros-${ROS_DISTRO}-ament-cmake-vendor-package \
+    && apt install -y ros-${ROS_DISTRO}-rmw-zenoh-cpp ros-${ROS_DISTRO}-ament-cmake-vendor-package \
+    && . /opt/ros/${ROS_DISTRO}/setup.sh \
     && colcon build \
         --continue-on-error \
         --cmake-args -DCMAKE_BUILD_TYPE=Release \
         --event-handlers=console_direct+ \
         --merge-install \
-        --packages-up-to intrinsic_sdk
+        --packages-up-to intrinsic_sdk \
+    && dpkg --get-selections > /installed_dependencies.txt
 
 # overlay stage: underlay + service code built
 FROM underlay AS overlay
@@ -39,7 +41,7 @@ ARG DEPENDENCIES
 
 ARG ROS_DISTRO=jazzy
 RUN apt-get update \
-    && apt install -y ros-${ROS_DISTRO}-rmw-zenoh-cpp python3-protobuf ${DEPENDENCIES} \
+    && apt install -y python3-protobuf ${DEPENDENCIES} \
     && rm -rf /var/lib/apt/lists/*
 
 ADD src /opt/ros/overlay/src
@@ -62,8 +64,13 @@ ARG SERVICE_NAME
 ARG DEPENDENCIES
 
 ARG ROS_DISTRO=jazzy
+
+COPY --from=underlay /installed_dependencies.txt /installed_dependencies.txt
+
 RUN apt-get update \
-    && apt-get install -y ros-${ROS_DISTRO}-rmw-zenoh-cpp \
+    && apt-cache dumpavail | sudo dpkg --merge-avail \
+    && dpkg --set-selections < /installed_dependencies.txt \
+    && apt-get dselect-upgrade -y \
     && rm -rf /var/lib/apt/lists/*
 
 COPY --from=overlay /opt/ros/underlay/install /opt/ros/underlay/install
