@@ -141,30 +141,6 @@ set_property(TARGET intrinsic_sdk_services PROPERTY POSITION_INDEPENDENT_CODE ON
 
 # Generate Python code from the protos.
 # Use the protoc from the grpcio-tools Python package to generate _pb2.py and _pb2_grpc.py files.
-set(venv_dir "${CMAKE_CURRENT_BINARY_DIR}/grpc_venv")
-if(NOT EXISTS "${venv_dir}")
-  execute_process(
-    COMMAND "${Python3_EXECUTABLE}" -m venv "${venv_dir}"
-    WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}"
-    RESULT_VARIABLE VENV_CREATE_RESULT
-    OUTPUT_VARIABLE VENV_CREATE_OUTPUT
-    ERROR_VARIABLE VENV_CREATE_ERROR
-  )
-  if(NOT VENV_CREATE_RESULT EQUAL 0)
-    message(FATAL_ERROR "Failed to create virtual environment: ${VENV_CREATE_ERROR}")
-  endif()
-
-  execute_process(
-    COMMAND "${venv_dir}/bin/pip" install -U grpcio-tools==1.74
-    WORKING_DIRECTORY "${venv_dir}"
-    RESULT_VARIABLE PIP_INSTALL_RESULT
-    OUTPUT_VARIABLE PIP_INSTALL_OUTPUT
-    ERROR_VARIABLE PIP_INSTALL_ERROR
-  )
-  if(NOT PIP_INSTALL_RESULT EQUAL 0)
-    message(FATAL_ERROR "Failed to install Python dependencies: ${PIP_INSTALL_ERROR}")
-  endif()
-endif()
 set(protoc_include_flags)
 foreach(sdk_proto_import_dir ${sdk_proto_import_dirs})
   list(APPEND protoc_include_flags -I "${sdk_proto_import_dir}")
@@ -202,16 +178,19 @@ foreach(sdk_proto ${sdk_protos})
     "${CMAKE_CURRENT_BINARY_DIR}/protos_gen_py/${_rel_dir}/${_basename}_pb2.py")
   list(APPEND _proto_generated_files
     "${CMAKE_CURRENT_BINARY_DIR}/protos_gen_py/${_rel_dir}/${_basename}_pb2_grpc.py")
+  list(APPEND _proto_generated_files
+    "${CMAKE_CURRENT_BINARY_DIR}/protos_gen_py/${_rel_dir}/${_basename}_pb2.pyi")
   list(APPEND protoc_generated_files ${_proto_generated_files})
   add_custom_command(
     OUTPUT ${_proto_generated_files}
     DEPENDS "${sdk_proto}"
     COMMAND
-      "${venv_dir}/bin/python3"
+      "python3"
       -m grpc_tools.protoc
       ${protoc_include_flags}
       --python_out="${CMAKE_CURRENT_BINARY_DIR}/protos_gen_py"
       --grpc_python_out="${CMAKE_CURRENT_BINARY_DIR}/protos_gen_py"
+      --pyi_out="${CMAKE_CURRENT_BINARY_DIR}/protos_gen_py"
       "${sdk_proto}"
     COMMENT "Using 'grpc_tools.protoc' to generate Python code for '${sdk_proto}'..."
   )

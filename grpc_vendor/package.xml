@@ -18,6 +18,12 @@
   <buildtool_depend>ament_cmake</buildtool_depend>
   <buildtool_depend>ament_cmake_vendor_package</buildtool_depend>
 
+  <build_depend>bazelisk_vendor</build_depend>
+  <build_depend>python3-dev</build_depend>
+  <build_depend>python3-setuptools</build_depend>
+  <build_depend>python3-pip</build_depend>
+  <build_depend>cython3</build_depend>
+
   <depend>abseil_cpp_vendor</depend>
   <depend>protobuf-dev</depend>
   <depend>re2_vendor</depend>
