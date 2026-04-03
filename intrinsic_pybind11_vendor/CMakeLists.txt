@@ -10,7 +10,7 @@ endif()
 find_package(ament_cmake REQUIRED)
 find_package(ament_cmake_vendor_package REQUIRED)
 
-set(_pybind11_ver "2.11.0")
+set(_pybind11_ver "3.0.0")
 set(pybind11_satisfied_by_system FALSE)
 find_package(pybind11 CONFIG QUIET)
 if(pybind11_FOUND)
