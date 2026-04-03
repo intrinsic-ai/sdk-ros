@@ -41,11 +41,6 @@ while [[ $# -gt 0 ]]; do
       shift # past argument
       shift # past value
       ;;
-    --manifest_path)
-      MANIFEST_PATH="$2"
-      shift # past argument
-      shift # past value
-      ;;
     --dependencies)
       DEPENDENCIES="$2"
       shift # past argument

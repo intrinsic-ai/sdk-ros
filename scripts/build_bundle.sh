@@ -26,6 +26,7 @@ while [[ $# -gt 0 ]]; do
       shift # past value
       ;;
     --skill_name)
+      SKILL_NAME="$2"
       shift # past argument
       shift # past value
       ;;
@@ -61,6 +62,16 @@ if [[ -z "$SERVICE_NAME" && -z "$SKILL_NAME" ]]; then
   exit 1
 fi
 
+if [[ -n "$SERVICE_NAME" && -z "$SERVICE_PACKAGE" ]]; then
+  echo "ERROR: --service_package must be provided when --service_name is specified."
+  exit 1
+fi
+
+if [[ -n "$SKILL_NAME" && -z "$SKILL_PACKAGE" ]]; then
+  echo "ERROR: --skill_package must be provided when --skill_name is specified."
+  exit 1
+fi
+
 SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 
 # Parse the SDK_VERSION from sdk_version.json
@@ -79,10 +90,10 @@ if [[ -n "$SERVICE_NAME" && -n "$SERVICE_PACKAGE" ]]; then
   docker load -i "$IMAGES_DIR/$SERVICE_NAME/$SERVICE_NAME.tar"
   
   echo "INFO: Extracting config and descriptor set from container..."
-  docker create --name "temp_container_service" "$SERVICE_PACKAGE:$SERVICE_NAME" > /dev/null
+  docker create --name "temp_container_service" "$SERVICE_PACKAGE:$SERVICE_NAME"
   docker cp "temp_container_service:/opt/ros/overlay/install/share/${SERVICE_PACKAGE}/${SERVICE_NAME}_protos.desc" \
-   "$IMAGES_DIR/$SERVICE_PACKAGE/${SERVICE_NAME}_protos.desc" 2 > /dev/null || true
-  docker rm -f "temp_container_service" > /dev/null
+   "$IMAGES_DIR/$SERVICE_PACKAGE/${SERVICE_NAME}_protos.desc"
+  docker rm -f "temp_container_service"
   
   INBUILD_ARGS=(
     "--file_descriptor_set" "$IMAGES_DIR/$SERVICE_NAME/${SERVICE_NAME}_protos.desc"
@@ -103,10 +114,10 @@ elif [[ -n "$SKILL_NAME" && -n "$SKILL_PACKAGE" ]]; then
   docker load -i "$IMAGES_DIR/$SKILL_NAME/$SKILL_NAME.tar"
 
   echo "INFO: Extracting descriptor set from container..."
-  docker create --name "temp_container_skill" "$SKILL_PACKAGE:$SKILL_NAME" > /dev/null
+  docker create --name "temp_container_skill" "$SKILL_PACKAGE:$SKILL_NAME"
   docker cp "temp_container_skill:/opt/ros/overlay/install/share/${SKILL_PACKAGE}/${SKILL_NAME}_protos.desc" \
-   "$IMAGES_DIR/$SKILL_NAME/${SKILL_NAME}_protos.desc" 2>/dev/null || true
-  docker rm -f "temp_container_skill" > /dev/null
+   "$IMAGES_DIR/$SKILL_NAME/${SKILL_NAME}_protos.desc"
+  docker rm -f "temp_container_skill"
 
   echo "INFO: Building the skill bundle..."
   ./inbuild skill bundle \

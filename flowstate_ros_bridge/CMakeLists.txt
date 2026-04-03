@@ -215,7 +215,7 @@ install(TARGETS
 # Install proto descriptor file
 install(FILES
   ${CMAKE_CURRENT_BINARY_DIR}/${SERVICE_NAME}_protos.desc
-  DESTINATION share/${PROJECT_NAME}/${SERVICE_NAME}
+  DESTINATION share/${PROJECT_NAME}
 )
 
 install(PROGRAMS
