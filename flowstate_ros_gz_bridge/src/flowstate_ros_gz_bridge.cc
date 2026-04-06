@@ -51,9 +51,9 @@ class FlowstateRosGzBridge : public ros_gz_bridge::RosGzBridge {
       auto res = SimConnection::Create(simulation_server_address);
       if (res.ok())
       {
-        this->_sim_conn = *res;
+        this->sim_conn_ = *res;
         // Set the gz::transport::Node for the ros gz bridge to the simulation connection node
-        this->gz_node_ = this->_sim_conn->Node();
+        this->gz_node_ = this->sim_conn_->Node();
       }
       else
       {
@@ -63,7 +63,7 @@ class FlowstateRosGzBridge : public ros_gz_bridge::RosGzBridge {
       }
     }
  private:
-  std::shared_ptr<SimConnection> _sim_conn;
+  std::shared_ptr<SimConnection> sim_conn_;
 };
 
 flowstate::RosGzBridgeConfig MakeTestConfig() {
