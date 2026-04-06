@@ -23,8 +23,8 @@
 // This copyright notice shall be included in all copies or substantial portions
 // of the software.
 
-#ifndef FLOWSTATE_GZ_RMF_BRIDGE__SRC__SIM_CONNECTION_H_
-#define FLOWSTATE_GZ_RMF_BRIDGE__SRC__SIM_CONNECTION_H_
+#ifndef FLOWSTATE_ROS_GZ_BRIDGE__SRC__SIM_CONNECTION_H_
+#define FLOWSTATE_ROS_GZ_BRIDGE__SRC__SIM_CONNECTION_H_
 
 #include <memory>
 #include <string_view>
