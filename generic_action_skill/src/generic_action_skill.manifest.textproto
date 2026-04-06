@@ -6,7 +6,7 @@ id {
 }
 display_name: "Generic ROS 2 Action Skill"
 vendor {
-  display_name: "Intrinsic ROS Example"
+  display_name: "Intrinsic"
 }
 options {
   supports_cancellation: true
