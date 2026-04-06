@@ -92,7 +92,7 @@ if [[ -n "$SERVICE_NAME" && -n "$SERVICE_PACKAGE" ]]; then
   echo "INFO: Extracting config and descriptor set from container..."
   docker create --name "temp_container_service" "$SERVICE_PACKAGE:$SERVICE_NAME"
   docker cp "temp_container_service:/opt/ros/overlay/install/share/${SERVICE_PACKAGE}/${SERVICE_NAME}_protos.desc" \
-   "$IMAGES_DIR/$SERVICE_PACKAGE/${SERVICE_NAME}_protos.desc"
+   "$IMAGES_DIR/$SERVICE_NAME/${SERVICE_NAME}_protos.desc"
   docker rm -f "temp_container_service"
   
   INBUILD_ARGS=(
