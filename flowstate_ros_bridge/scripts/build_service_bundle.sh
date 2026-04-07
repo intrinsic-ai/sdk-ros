@@ -42,13 +42,5 @@ src/sdk-ros/scripts/build_container.sh \
   --service_name flowstate_ros_bridge \
   --service_package flowstate_ros_bridge \
   --dependencies nlohmann-json3-dev \
-<<<<<<< HEAD
-  --builder_name "$BUILDER_NAME" \
-  --images_dir "$IMAGES_DIR"
-src/sdk-ros/scripts/build_bundle.sh --service_name flowstate_ros_bridge --service_package flowstate_ros_bridge \
-  --builder_name "$BUILDER_NAME" \
-  --images_dir "$IMAGES_DIR"
-=======
   --ros_distro "$ROS_DISTRO"
 src/sdk-ros/scripts/build_bundle.sh --service_name flowstate_ros_bridge --service_package flowstate_ros_bridge
->>>>>>> origin/main

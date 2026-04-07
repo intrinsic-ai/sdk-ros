@@ -91,41 +91,27 @@ class InitFlowstateRosBridgeError(Exception):
 
 
 async def init_flowstate_ros_bridge(token_source: auth.TokenSource, cluster: str):
-    #     token = await token_source.get_token()
-    #     print(
-    #         f"""Successfully authenticated to flowstate.
-    # You may now start rmw_zenohd and connect it to the proxy by running:
-
-    # ```
-    # ZENOH_CONFIG_OVERRIDE='connect/endpoints=["ws/localhost:{args.port}"];routing/router/peers_failover_brokering=true' ros2 run rmw_zenoh_cpp rmw_zenohd
-    # ```"""
-    #     )
-
-    # try:
-    #     loop.run_until_complete(check_token())
-    # except aiohttp.ClientResponseError as e:
-    #     if e.status == 401:
-    #         print(f"Failed to authenticate to flowstate: {e.message}", file=sys.stderr)
-    #         print(
-    #             f"Try refreshing your api key `inctl auth login --org={args.org}`",
-    #             file=sys.stderr,
-    #         )
-    #         sys.exit(401)
-    #     else:
-    #         raise e
+    print("Checking if flowstate_ros_bridge is installed and compatible...")
 
     channel = create_onprem_channel_async(token_source, cluster)
     async with channel:
         installed_assets_client = InstalledAssetsStub(channel)
         try:
-            installed_asset: InstalledAsset = (
+            ros_bridge: InstalledAsset = (
                 await installed_assets_client.GetInstalledAsset(
                     GetInstalledAssetRequest(
-                        id=Id(package="ai.intrinsic", name="flowstate_ros_bridgea")
+                        id=Id(package="ai.intrinsic", name="flowstate_ros_bridge")
                     )
                 )
             )
-            print(installed_asset)
+            full_version_str = ros_bridge.metadata.id_version.version
+            version = full_version_str.split(".")
+            major_version = int(version[0])
+            minor_version = int(version[1])
+            if not (major_version >= 0 and minor_version >= 1):
+                raise InitFlowstateRosBridgeError(
+                    f"flowstate_ros_bridge version {full_version_str} is not compatible with this version of flowstate_credentials_proxy. Please update flowstate_ros_bridge to version 0.1.0 or later."
+                )
         except grpc.aio.AioRpcError as e:
             if e.code() == grpc.StatusCode.NOT_FOUND:
                 # TODO: ask user if they want to install
@@ -177,14 +163,24 @@ Download inctl here https://github.com/intrinsic-ai/sdk/releases""",
         print(e)
         exit(1)
 
+    app = web.Application()
+    app.add_routes(
+        [web.get("/", lambda req: proxy(req, token_source, args.cluster, args.service))]
+    )
+
+    async def on_startup(app: web.Application):
+        print(
+            f"""You may now start rmw_zenohd and connect it to the proxy by running:
+
+    ```
+    ZENOH_CONFIG_OVERRIDE='connect/endpoints=["ws/localhost:{args.port}"];routing/router/peers_failover_brokering=true' ros2 run rmw_zenoh_cpp rmw_zenohd
+    ```"""
+        )
+
+    app.on_startup.append(on_startup)
+
     print(f"Starting zenoh proxy on port {args.port}.")
-
-    # app = web.Application()
-    # app.add_routes(
-    #     [web.get("/", lambda req: proxy(req, token_source, args.cluster, args.service))]
-    # )
-
-    # web.run_app(app, port=args.port, handle_signals=True, print=None)
+    web.run_app(app, port=args.port, handle_signals=True, print=None)
 
 
 if __name__ == "__main__":

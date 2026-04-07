@@ -9,6 +9,7 @@
 
   <depend>intrinsic_sdk_ros</depend>
   <depend>python3-aiohttp</depend>
+  <depend>grpc_python_vendor</depend>
 
   <export>
     <build_type>ament_python</build_type>
