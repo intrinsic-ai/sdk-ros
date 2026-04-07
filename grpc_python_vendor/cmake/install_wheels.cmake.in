@@ -1,0 +1,31 @@
+set(grpcio_version "@grpcio_version@")
+set(protobuf_version "@protobuf_version@")
+set(install_prefix ${CMAKE_INSTALL_PREFIX}/opt/@PROJECT_NAME@)
+
+message(STATUS "Installing grpcio==${grpcio_version} to ${install_prefix}")
+execute_process(
+  COMMAND @Python_EXECUTABLE@ -m pip install
+    --prefix ${install_prefix}
+    --no-deps
+    --no-index
+    --find-links ${CMAKE_CURRENT_BINARY_DIR}/wheels
+    grpcio==${grpcio_version}
+  RESULT_VARIABLE install_grpc_result
+)
+if(NOT install_grpc_result EQUAL 0)
+  message(FATAL_ERROR "Failed to install grpcio wheel")
+endif()
+
+message(STATUS "Installing protobuf==${protobuf_version} to ${install_prefix}")
+execute_process(
+  COMMAND @Python_EXECUTABLE@ -m pip install
+    --prefix ${install_prefix}
+    --no-deps
+    --no-index
+    --find-links ${CMAKE_CURRENT_BINARY_DIR}/wheels
+    protobuf==${protobuf_version}
+  RESULT_VARIABLE install_protobuf_result
+)
+if(NOT install_protobuf_result EQUAL 0)
+  message(FATAL_ERROR "Failed to install protobuf wheel")
+endif()
