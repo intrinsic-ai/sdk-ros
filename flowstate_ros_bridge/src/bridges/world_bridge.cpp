@@ -14,11 +14,13 @@
 
 #include "world_bridge.hpp"
 
+#include <limits>
 #include <string>
 #include <utility>
 
 #include "absl/log/log.h"
 #include "absl/status/status.h"
+#include "absl/strings/str_format.h"
 #include "intrinsic/eigenmath/types.h"
 #include "intrinsic/math/proto_conversion.h"
 #include "intrinsic/util/eigen.h"
@@ -29,6 +31,19 @@ namespace flowstate_ros_bridge {
 constexpr const char* kTfPrefixParamName = "world_tf_prefix";
 constexpr const char* kResourceServiceName = "flowstate_get_resource";
 constexpr const char* kMeshUrlPrefixParamName = "mesh_url_prefix";
+constexpr const char* kEnableRobotJointStateTopicParamName =
+    "enable_robot_joint_state_topic";
+constexpr const char* kEnableForceTorqueTopicParamName =
+    "enable_force_torque_topic";
+constexpr const char* kRobotJointStateTopicParamName =
+    "robot_joint_state_topic";
+constexpr const char* kForceTorqueTopicParamName = "force_torque_topic";
+constexpr const char* kForceTorqueSensorFrameIDParamName =
+    "force_torque_sensor_frame_id";
+constexpr const char* kRobotControllerNameParamName =
+    "robot_controller_instance";
+constexpr const char* kThrottleRobotStateTopicParamName =
+    "throttle_robot_state_topic";
 
 ///=============================================================================
 void WorldBridge::declare_ros_parameters(
@@ -42,6 +57,25 @@ void WorldBridge::declare_ros_parameters(
   param_interface->declare_parameter(
       kMeshUrlPrefixParamName,
       rclcpp::ParameterValue{"http://localhost:8123/"});
+  param_interface->declare_parameter(kEnableRobotJointStateTopicParamName,
+                                     rclcpp::ParameterValue(true));
+  param_interface->declare_parameter(kEnableForceTorqueTopicParamName,
+                                     rclcpp::ParameterValue(true));
+  param_interface->declare_parameter(
+      kRobotJointStateTopicParamName,
+      rclcpp::ParameterValue("/robot_joint_state"));
+  param_interface->declare_parameter(
+      kForceTorqueTopicParamName,
+      rclcpp::ParameterValue("/force_torque_sensor"));
+  param_interface->declare_parameter(
+      kForceTorqueSensorFrameIDParamName,
+      rclcpp::ParameterValue(
+          "force_torque_sensor/force_torque_sensor/AtiForceTorqueSensor"));
+  param_interface->declare_parameter(
+      kRobotControllerNameParamName,
+      rclcpp::ParameterValue("robot_controller"));
+  param_interface->declare_parameter(kThrottleRobotStateTopicParamName,
+                                     rclcpp::ParameterValue(false));
 }
 
 ///=============================================================================
@@ -105,6 +139,55 @@ bool WorldBridge::initialize(ROSNodeInterfaces ros_node_interfaces,
   }
   LOG(INFO) << "Subscribed to Flowstate TF topic";
   data_->tf_sub_ = std::move(*tf_sub_);
+
+  // Robot States Bridge
+  data_->robot_joint_state_topic_enabled_ =
+      param_interface->get_parameter(kEnableRobotJointStateTopicParamName)
+          .as_bool();
+  data_->force_torque_topic_enabled_ =
+      param_interface->get_parameter(kEnableForceTorqueTopicParamName)
+          .as_bool();
+  LOG(INFO) << "Robot Joint State Bridge Enabled: "
+            << data_->robot_joint_state_topic_enabled_;
+  LOG(INFO) << "Force Torque Bridge Enabled: "
+            << data_->force_torque_topic_enabled_;
+
+  // Create ROS publishers
+  data_->robot_joint_state_pub_ =
+      rclcpp::create_publisher<sensor_msgs::msg::JointState>(
+          param_interface, topics_interface,
+          param_interface->get_parameter(kRobotJointStateTopicParamName)
+              .as_string(),
+          rclcpp::SystemDefaultsQoS());
+  data_->force_torque_pub_ =
+      rclcpp::create_publisher<geometry_msgs::msg::WrenchStamped>(
+          param_interface, topics_interface,
+          param_interface->get_parameter(kForceTorqueTopicParamName)
+              .as_string(),
+          rclcpp::SensorDataQoS());
+
+  // Create Flowstate subscriptions
+  std::string robot_controller_instance =
+      param_interface->get_parameter(kRobotControllerNameParamName).as_string();
+  bool throttle_robot_state_topic =
+      param_interface->get_parameter(kThrottleRobotStateTopicParamName)
+          .as_bool();
+  auto robot_state_sub = data_->world_->CreateRobotStateSubscription(
+      [this](const intrinsic_proto::data_logger::LogItem& msg) {
+        this->RobotStateCallback(msg);
+      },
+      robot_controller_instance, throttle_robot_state_topic);
+  if (!robot_state_sub.ok()) {
+    LOG(ERROR) << "Unable to create Robot State Subscription: "
+               << robot_state_sub.status();
+    return false;
+  }
+  LOG(INFO) << "Subscribed to Flowstate Robot State topic";
+  data_->robot_state_sub_ = std::move(*robot_state_sub);
+
+  data_->ft_sensor_frame_id_ =
+      param_interface->get_parameter(kForceTorqueSensorFrameIDParamName)
+          .as_string();
 
   // Start a thread to publish sceneObject visualization messages whenever a new
   // object arrives
@@ -175,19 +258,20 @@ absl::Status WorldBridge::Data::SendObjectVisualizationMessages(
           }
           const auto& geo_ref = geometry.geo_ref();
           const std::string object_name = object.Name().value();
-          const std::vector<absl::string_view> parts = absl::StrSplit(object_name, '/');
+          const std::vector<absl::string_view> parts =
+              absl::StrSplit(object_name, '/');
           const absl::string_view short_name = parts.back();
-          
-          // In V1 SDK, the Flowstate TF stream appends the short object name again 
-          // between the full path and the entity name.
-          std::string tf_frame_name = absl::StrFormat("%s%s/%s/%s", tf_prefix_.c_str(),
-                                                      object_name, short_name, entity.second.name());
-          
+
+          // In V1 SDK, the Flowstate TF stream appends the short object name
+          // again between the full path and the entity name.
+          std::string tf_frame_name =
+              absl::StrFormat("%s%s/%s/%s", tf_prefix_.c_str(), object_name,
+                              short_name, entity.second.name());
+
           // Let's be smarter in the future. For now, just skip over
           // the intcas:// prefix
           const std::string gltf_path = absl::StrFormat(
-              "gltf/%s_%s.glb",
-              geo_ref.exact_geometry_ref().substr(9),
+              "gltf/%s_%s.glb", geo_ref.exact_geometry_ref().substr(9),
               geo_ref.renderable_ref().substr(9));
 
           const auto renderable_name = std::string("/") + gltf_path;
@@ -319,13 +403,10 @@ void WorldBridge::TfCallback(const intrinsic_proto::TFMessage& tf_proto) {
   }
   data_->tf_pub_->publish(tf_ros);
 
-  // print a timing snapshot every 10 seconds
-  static int count = 0;
-  if (count++ % 500 == 0) {
-    const rclcpp::Duration elapsed = clock.now() - t_start;
-    LOG(INFO) << "tf translation time: " << (1000.0 * elapsed.seconds())
-              << " ms";
-  }
+  // print a timing snapshot every 500 messages
+  const rclcpp::Duration elapsed = clock.now() - t_start;
+  LOG_EVERY_N(INFO, 500) << absl::StrFormat("tf translation time: %.3f ms",
+                                            1000.0 * elapsed.seconds());
 
   std::vector<std::string> deleted_tf_frames;
   for (const auto& tf_frame : data_->tf_frame_names_) {
@@ -365,6 +446,148 @@ void WorldBridge::TfCallback(const intrinsic_proto::TFMessage& tf_proto) {
 
   data_->tf_frame_names_ = std::move(new_tf_frame_names);
 }
+
+///=============================================================================
+void WorldBridge::RobotStateCallback(
+    const intrinsic_proto::data_logger::LogItem& log_item) {
+  rclcpp::Clock clock;
+  const rclcpp::Time t_start = clock.now();
+  const auto& payload = log_item.payload();
+
+  switch (payload.data_case()) {
+    // At the time of writing this was the only received item in the LogItem msg
+    case intrinsic_proto::data_logger::LogItem::Payload::kIconRobotStatus: {
+      if (data_->robot_joint_state_topic_enabled_ ||
+          data_->force_torque_topic_enabled_) {
+        HandleRobotStatus(payload.icon_robot_status(), t_start);
+      }
+      break;
+    }
+
+    default: {
+      std::string msg;
+      const auto* descriptor = payload.GetDescriptor();
+      const auto* field = descriptor->FindFieldByNumber(payload.data_case());
+      if (field) {
+        msg = absl::StrFormat("Received unhandled data type: %s (ID: %d)",
+                              field->name(), payload.data_case());
+      } else {
+        msg = absl::StrFormat("Received unknown or unset data type (ID: %d)",
+                              payload.data_case());
+      }
+      LOG_EVERY_N(INFO, 100) << msg;
+      break;
+    }
+  }
+
+  // print the translation time every 5000 messages
+  const rclcpp::Duration elapsed = clock.now() - t_start;
+  LOG_EVERY_N(INFO, 5000) << absl::StrFormat(
+      "Robot state translation time: %.3f ms", 1000.0 * elapsed.seconds());
+}
+
+void WorldBridge::HandleRobotStatus(
+    const intrinsic_proto::icon::RobotStatus& robot_status,
+    const rclcpp::Time& time) {
+  // On first execution, cache the part names to avoid repeated map iteration
+  if (!data_->robot_arm_part_name_.has_value()) {
+    for (const auto& entry : robot_status.status_map()) {
+      const std::string& part_name = entry.first;
+      const auto& part_status = entry.second;
+      if (!part_status.joint_states().empty()) {
+        data_->robot_arm_part_name_ = part_name;
+        LOG(INFO) << "Cached robot arm part name: " << part_name;
+      }
+    }
+  }
+  if (!data_->force_torque_part_name_.has_value()) {
+    for (const auto& entry : robot_status.status_map()) {
+      const std::string& part_name = entry.first;
+      const auto& part_status = entry.second;
+      if (!data_->force_torque_part_name_.has_value() &&
+          part_status.has_wrench_at_ft()) {
+        data_->force_torque_part_name_ = part_name;
+        LOG(INFO) << "Cached force torque sensor part name: " << part_name;
+      }
+    }
+  }
+
+  // Use cached part names for publishing
+  if (data_->robot_joint_state_topic_enabled_ &&
+      data_->robot_arm_part_name_.has_value()) {
+    const std::string& part_name = data_->robot_arm_part_name_.value();
+    auto it = robot_status.status_map().find(part_name);
+    if (it != robot_status.status_map().end()) {
+      PublishJointState(part_name, it->second, time);
+    } else {
+      LOG_EVERY_N(ERROR, 100)
+          << "Error: Robot arm part [" << part_name << "] not found!";
+    }
+  }
+
+  if (data_->force_torque_topic_enabled_ &&
+      data_->force_torque_part_name_.has_value()) {
+    const std::string& part_name = data_->force_torque_part_name_.value();
+    auto it = robot_status.status_map().find(part_name);
+    if (it != robot_status.status_map().end()) {
+      PublishForceTorqueSensor(data_->ft_sensor_frame_id_, it->second, time);
+    } else {
+      LOG_EVERY_N(ERROR, 100)
+          << "Error: Force torque part [" << part_name << "] not found!";
+    }
+  }
+}
+
+void WorldBridge::PublishJointState(
+    const std::string& part_name,
+    const intrinsic_proto::icon::PartStatus& part_status,
+    const rclcpp::Time& time) {
+  sensor_msgs::msg::JointState robot_joint_state_ros;
+  robot_joint_state_ros.header.stamp = time;
+  robot_joint_state_ros.header.frame_id = "";
+
+  for (int i = 0; i < part_status.joint_states_size(); ++i) {
+    const auto& joint_state = part_status.joint_states(i);
+    std::string joint_name = absl::StrFormat("%s_joint_%d", part_name, i);
+    robot_joint_state_ros.name.push_back(joint_name);
+
+    double pos = joint_state.has_position_sensed()
+                     ? joint_state.position_sensed()
+                     : std::numeric_limits<double>::quiet_NaN();
+    double vel = joint_state.has_velocity_sensed()
+                     ? joint_state.velocity_sensed()
+                     : std::numeric_limits<double>::quiet_NaN();
+    double eff = joint_state.has_torque_sensed()
+                     ? joint_state.torque_sensed()
+                     : std::numeric_limits<double>::quiet_NaN();
+
+    robot_joint_state_ros.position.push_back(pos);
+    robot_joint_state_ros.velocity.push_back(vel);
+    robot_joint_state_ros.effort.push_back(eff);
+  }
+  data_->robot_joint_state_pub_->publish(robot_joint_state_ros);
+}
+
+void WorldBridge::PublishForceTorqueSensor(
+    const std::string& frame_id,
+    const intrinsic_proto::icon::PartStatus& part_status,
+    const rclcpp::Time& time) {
+  geometry_msgs::msg::WrenchStamped wrench_msg;
+  wrench_msg.header.stamp = time;
+  wrench_msg.header.frame_id = frame_id;
+
+  const auto& w = part_status.wrench_at_ft();
+  wrench_msg.wrench.force.x = w.x();
+  wrench_msg.wrench.force.y = w.y();
+  wrench_msg.wrench.force.z = w.z();
+  wrench_msg.wrench.torque.x = w.rx();
+  wrench_msg.wrench.torque.y = w.ry();
+  wrench_msg.wrench.torque.z = w.rz();
+
+  data_->force_torque_pub_->publish(wrench_msg);
+}
+
+///=============================================================================
 
 WorldBridge::~WorldBridge() {
   if (data_->viz_thread_ && data_->viz_thread_->joinable()) {
