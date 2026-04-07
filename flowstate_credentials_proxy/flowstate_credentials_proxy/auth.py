@@ -6,6 +6,7 @@ from datetime import datetime, timedelta, timezone
 from os import environ
 
 import aiohttp
+from intrinsic.solutions.auth import get_configuration
 
 INTRINSIC_CONFIG_LOCATION = pathlib.Path(environ["HOME"], ".config", "intrinsic")
 ORGANIZATION_PATTERN = re.compile(r"[a-zA-Z][\w-]*@[a-zA-Z][\w-]*")
@@ -37,13 +38,8 @@ def get_api_key(project: str):
         KeyError: If the API key file is invalid.
         FileNotFoundError: If the API key file does not exist.
     """
-    user_token = json.load(
-        pathlib.Path(
-            INTRINSIC_CONFIG_LOCATION, "projects", f"{project}.user-token"
-        ).open()
-    )
-    api_key = user_token["tokens"]["default"]["apiKey"]
-    return api_key
+    config = get_configuration(project)
+    return config.get_default_credentials().api_key
 
 
 class TokenSource:
