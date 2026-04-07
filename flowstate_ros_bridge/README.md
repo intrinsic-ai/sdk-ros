@@ -62,8 +62,11 @@ In the root of a colcon workspace first set up the docker engine:
 Then, create the bundle with the `build_service_bundle.sh` script. This will compile the packages in a docker container and bundle that container in a tarball.
 
 ```bash
-./src/sdk-ros/flowstate_ros_bridge/scripts/build_service_bundle.sh
+./src/sdk-ros/flowstate_ros_bridge/scripts/build_service_bundle.sh --ros_distro jazzy
 ```
+
+> [!NOTE]
+> Replace `jazzy` with the target ROS 2 distro for building `flowstate_ros_bridge`. 
 
 The output of this command will be a tarball inside the `images` directory of the colcon workspace which can be pushed to Flowstate as a new service.
 
@@ -74,3 +77,7 @@ With a solution open in Flowstate, the generated service bundle can be sideloade
 ```bash
 ./inctl service install images/flowstate_ros_bridge.bundle.tar --org $ORG --cluster $CLUSTER # replace with your org and cluster
 ```
+
+## Documentation
+
+* [Flowstate Robot State and Sensor ROS Bridge:](docs/robot_state_sensor.md) Explains the translation of internal Flowstate data (joint states, force/torque) into standard ROS 2 messages, with setup and testing instructions.

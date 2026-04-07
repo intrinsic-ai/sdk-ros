@@ -4,33 +4,34 @@ if [ ! -d "src/sdk-ros" ]; then
   exit
 fi
 
-IMAGES_DIR=./images
-BUILDER_NAME=container-builder
+ROS_DISTRO="jazzy"
 
-usage() {
-  echo "Usage: build_service_bundle.sh [options]"
+show_help() {
+  echo "Usage: $(basename "$0") [OPTIONS]"
+  echo ""
+  echo "Build and bundle the AIC model container image for Flowstate."
   echo ""
   echo "Options:"
-  echo "  --images_dir <dir>    Path to the images directory (default: ./images)"
-  echo "  --builder_name <name> Name of the builder (default: container-builder)"
-  echo "  --help                Show this help message"
-  exit 0
+  echo "  -h, --help           Show this help message and exit"
+  echo "  --ros_distro ROS_DISTRO  Name of the ROS distro (default: jazzy)"
+  echo ""
 }
 
-# Parse arguments
-if ! OPTS=$(getopt -o "" --longoptions images_dir:,builder_name:,help -n 'build_service_bundle.sh' -- "$@"); then
-  echo "Failed to parse options... exiting." >&2
-  exit 1
-fi
-eval set -- "$OPTS"
-
-while true; do
-  case "$1" in
-    --images_dir) IMAGES_DIR="$2"; shift 2 ;;
-    --builder_name) BUILDER_NAME="$2"; shift 2 ;;
-    --help) usage ;;
-    --) shift; break ;;
-    *) break ;;
+while [[ $# -gt 0 ]]; do
+  case $1 in
+    -h|--help)
+      show_help
+      exit 0
+      ;;
+    --ros_distro)
+      ROS_DISTRO="$2"
+      shift
+      shift
+      ;;
+    -*|--*)
+      echo "Unknown option $1"
+      exit 1
+      ;;
   esac
 done
 
@@ -41,8 +42,5 @@ src/sdk-ros/scripts/build_container.sh \
   --service_name flowstate_ros_bridge \
   --service_package flowstate_ros_bridge \
   --dependencies nlohmann-json3-dev \
-  --builder_name "$BUILDER_NAME" \
-  --images_dir "$IMAGES_DIR"
-src/sdk-ros/scripts/build_bundle.sh --service_name flowstate_ros_bridge --service_package flowstate_ros_bridge \
-  --builder_name "$BUILDER_NAME" \
-  --images_dir "$IMAGES_DIR"
+  --ros_distro "$ROS_DISTRO"
+src/sdk-ros/scripts/build_bundle.sh --service_name flowstate_ros_bridge --service_package flowstate_ros_bridge
