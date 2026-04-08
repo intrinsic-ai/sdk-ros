@@ -67,8 +67,8 @@ These parameters are defined in the `SensorPublisherConfig` message and can be m
 | :--- | :--- | :--- |
 | `enable_robot_joint_state_topic` | `true` | Enables publishing of robot joint states in ROS. |
 | `enable_force_torque_topic` | `true` | Enables publishing of F/T sensor data in ROS. |
-| `robot_joint_state_topic` | `/robot_joint_state` | Topic to publish joint state data on. |
-| `force_torque_topic` | `/force_torque_sensor` | Topic to publish F/T sensor data on. |
+| `robot_joint_state_topic` | `/joint_states` | Topic to publish joint state data on. |
+| `force_torque_topic` | `/fts_broadcaster/wrench` | Topic to publish F/T sensor data on. |
 | `force_torque_sensor_frame_id` | `force_torque_sensor/force_torque_sensor/AtiForceTorqueSensor` | Frame ID of F/T sensor to be used in force_torque_topic. |
 | `robot_controller_instance` | `robot_controller` | Name of the ICON service/resource instance. |
 | `throttle_robot_state_topic` | `false` | By default, the bridge subscribes to the high-frequency `/icon/robot_controller/robot_status` state topic (~300 Hz). If this parameter is set to `True`, then the low-frequency equivalent (~25 Hz), topic  `/icon/robot_controller/robot_status_throttle`, will be used instead. |
