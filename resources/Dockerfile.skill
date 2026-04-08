@@ -78,7 +78,7 @@ RUN apt-get update \
        python3-pip \
        ${DEPENDENCIES} \
     && rm -rf /var/lib/apt/lists/* \
-    && pip3 install --upgrade protobuf grpcio --break-system-packages
+    && pip3 install --upgrade protobuf grpcio grpcio-status --break-system-packages
 
 COPY --from=overlay /opt/ros/underlay/install /opt/ros/underlay/install
 COPY --from=overlay /opt/ros/overlay/install /opt/ros/overlay/install
