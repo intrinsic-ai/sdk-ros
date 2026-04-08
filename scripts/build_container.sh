@@ -106,6 +106,7 @@ elif [[ -n "$SKILL_NAME" && -n "$SKILL_PACKAGE" ]]; then
       --build-arg="SKILL_NAME=$SKILL_NAME" \
       --build-arg="SKILL_EXECUTABLE_NAME=${SKILL_NAME}_main" \
       --build-arg="ROS_DISTRO=$ROS_DISTRO" \
+      --build-arg="DEPENDENCIES=$DEPENDENCIES" \
       .
 
 fi
