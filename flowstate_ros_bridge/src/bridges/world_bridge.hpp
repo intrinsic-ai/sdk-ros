@@ -60,6 +60,7 @@ class WorldBridge : public BridgeInterface {
                          const rclcpp::Time& time);
 
   void PublishJointState(const std::string& part_name,
+                         const std::string& frame_id,
                          const intrinsic_proto::icon::PartStatus& part_status,
                          const rclcpp::Time& time);
 
@@ -96,6 +97,7 @@ class WorldBridge : public BridgeInterface {
     bool robot_joint_state_topic_enabled_;
     bool force_torque_topic_enabled_;
     std::string ft_sensor_frame_id_;
+    std::string robot_base_frame_id_;
     // Cached part names to avoid repeated map iteration
     std::optional<std::string> robot_arm_part_name_;
     std::optional<std::string> force_torque_part_name_;

@@ -100,6 +100,7 @@ int main(int argc, char* argv[]) {
                       s.enable_force_torque_topic());
   params.emplace_back("robot_joint_state_topic", s.robot_joint_state_topic());
   params.emplace_back("force_torque_topic", s.force_torque_topic());
+  params.emplace_back("robot_base_frame_id", s.robot_base_frame_id());
   params.emplace_back("force_torque_sensor_frame_id",
                       s.force_torque_sensor_frame_id());
   params.emplace_back("robot_controller_instance",

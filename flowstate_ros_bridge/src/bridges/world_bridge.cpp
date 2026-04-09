@@ -40,6 +40,7 @@ constexpr const char* kRobotJointStateTopicParamName =
 constexpr const char* kForceTorqueTopicParamName = "force_torque_topic";
 constexpr const char* kForceTorqueSensorFrameIDParamName =
     "force_torque_sensor_frame_id";
+constexpr const char* kRobotBaseFrameIDParamName = "robot_base_frame_id";
 constexpr const char* kRobotControllerNameParamName =
     "robot_controller_instance";
 constexpr const char* kThrottleRobotStateTopicParamName =
@@ -71,6 +72,9 @@ void WorldBridge::declare_ros_parameters(
       kForceTorqueSensorFrameIDParamName,
       rclcpp::ParameterValue(
           "force_torque_sensor/force_torque_sensor/AtiForceTorqueSensor"));
+  param_interface->declare_parameter(
+      kRobotBaseFrameIDParamName,
+      rclcpp::ParameterValue("robot/robot/base_link"));
   param_interface->declare_parameter(
       kRobotControllerNameParamName,
       rclcpp::ParameterValue("robot_controller"));
@@ -188,6 +192,8 @@ bool WorldBridge::initialize(ROSNodeInterfaces ros_node_interfaces,
   data_->ft_sensor_frame_id_ =
       param_interface->get_parameter(kForceTorqueSensorFrameIDParamName)
           .as_string();
+  data_->robot_base_frame_id_ =
+      param_interface->get_parameter(kRobotBaseFrameIDParamName).as_string();
 
   // Start a thread to publish sceneObject visualization messages whenever a new
   // object arrives
@@ -518,7 +524,8 @@ void WorldBridge::HandleRobotStatus(
     const std::string& part_name = data_->robot_arm_part_name_.value();
     auto it = robot_status.status_map().find(part_name);
     if (it != robot_status.status_map().end()) {
-      PublishJointState(part_name, it->second, time);
+      PublishJointState(part_name, data_->robot_base_frame_id_, it->second,
+                        time);
     } else {
       LOG_EVERY_N(ERROR, 100)
           << "Error: Robot arm part [" << part_name << "] not found!";
@@ -539,12 +546,12 @@ void WorldBridge::HandleRobotStatus(
 }
 
 void WorldBridge::PublishJointState(
-    const std::string& part_name,
+    const std::string& part_name, const std::string& frame_id,
     const intrinsic_proto::icon::PartStatus& part_status,
     const rclcpp::Time& time) {
   sensor_msgs::msg::JointState robot_joint_state_ros;
   robot_joint_state_ros.header.stamp = time;
-  robot_joint_state_ros.header.frame_id = "";
+  robot_joint_state_ros.header.frame_id = frame_id;
 
   for (int i = 0; i < part_status.joint_states_size(); ++i) {
     const auto& joint_state = part_status.joint_states(i);
