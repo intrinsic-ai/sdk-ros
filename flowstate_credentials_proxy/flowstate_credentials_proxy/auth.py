@@ -7,9 +7,17 @@ from os import environ
 
 import aiohttp
 
+USE_SSO = bool(environ.get("FLOWSTATE_CREDENTIALS_PROXY_USE_SSO", False))
+
 INTRINSIC_CONFIG_LOCATION = pathlib.Path(environ["HOME"], ".config", "intrinsic")
 ORGANIZATION_PATTERN = re.compile(r"[a-zA-Z][\w-]*@[a-zA-Z][\w-]*")
-FLOWSTATE_ADDR = "https://flowstate.intrinsic.ai"
+if USE_SSO:
+    # TODO: sso only works on dev right now.
+    FLOWSTATE_ADDR = "https://flowstate-dev.intrinsic.ai"
+    FLOWSTATE_ACCOUNTS_ADDR = "https://accounts-dev.intrinsic.ai"
+else:
+    FLOWSTATE_ADDR = "https://flowstate.intrinsic.ai"
+    FLOWSTATE_ACCOUNTS_ADDR = "https://accounts.intrinsic.ai"
 
 
 class InvalidOrganizationError(ValueError):
@@ -47,7 +55,7 @@ def get_api_key(project: str):
 
 
 class TokenSource:
-    def __init__(self, org: str):
+    def __init__(self, org: str, cluster: str):
         """
         Create a new instance of TokenSource.
 
@@ -58,6 +66,7 @@ class TokenSource:
             FileNotFoundError: If the API key file does not exist.
         """
         self.org = org
+        self.cluster = cluster
         self.project = get_project_from_organization(self.org)
         self.api_key = get_api_key(self.project)
         self.__cached_token: str | None = None
@@ -96,6 +105,32 @@ class TokenSource:
                     "api_key_project_hint": self.project,
                 },
             ) as resp:
-                access_token: str = (await resp.json())["idToken"]
-                self.__cached_token = access_token
-                return self.__cached_token
+                token: str | None = (await resp.json())["idToken"]
+                if not token:
+                    raise KeyError("idToken not found in response")
+                self.__cached_token = token
+
+        if USE_SSO:
+            async with aiohttp.ClientSession(
+                base_url=FLOWSTATE_ACCOUNTS_ADDR,
+                cookies={"auth-proxy": self.__cached_token},
+                raise_for_status=True,
+            ) as session:
+                async with session.post(
+                    f"/sso/v1alpha/equipment/org/{self.org}/cluster/{self.cluster}/code",
+                ) as resp:
+                    sso_code = (await resp.json())["code"]
+
+                async with session.post(
+                    f"/sso/v1alpha/equipment/signin",
+                    json={
+                        "code": sso_code,
+                    },
+                ) as resp:
+                    token: str | None = (await resp.json())["signin_token"]
+                    if not token:
+                        raise KeyError("signin_token not found in response")
+                    self.__cached_token = token
+
+        [print(x) for x in self.__cached_token.split(".")]
+        return self.__cached_token

@@ -27,8 +27,10 @@ async def proxy(
     headers = {"cookie": f"auth-proxy={token}"}
 
     try:
-        async with aiohttp.ClientSession() as session:
-            async with session.ws_connect(uri, headers=headers) as upstream:
+        async with aiohttp.ClientSession(
+            headers=headers, raise_for_status=True
+        ) as session:
+            async with session.ws_connect(uri) as upstream:
                 print("Connected to upstream websocket")
 
                 async def forward_to_upstream(
@@ -66,7 +68,10 @@ async def proxy(
                 )
     except aiohttp.ClientResponseError as e:
         if e.status == 404:
-            print(f"Failed to connect to {e.request_info.url}. Make sure that the cluster and service name is correct.", file=sys.stderr)
+            print(
+                f"Failed to connect to {e.request_info.url}. Make sure that the cluster and service name is correct.",
+                file=sys.stderr,
+            )
         else:
             raise e
     except Exception as e:
@@ -97,7 +102,7 @@ def main():
     args = parser.parse_args()
 
     try:
-        token_source = auth.TokenSource(args.org)
+        token_source = auth.TokenSource(args.org, args.cluster)
     except FileNotFoundError:
         print(
             f"""Error: Credentials for given organization "{args.org}" not found.
