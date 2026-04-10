@@ -5,7 +5,7 @@
   <version>0.0.1</version>
   <description>Version of ROS GZ bridge to bridge with Flowstate Gazebo</description>
   <maintainer email="lucadv@intrinsic.ai">Luca Della Vedova</maintainer>
-  <license>Intrinsic License</license>
+  <license>Apache-2.0</license>
 
   <buildtool_depend>ament_cmake</buildtool_depend>
 

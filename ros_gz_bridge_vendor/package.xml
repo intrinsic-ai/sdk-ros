@@ -3,7 +3,7 @@
 <package format="3">
   <name>ros_gz_bridge_vendor</name>
   <version>0.0.1</version>
-  <description>Version of ROS GZ bridge to bridge with Flowstate Gazebo</description>
+  <description>Vendored ROS GZ bridge package</description>
   <maintainer email="lucadv@intrinsic.ai">Luca Della Vedova</maintainer>
   <license>Apache-2.0</license>
 
