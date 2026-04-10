@@ -132,5 +132,4 @@ class TokenSource:
                         raise KeyError("signin_token not found in response")
                     self.__cached_token = token
 
-        [print(x) for x in self.__cached_token.split(".")]
         return self.__cached_token
