@@ -58,6 +58,11 @@ add_library(shared_memory_manager
   src/shared_memory_lockstep.cpp
 )
 
+set_property(
+  TARGET shared_memory_manager
+  PROPERTY POSITION_INDEPENDENT_CODE ON
+)
+
 add_dependencies(shared_memory_manager icon_hwm_fbs)
 target_link_libraries(shared_memory_manager
   PUBLIC
@@ -70,7 +75,7 @@ generate_parameter_library(icon_hwm_controller_parameters
   src/icon_hwm_controller_parameters.yaml
 )
 
-add_library( icon_hwm_controller
+add_library( icon_hwm_controller SHARED
   src/icon_hwm_controller.cpp
 )
 
@@ -94,6 +99,12 @@ target_link_libraries(icon_hwm_controller PUBLIC
 
 pluginlib_export_plugin_description_file(controller_interface icon_hwm_controller.xml)
 
+install(TARGETS
+  icon_hwm_controller
+  RUNTIME DESTINATION bin
+  ARCHIVE DESTINATION lib
+  LIBRARY DESTINATION lib
+)
 
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)

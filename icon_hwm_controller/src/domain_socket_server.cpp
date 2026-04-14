@@ -586,11 +586,13 @@ tl::expected<std::unique_ptr<DomainSocketServer>, Status> DomainSocketServer::Cr
   std::filesystem::path socket_directory, std::string_view module_name,
   std::chrono::seconds lock_acquire_timeout, size_t protocol_version)
 {
+  std::cerr << "Creating socket directory";
   if (auto status =
     domain_socket_internal::CreateSocketDirectory(socket_directory); !status.ok())
-  {
-    return tl::unexpected(status);
-  }
+    {
+      return tl::unexpected(status);
+    }
+    std::cerr << "Successfully created socket directory";
 
   std::filesystem::path absolute_lock_path = LockName(socket_directory, module_name);
   auto flock_fd = TryLockPath(absolute_lock_path, lock_acquire_timeout);

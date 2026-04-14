@@ -14,6 +14,8 @@
 #include "intrinsic/hal/hardware_interface_traits.hpp"
 #include "intrinsic/hal/hardware_interface_registry.hpp"
 #include "intrinsic/hal/icon_state_register.hpp"
+#include "intrinsic/shared_memory_manager/domain_socket_server.hpp"
+#include "intrinsic/shared_memory_manager/shared_memory_manager.hpp"
 
 #include "realtime_tools/realtime_helpers.hpp"
 
@@ -58,6 +60,10 @@ namespace icon_hwm_controller {
 
 controller_interface::InterfaceConfiguration IconHwmController::command_interface_configuration() const {
   controller_interface::InterfaceConfiguration config;
+  // By specifying INDIVIDUAL here, we ensure that the interfaces
+  // appear in the same order we request them in.
+  //
+  // See https://github.com/ros-controls/ros2_control/blob/7c5e76766307705b3ef0c28247a17c91814fb311/controller_interface/include/controller_interface/controller_interface_base.hpp#L373-L400
   config.type = controller_interface::interface_configuration_type::INDIVIDUAL;
   for (const auto & dof_name : params_.dof_names) {
     config.names.push_back(dof_name + "/" + params_.command_interface);
@@ -67,6 +73,10 @@ controller_interface::InterfaceConfiguration IconHwmController::command_interfac
 
 controller_interface::InterfaceConfiguration IconHwmController::state_interface_configuration() const {
   controller_interface::InterfaceConfiguration config;
+  // By specifying INDIVIDUAL here, we ensure that the interfaces
+  // appear in the same order we request them in.
+  //
+  // See https://github.com/ros-controls/ros2_control/blob/7c5e76766307705b3ef0c28247a17c91814fb311/controller_interface/include/controller_interface/controller_interface_base.hpp#L373-L400
   config.type = controller_interface::interface_configuration_type::INDIVIDUAL;
   for (const auto & dof_name : params_.dof_names) {
     for (const auto & interface_type : params_.reference_and_state_interfaces) {
@@ -103,6 +113,16 @@ controller_interface::CallbackReturn IconHwmController::on_configure(const rclcp
     return controller_interface::CallbackReturn::ERROR;
   }
   shm_manager_ = std::move(shared_memory_manager.value());
+  auto domain_socket_server = intrinsic::hal::DomainSocketServer::Create(
+    intrinsic::hal::SocketDirectoryFromNamespace(shm_manager_->SharedMemoryNamespace()),
+    shm_manager_->ModuleName(),
+    intrinsic::hal::DomainSocketServer::kDefaultLockAcquireTimeout
+  );
+  if (!domain_socket_server.has_value()) {
+    RCLCPP_ERROR(get_node()->get_logger(), "Failed to create DomainSocketServer: %s", domain_socket_server.error().message.c_str());
+    return controller_interface::CallbackReturn::ERROR;
+  }
+  domain_socket_server_ = std::move(domain_socket_server.value());
 
  intrinsic::hal::HardwareInterfaceRegistry registry(*shm_manager_);
   // Advertise IconState
@@ -124,6 +144,18 @@ controller_interface::CallbackReturn IconHwmController::on_configure(const rclcp
     return controller_interface::CallbackReturn::ERROR;
   }
   joint_position_state_ = std::move(joint_position_state).value();
+
+  // Advertise JointVelocityState
+  // Build a default flatbuffer for JointVelocityState with the correct number of DOFs
+  auto joint_velocity_state = registry.AdvertiseMutableStrictInterface<intrinsic_fbs::JointVelocityState>(
+    "joint_velocity_state",
+    params_.dof_names.size()
+  );
+  if (!joint_velocity_state.has_value()){
+    RCLCPP_ERROR(get_node()->get_logger(), "Failed to advertise JointVelocityState: %s", joint_velocity_state.error().message.c_str());
+    return controller_interface::CallbackReturn::ERROR;
+  }
+  joint_velocity_state_ = std::move(joint_velocity_state).value();
 
   // Advertise JointPositionCommand
   auto joint_position_command = registry.AdvertiseStrictInterface<intrinsic_fbs::JointPositionCommand>(
@@ -198,6 +230,15 @@ controller_interface::CallbackReturn IconHwmController::on_configure(const rclcp
     }
     return intrinsic::OkStatus();
   };
+  {
+    auto prepare_server_result = intrinsic::hal::RemoteTriggerServer::Create(*shm_manager_, "prepare", [this](){ (void)Prepare(); });
+    if (!prepare_server_result.has_value()) {
+      RCLCPP_ERROR(get_node()->get_logger(), "Failed to create prepare server: %s", prepare_server_result.error().message.c_str());
+      return controller_interface::CallbackReturn::ERROR;
+    }
+    prepare_server_ = std::make_unique<intrinsic::hal::RemoteTriggerServer>(
+      std::move(prepare_server_result.value()));
+  }
   {
     auto activate_server_result = intrinsic::hal::RemoteTriggerServer::Create(*shm_manager_, "activate", [this](){ (void)Activate(); });
     if (!activate_server_result.has_value()) {
@@ -279,6 +320,7 @@ controller_interface::CallbackReturn IconHwmController::on_configure(const rclcp
   // The remaining servers *MUST NOT* run at realtime priority, since they can block and must not delay the execution of any of the realtime threads.
   auto state_change_query_thread_body = [this](){
     while (!stop_requested_){
+      prepare_server_->Query();
       enable_motion_server_->Query();
       disable_motion_server_->Query();
       clear_faults_server_->Query();
@@ -298,6 +340,11 @@ controller_interface::CallbackReturn IconHwmController::on_configure(const rclcp
   }
   clock_ = std::move(clock_res.value());
 
+  // Start the domain socket server
+  if (auto s = domain_socket_server_->AddSegmentInfoServeShmDescriptors(*shm_manager_); !s.ok()) {
+    RCLCPP_ERROR(get_node()->get_logger(), "Failed to start domain socket server: %s", s.message.c_str());
+    return controller_interface::CallbackReturn::ERROR;
+  }
   return controller_interface::CallbackReturn::SUCCESS;
 }
 
@@ -308,6 +355,33 @@ controller_interface::CallbackReturn IconHwmController::on_activate(const rclcpp
 }
 
 controller_interface::CallbackReturn IconHwmController::on_deactivate(const rclcpp_lifecycle::State & /*previous_state*/) {
+  return controller_interface::CallbackReturn::SUCCESS;
+}
+
+controller_interface::CallbackReturn IconHwmController::on_cleanup(const rclcpp_lifecycle::State & /*previous_state*/) {
+  // Stop all of the servers, join any threads, and reset the unique_ptrs.
+  stop_requested_ = true;
+  
+  domain_socket_server_.reset();
+  clock_.reset();
+  state_change_query_thread_.join();
+  apply_command_server_.reset();
+  read_status_server_.reset();
+  shutdown_server_.reset();
+  clear_faults_server_.reset();
+  disable_motion_server_.reset();
+  enable_motion_server_.reset();
+  deactivate_server_.reset();
+  activate_server_.reset();
+  prepare_server_.reset();
+  set_hw_state_client_.reset();
+  switch_controller_client_.reset();
+  hardware_module_state_ = {};
+  hardware_module_state_ = {};
+  joint_position_command_ = {};
+  joint_position_state_ = {};
+  icon_state_ = {};
+  shm_manager_.reset();
   return controller_interface::CallbackReturn::SUCCESS;
 }
 
@@ -329,6 +403,7 @@ controller_interface::return_type IconHwmController::update(const rclcpp::Time &
   // After TickBlocking returns, ICON has finished ReadStatus/ApplyCommand
 
   joint_position_state_.UpdatedAt(now_shm);
+  joint_velocity_state_.UpdatedAt(now_shm);
 
   return controller_interface::return_type::OK;
 }
@@ -341,6 +416,10 @@ void IconHwmController::detect_faults() {
       break;
     }
   }
+}
+
+intrinsic::Status IconHwmController::Prepare() {
+  return intrinsic::OkStatus();
 }
 
 intrinsic::RealtimeStatus IconHwmController::Activate() {
@@ -403,17 +482,29 @@ intrinsic::Status IconHwmController::Shutdown() {
 }
 
 intrinsic::RealtimeStatus IconHwmController::ReadStatus() {
-  auto * mutable_state = joint_position_state_.MutableValue();
-  auto * pos_vec = mutable_state->mutable_position();
+  auto * mutable_pos_state = joint_position_state_.MutableValue();
+  auto * pos_vec = mutable_pos_state->mutable_position();
+  
+  auto * mutable_vel_state = joint_velocity_state_.MutableValue();
+  auto * vel_vec = mutable_vel_state->mutable_velocity();
   
   size_t num_dofs = params_.dof_names.size();
   for (size_t i = 0; i < num_dofs; ++i) {
-    // We assume state_interfaces_ has the primary state (position) at the beginning of each joint's block
-    // Or we should find it by name.
-    // For now, let's assume the first interface is position.
-    auto val = state_interfaces_[i * params_.reference_and_state_interfaces.size()].get_optional().value_or(std::numeric_limits<double>::quiet_NaN());
-    pos_vec->Mutate(i, val);
+    // Interfaces in `state_interfaces_` are in the same order that we listed our desired
+    // interfaces in state_interface_configuration()
+    //
+    // That is, joints appear in the order they do in the configuration, 
+    // and for each joint, the state interfaces (usually position and velocity) do the same.
+    auto pos_val = state_interfaces_[i * params_.reference_and_state_interfaces.size()].get_optional().value_or(std::numeric_limits<double>::quiet_NaN());
+    pos_vec->Mutate(i, pos_val);
+    
+    auto vel_val = state_interfaces_[i * params_.reference_and_state_interfaces.size() + 1].get_optional().value_or(std::numeric_limits<double>::quiet_NaN());
+    vel_vec->Mutate(i, vel_val);
   }
+
+  auto now = intrinsic::Now();
+  joint_position_state_.UpdatedAt(now);
+  joint_velocity_state_.UpdatedAt(now);
   
   return intrinsic::RtOkStatus();
 }
