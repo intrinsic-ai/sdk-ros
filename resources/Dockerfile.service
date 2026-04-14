@@ -69,16 +69,7 @@ RUN apt-get update \
 COPY --from=overlay /opt/ros/underlay/install /opt/ros/underlay/install
 COPY --from=overlay /opt/ros/overlay/install /opt/ros/overlay/install
 
-RUN cp \
-        /opt/ros/overlay/install/share/${SERVICE_PACKAGE}/${SERVICE_NAME}/service_manifest.binarypb \
-        /service_manifest.binarypb \
-    && cp \
-        /opt/ros/overlay/install/share/${SERVICE_PACKAGE}/${SERVICE_NAME}/default_config.binarypb \
-        /default_config.binarypb \
-    && cp \
-        /opt/ros/overlay/install/share/${SERVICE_PACKAGE}/${SERVICE_NAME}/${SERVICE_NAME}_protos.desc \
-        /parameter-descriptor-set.proto.bin \
-    && sed --in-place \
+RUN sed --in-place \
         --expression '$isource "/opt/ros/overlay/install/setup.bash"' \
         /ros_entrypoint.sh \
     && sed --in-place \
