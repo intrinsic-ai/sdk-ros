@@ -102,6 +102,8 @@ class WorldBridge : public BridgeInterface {
     std::optional<std::string> robot_arm_part_name_;
     std::optional<std::string> force_torque_part_name_;
 
+    std::vector<std::string> override_joint_names_;
+
     std::shared_ptr<rclcpp::Publisher<visualization_msgs::msg::MarkerArray>>
         workcell_markers_pub_;
     std::string tf_prefix_;

@@ -45,6 +45,7 @@ constexpr const char* kRobotControllerNameParamName =
     "robot_controller_instance";
 constexpr const char* kThrottleRobotStateTopicParamName =
     "throttle_robot_state_topic";
+constexpr const char* kOverrideJointNamesParamName = "override_joint_names";
 
 ///=============================================================================
 void WorldBridge::declare_ros_parameters(
@@ -79,6 +80,9 @@ void WorldBridge::declare_ros_parameters(
       rclcpp::ParameterValue("robot_controller"));
   param_interface->declare_parameter(kThrottleRobotStateTopicParamName,
                                      rclcpp::ParameterValue(false));
+  param_interface->declare_parameter(
+      kOverrideJointNamesParamName,
+      rclcpp::ParameterValue(std::vector<std::string>{}));
 }
 
 ///=============================================================================
@@ -133,6 +137,10 @@ bool WorldBridge::initialize(ROSNodeInterfaces ros_node_interfaces,
   data_->mesh_url_prefix_ =
       param_interface->get_parameter(kMeshUrlPrefixParamName)
           .get_value<std::string>();
+
+  data_->override_joint_names_ =
+      param_interface->get_parameter(kOverrideJointNamesParamName)
+          .as_string_array();
 
   auto tf_sub_ = data_->world_->CreateTfSubscription(
       [this](const intrinsic_proto::TFMessage& msg) { this->TfCallback(msg); });
@@ -555,6 +563,17 @@ void WorldBridge::PublishJointState(
   for (int i = 0; i < part_status.joint_states_size(); ++i) {
     const auto& joint_state = part_status.joint_states(i);
     std::string joint_name = absl::StrFormat("%s_joint_%d", part_name, i);
+    if (!data_->override_joint_names_.empty()) {
+      if (std::size_t(part_status.joint_states_size()) ==
+          data_->override_joint_names_.size()) {
+        joint_name = data_->override_joint_names_[i];
+      } else {
+        LOG_EVERY_N(ERROR, 100)
+            << "Size of override_joint_names is not equal to "
+               "size of joints from part ["
+            << part_name << "]. Using default joint names!";
+      }
+    }
     robot_joint_state_ros.name.push_back(joint_name);
 
     double pos = joint_state.has_position_sensed()

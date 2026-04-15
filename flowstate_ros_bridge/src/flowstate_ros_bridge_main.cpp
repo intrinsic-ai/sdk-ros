@@ -107,6 +107,10 @@ int main(int argc, char* argv[]) {
                       s.robot_controller_instance());
   params.emplace_back("throttle_robot_state_topic",
                       s.throttle_robot_state_topic());
+  const auto& override_joint_names_proto = s.override_joint_names();
+  std::vector<std::string> override_joint_names(
+      override_joint_names_proto.begin(), override_joint_names_proto.end());
+  params.emplace_back("override_joint_names", override_joint_names);
 
   options.parameter_overrides(params);
 

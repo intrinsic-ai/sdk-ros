@@ -13,6 +13,7 @@ message SensorPublisherConfig {
   string force_torque_sensor_frame_id = 6;
   string robot_controller_instance = 7;
   bool throttle_robot_state_topic = 8;
+  repeated string override_joint_names = 9;
 }
 
 message FlowstateRosBridgeConfig {

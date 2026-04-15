@@ -13,7 +13,7 @@
   bridge_plugins: [
     "flowstate_ros_bridge::WorldBridge",
     "flowstate_ros_bridge::ExecutiveBridge"
-  ],
+  ]
   executive_deadline_seconds: 5
   executive_update_rate_millis: 1000
   sensors: {
@@ -25,5 +25,6 @@
     force_torque_sensor_frame_id: "force_torque_sensor/force_torque_sensor/AtiForceTorqueSensor"
     robot_controller_instance: "robot_controller"
     throttle_robot_state_topic: false
+    override_joint_names: []
   },
 }
