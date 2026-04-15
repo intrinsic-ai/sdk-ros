@@ -73,7 +73,7 @@ These parameters are defined in the `SensorPublisherConfig` message and can be m
 | `force_torque_sensor_frame_id` | `/force_torque_sensor/force_torque_sensor/AtiForceTorqueSensor` | Frame ID of F/T sensor to be used in force_torque_topic. |
 | `robot_controller_instance` | `robot_controller` | Name of the ICON service/resource instance. |
 | `throttle_robot_state_topic` | `false` | By default, the bridge subscribes to the high-frequency `/icon/robot_controller/robot_status` state topic (~300 Hz). If this parameter is set to `True`, then the low-frequency equivalent (~25 Hz), topic  `/icon/robot_controller/robot_status_throttle`, will be used instead. |
-
+| `override_joint_names` | `[]` | If populated, replaces the default joint names with a user-specified ones. The size of override_joint_names must match the number of joints of the robot part it is overriding, otherwise it will be ignored. Example values for a 6 DOF robot such as the UR5e would be `["shoulder_pan_joint", "shoulder_lift_joint", "elbow_joint", "wrist_1_joint", "wrist_2_joint", "wrist_3_joint"]"`. |
 ---
 
 ## 3. Usage & Verification
