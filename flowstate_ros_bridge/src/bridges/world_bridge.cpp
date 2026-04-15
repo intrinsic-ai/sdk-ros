@@ -62,12 +62,11 @@ void WorldBridge::declare_ros_parameters(
                                      rclcpp::ParameterValue(true));
   param_interface->declare_parameter(kEnableForceTorqueTopicParamName,
                                      rclcpp::ParameterValue(true));
-  param_interface->declare_parameter(
-      kRobotJointStateTopicParamName,
-      rclcpp::ParameterValue("/robot_joint_state"));
+  param_interface->declare_parameter(kRobotJointStateTopicParamName,
+                                     rclcpp::ParameterValue("/joint_states"));
   param_interface->declare_parameter(
       kForceTorqueTopicParamName,
-      rclcpp::ParameterValue("/force_torque_sensor"));
+      rclcpp::ParameterValue("/fts_broadcaster/wrench"));
   param_interface->declare_parameter(
       kForceTorqueSensorFrameIDParamName,
       rclcpp::ParameterValue(
