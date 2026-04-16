@@ -40,10 +40,12 @@ constexpr const char* kRobotJointStateTopicParamName =
 constexpr const char* kForceTorqueTopicParamName = "force_torque_topic";
 constexpr const char* kForceTorqueSensorFrameIDParamName =
     "force_torque_sensor_frame_id";
+constexpr const char* kRobotBaseFrameIDParamName = "robot_base_frame_id";
 constexpr const char* kRobotControllerNameParamName =
     "robot_controller_instance";
 constexpr const char* kThrottleRobotStateTopicParamName =
     "throttle_robot_state_topic";
+constexpr const char* kOverrideJointNamesParamName = "override_joint_names";
 
 ///=============================================================================
 void WorldBridge::declare_ros_parameters(
@@ -61,21 +63,26 @@ void WorldBridge::declare_ros_parameters(
                                      rclcpp::ParameterValue(true));
   param_interface->declare_parameter(kEnableForceTorqueTopicParamName,
                                      rclcpp::ParameterValue(true));
-  param_interface->declare_parameter(
-      kRobotJointStateTopicParamName,
-      rclcpp::ParameterValue("/robot_joint_state"));
+  param_interface->declare_parameter(kRobotJointStateTopicParamName,
+                                     rclcpp::ParameterValue("/joint_states"));
   param_interface->declare_parameter(
       kForceTorqueTopicParamName,
-      rclcpp::ParameterValue("/force_torque_sensor"));
+      rclcpp::ParameterValue("/fts_broadcaster/wrench"));
   param_interface->declare_parameter(
       kForceTorqueSensorFrameIDParamName,
       rclcpp::ParameterValue(
           "force_torque_sensor/force_torque_sensor/AtiForceTorqueSensor"));
   param_interface->declare_parameter(
+      kRobotBaseFrameIDParamName,
+      rclcpp::ParameterValue("robot/robot/base_link"));
+  param_interface->declare_parameter(
       kRobotControllerNameParamName,
       rclcpp::ParameterValue("robot_controller"));
   param_interface->declare_parameter(kThrottleRobotStateTopicParamName,
                                      rclcpp::ParameterValue(false));
+  param_interface->declare_parameter(
+      kOverrideJointNamesParamName,
+      rclcpp::ParameterValue(std::vector<std::string>{}));
 }
 
 ///=============================================================================
@@ -130,6 +137,10 @@ bool WorldBridge::initialize(ROSNodeInterfaces ros_node_interfaces,
   data_->mesh_url_prefix_ =
       param_interface->get_parameter(kMeshUrlPrefixParamName)
           .get_value<std::string>();
+
+  data_->override_joint_names_ =
+      param_interface->get_parameter(kOverrideJointNamesParamName)
+          .as_string_array();
 
   auto tf_sub_ = data_->world_->CreateTfSubscription(
       [this](const intrinsic_proto::TFMessage& msg) { this->TfCallback(msg); });
@@ -188,6 +199,8 @@ bool WorldBridge::initialize(ROSNodeInterfaces ros_node_interfaces,
   data_->ft_sensor_frame_id_ =
       param_interface->get_parameter(kForceTorqueSensorFrameIDParamName)
           .as_string();
+  data_->robot_base_frame_id_ =
+      param_interface->get_parameter(kRobotBaseFrameIDParamName).as_string();
 
   // Start a thread to publish sceneObject visualization messages whenever a new
   // object arrives
@@ -518,7 +531,8 @@ void WorldBridge::HandleRobotStatus(
     const std::string& part_name = data_->robot_arm_part_name_.value();
     auto it = robot_status.status_map().find(part_name);
     if (it != robot_status.status_map().end()) {
-      PublishJointState(part_name, it->second, time);
+      PublishJointState(part_name, data_->robot_base_frame_id_, it->second,
+                        time);
     } else {
       LOG_EVERY_N(ERROR, 100)
           << "Error: Robot arm part [" << part_name << "] not found!";
@@ -539,16 +553,27 @@ void WorldBridge::HandleRobotStatus(
 }
 
 void WorldBridge::PublishJointState(
-    const std::string& part_name,
+    const std::string& part_name, const std::string& frame_id,
     const intrinsic_proto::icon::PartStatus& part_status,
     const rclcpp::Time& time) {
   sensor_msgs::msg::JointState robot_joint_state_ros;
   robot_joint_state_ros.header.stamp = time;
-  robot_joint_state_ros.header.frame_id = "";
+  robot_joint_state_ros.header.frame_id = frame_id;
 
   for (int i = 0; i < part_status.joint_states_size(); ++i) {
     const auto& joint_state = part_status.joint_states(i);
     std::string joint_name = absl::StrFormat("%s_joint_%d", part_name, i);
+    if (!data_->override_joint_names_.empty()) {
+      if (std::size_t(part_status.joint_states_size()) ==
+          data_->override_joint_names_.size()) {
+        joint_name = data_->override_joint_names_[i];
+      } else {
+        LOG_EVERY_N(ERROR, 100)
+            << "Size of override_joint_names is not equal to "
+               "size of joints from part ["
+            << part_name << "]. Using default joint names!";
+      }
+    }
     robot_joint_state_ros.name.push_back(joint_name);
 
     double pos = joint_state.has_position_sensed()
