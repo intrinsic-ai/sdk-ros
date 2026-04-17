@@ -53,7 +53,6 @@ This command build the code, the Intrinsic SDK, and the necessary ROS dependenci
 ./src/sdk-ros/scripts/build_container.sh \
   --skill_package generic_action_skill \
   --skill_name generic_action_skill \
-  --manifest_path src/sdk-ros/generic_action_skill/src/generic_action_skill.manifest.textproto \
   --dependencies "ros-jazzy-common-interfaces ros-jazzy-action-tutorials-cpp ros-jazzy-action-tutorials-interfaces python3-absl python3-retrying python3-yaml"
 ```
 
