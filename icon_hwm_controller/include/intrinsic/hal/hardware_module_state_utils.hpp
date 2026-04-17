@@ -19,3 +19,12 @@ void SetState(HardwareModuleState* hardware_module_state, StateCode code,
 std::string_view GetMessage(const HardwareModuleState* hardware_module_state);
 
 }  // namespace intrinsic_fbs
+
+namespace intrinsic::hal {
+
+enum class TransitionGuardResult { kNoOp, kAllowed, kProhibited };
+
+TransitionGuardResult HardwareModuleTransitionGuard(
+    intrinsic_fbs::StateCode from, intrinsic_fbs::StateCode to);
+
+}  // namespace intrinsic::hal

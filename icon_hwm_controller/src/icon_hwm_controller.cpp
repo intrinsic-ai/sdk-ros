@@ -419,65 +419,96 @@ void IconHwmController::DetectFaults() {
 }
 
 intrinsic::Status IconHwmController::Prepare() {
+  if (!SetStateDirectly(intrinsic_fbs::StateCode::kPreparing)) {
+    return {intrinsic::StatusCode::kFailedPrecondition, "Transition to Preparing not allowed"};
+  }
+  SetStateDirectly(intrinsic_fbs::StateCode::kPrepared);
   return intrinsic::OkStatus();
 }
 
 intrinsic::RealtimeStatus IconHwmController::Activate() {
-  state_code_.store(intrinsic_fbs::StateCode::kActivated);
+  if (!SetStateDirectly(intrinsic_fbs::StateCode::kActivating)) {
+    return {intrinsic::StatusCode::kFailedPrecondition, "Transition to Activating not allowed"};
+  }
+  SetStateDirectly(intrinsic_fbs::StateCode::kActivated);
   return intrinsic::RtOkStatus();
 }
 
 intrinsic::RealtimeStatus IconHwmController::Deactivate() {
-  state_code_.store(intrinsic_fbs::StateCode::kDeactivated);
+  if (!SetStateDirectly(intrinsic_fbs::StateCode::kDeactivating)) {
+    return {intrinsic::StatusCode::kFailedPrecondition, "Transition to Deactivating not allowed"};
+  }
+  SetStateDirectly(intrinsic_fbs::StateCode::kDeactivated);
   return intrinsic::RtOkStatus();
 }
 
 intrinsic::Status IconHwmController::EnableMotion() {
-  state_code_.store(intrinsic_fbs::StateCode::kMotionEnabling);
+  if (!SetStateDirectly(intrinsic_fbs::StateCode::kMotionEnabling)) {
+    return {intrinsic::StatusCode::kFailedPrecondition, "Transition to MotionEnabling not allowed"};
+  }
   
   if (!params_.hardware_interface_name.empty()) {
     auto res = CallSetHwState(params_.hardware_interface_name, 3); // 3 = ACTIVE
     if (!res.ok()) {
-       state_code_.store(intrinsic_fbs::StateCode::kFaulted);
-       fault_reason_ = "Failed to activate hardware interface: " + res.message;
-       return res;
+      // TODO(nilsb): prepend "Failed to activate hardware interface: "
+      SetStateDirectly(
+        intrinsic_fbs::StateCode::kFaulted, 
+        res.message);
+      return res;
+    }
+  }
+
+  if (clock_ != nullptr) {
+    auto res = clock_->Reset(std::chrono::seconds(20));
+    if (!res.ok()) {
+      // TODO(nilsb): prepend "Failed to reset clock: "
+      SetStateDirectly(
+        intrinsic_fbs::StateCode::kFaulted, 
+        res.GetMessage());
+      return ToStatus(res);
     }
   }
 
   if (!params_.controllers_to_activate.empty() || !params_.controllers_to_deactivate.empty()) {
     auto res = CallSwitchController(params_.controllers_to_activate, params_.controllers_to_deactivate);
     if (!res.ok()) {
-       state_code_.store(intrinsic_fbs::StateCode::kFaulted);
-       fault_reason_ = "Failed to switch controllers: " + res.message;
-       return res;
+      // TODO(nilsb): prepend "Failed to switch controllers: "
+      SetStateDirectly(
+        intrinsic_fbs::StateCode::kFaulted, 
+        res.message);
+      return res;
     }
   }
 
-  state_code_.store(intrinsic_fbs::StateCode::kMotionEnabled);
+  SetStateDirectly(intrinsic_fbs::StateCode::kMotionEnabled);
   return intrinsic::OkStatus();
 }
 
 intrinsic::Status IconHwmController::DisableMotion() {
-  state_code_.store(intrinsic_fbs::StateCode::kMotionDisabling);
+  if (!SetStateDirectly(intrinsic_fbs::StateCode::kMotionDisabling)) {
+    return {intrinsic::StatusCode::kFailedPrecondition, "Transition to MotionDisabling not allowed"};
+  }
   
   if (!params_.controllers_to_activate.empty()) {
      // Deactivate the controllers we activated
      (void)CallSwitchController({}, params_.controllers_to_activate);
   }
 
-  state_code_.store(intrinsic_fbs::StateCode::kActivated);
+  SetStateDirectly(intrinsic_fbs::StateCode::kActivated);
   return intrinsic::OkStatus();
 }
 
 intrinsic::Status IconHwmController::ClearFaults() {
+  if (!SetStateDirectly(intrinsic_fbs::StateCode::kClearingFaults)) {
+    return {intrinsic::StatusCode::kFailedPrecondition, "Transition to ClearingFaults not allowed"};
+  }
   faulted_ = false;
-  fault_reason_ = "";
-  state_code_.store(intrinsic_fbs::StateCode::kActivated);
+  SetStateDirectly(intrinsic_fbs::StateCode::kActivated);
   return intrinsic::OkStatus();
 }
 
 intrinsic::Status IconHwmController::Shutdown() {
-  state_code_.store(intrinsic_fbs::StateCode::kDeactivated);
+  SetStateDirectly(intrinsic_fbs::StateCode::kDeactivated);
   return intrinsic::OkStatus();
 }
 
@@ -505,7 +536,7 @@ intrinsic::RealtimeStatus IconHwmController::ReadStatus() {
   auto now = intrinsic::Now();
   joint_position_state_.UpdatedAt(now);
   joint_velocity_state_.UpdatedAt(now);
-  
+
   return intrinsic::RtOkStatus();
 }
 
@@ -549,6 +580,61 @@ void IconHwmController::UpdateHwmState() {
   }
   
   hardware_module_state_.UpdatedAt(intrinsic::Now());
+}
+
+bool IconHwmController::SetStateDirectly(
+    intrinsic_fbs::StateCode state, 
+    std::string_view fault_reason,
+    bool force, 
+    bool silent) {
+  auto current_state = state_code_.load();
+  auto guard_res = intrinsic::hal::HardwareModuleTransitionGuard(current_state, state);
+  if (!force && guard_res != intrinsic::hal::TransitionGuardResult::kAllowed) {
+    if (!silent && guard_res == intrinsic::hal::TransitionGuardResult::kProhibited) {
+      RCLCPP_ERROR(get_node()->get_logger(), "Switching from %s to %s is prohibited!",
+        intrinsic_fbs::EnumNameStateCode(current_state),
+        intrinsic_fbs::EnumNameStateCode(state));
+    }
+    return false;
+  }
+  
+  const bool state_changed = current_state != state;
+  if (!silent && state_changed) {
+    if (fault_reason.empty()) {
+      RCLCPP_INFO(get_node()->get_logger(), "Switching from %s to %s",
+        intrinsic_fbs::EnumNameStateCode(current_state),
+        intrinsic_fbs::EnumNameStateCode(state));
+    } else {
+      RCLCPP_INFO(get_node()->get_logger(), "Switching from %s to %s with message '%.*s'",
+        intrinsic_fbs::EnumNameStateCode(current_state),
+        intrinsic_fbs::EnumNameStateCode(state),
+        static_cast<int>(fault_reason.size()), fault_reason.data());
+    }
+  }
+
+  if (!state_changed && fault_reason_ == fault_reason) {
+    // Don't update timestamp when state and message is the same as before.
+    return false;
+  }
+  // TODO(nilsb): When transitioning *away* from kMotionEnabled, make sure we take 
+  // appropriate action to disable. Currently this class is a prototype that pretty much 
+  // treats all transitions as no-ops, but in the future we'll need to do something.
+  state_code_.store(state);
+  fault_reason_ = fault_reason;
+
+  if (*hardware_module_state_ != nullptr) {
+    auto * mutable_state = *hardware_module_state_;
+    mutable_state->mutate_code(state);
+    
+    auto * msg_bytes = mutable_state->mutable_message();
+    const size_t max_len = msg_bytes->size();
+    const size_t len = std::min(fault_reason.length(), max_len);
+    std::memset(msg_bytes->data(), 0, max_len);
+    std::memcpy(msg_bytes->data(), fault_reason.data(), len);
+    
+    hardware_module_state_.UpdatedAt(intrinsic::Now());
+  }
+  return state_changed;
 }
 
 intrinsic::Status IconHwmController::CallSwitchController(const std::vector<std::string>& activate, const std::vector<std::string>& deactivate) {

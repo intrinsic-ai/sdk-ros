@@ -36,3 +36,133 @@ std::string_view GetMessage(const HardwareModuleState* hardware_module_state) {
       hardware_module_state->message()->Data());
 }
 }  // namespace intrinsic_fbs
+
+namespace intrinsic::hal {
+
+TransitionGuardResult HardwareModuleTransitionGuard(
+    intrinsic_fbs::StateCode from, intrinsic_fbs::StateCode to) {
+  using intrinsic_fbs::StateCode;
+  if (to == StateCode::kFatallyFaulted) {
+    return TransitionGuardResult::kAllowed;
+  }
+
+  switch (from) {
+    case StateCode::kPreparing:
+      switch (to) {
+        case StateCode::kPrepared:
+        case StateCode::kFaulted:
+        case StateCode::kFatallyFaulted:
+          return TransitionGuardResult::kAllowed;
+        default:
+          return TransitionGuardResult::kProhibited;
+      }
+    case StateCode::kPrepared:
+      switch (to) {
+        case StateCode::kActivating:
+        case StateCode::kDeactivating:
+          return TransitionGuardResult::kAllowed;
+        default:
+          return TransitionGuardResult::kProhibited;
+      }
+    case StateCode::kDeactivating:
+      switch (to) {
+        case StateCode::kDeactivated:
+          return TransitionGuardResult::kAllowed;
+        default:
+          return TransitionGuardResult::kProhibited;
+      }
+    case StateCode::kDeactivated:
+      switch (to) {
+        case StateCode::kDeactivating:
+          return TransitionGuardResult::kNoOp;
+        case StateCode::kPreparing:
+        case StateCode::kInitFailed:
+          return TransitionGuardResult::kAllowed;
+        default:
+          return TransitionGuardResult::kProhibited;
+      }
+
+    case StateCode::kActivating:
+      switch (to) {
+        case StateCode::kActivated:
+          return TransitionGuardResult::kAllowed;
+        default:
+          return TransitionGuardResult::kProhibited;
+      }
+
+    case StateCode::kActivated:
+      switch (to) {
+        case StateCode::kMotionDisabling:
+        case StateCode::kClearingFaults:
+          return TransitionGuardResult::kNoOp;
+        case StateCode::kMotionEnabling:
+        case StateCode::kDeactivating:
+        case StateCode::kFaulted:
+          return TransitionGuardResult::kAllowed;
+        default:
+          return TransitionGuardResult::kProhibited;
+      }
+
+    case StateCode::kMotionEnabling:
+      switch (to) {
+        case StateCode::kDeactivating:
+        case StateCode::kMotionEnabled:
+        case StateCode::kFaulted:
+          return TransitionGuardResult::kAllowed;
+        default:
+          return TransitionGuardResult::kProhibited;
+      }
+
+    case StateCode::kMotionEnabled:
+      switch (to) {
+        case StateCode::kMotionEnabling:
+        case StateCode::kClearingFaults:
+          return TransitionGuardResult::kNoOp;
+        case StateCode::kMotionDisabling:
+        case StateCode::kFaulted:
+        case StateCode::kDeactivating:
+          return TransitionGuardResult::kAllowed;
+        default:
+          return TransitionGuardResult::kProhibited;
+      }
+
+    case StateCode::kMotionDisabling:
+      switch (to) {
+        case StateCode::kFaulted:
+        case StateCode::kActivated:
+        case StateCode::kDeactivating:
+          return TransitionGuardResult::kAllowed;
+        default:
+          return TransitionGuardResult::kProhibited;
+      }
+
+    case StateCode::kFaulted:
+      switch (to) {
+        case StateCode::kClearingFaults:
+        case StateCode::kDeactivating:
+        case StateCode::kFaulted:
+          return TransitionGuardResult::kAllowed;
+        default:
+          return TransitionGuardResult::kProhibited;
+      }
+
+    case StateCode::kClearingFaults:
+      switch (to) {
+        case StateCode::kDeactivating:
+        case StateCode::kFaulted:
+        case StateCode::kActivated:
+          return TransitionGuardResult::kAllowed;
+        default:
+          return TransitionGuardResult::kProhibited;
+      }
+
+    case StateCode::kInitFailed:
+      return TransitionGuardResult::kProhibited;
+
+    case StateCode::kFatallyFaulted:
+      return TransitionGuardResult::kProhibited;
+  }
+  return TransitionGuardResult::kProhibited;
+}
+
+}  // namespace intrinsic::hal

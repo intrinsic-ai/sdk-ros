@@ -100,6 +100,7 @@ class IconHwmController final : public controller_interface::ControllerInterface
   // Helper methods
   void DetectFaults();
   void UpdateHwmState();
+  bool SetStateDirectly(intrinsic_fbs::StateCode state, std::string_view fault_reason = "", bool force = false, bool silent = false);
   intrinsic::Status CallSwitchController(const std::vector<std::string>& activate, const std::vector<std::string>& deactivate);
   intrinsic::Status CallSetHwState(const std::string& name, uint8_t state);
 };
