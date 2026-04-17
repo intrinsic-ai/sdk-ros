@@ -15,9 +15,8 @@
 # intrinsic_sdk_cmake build base + user code built and setup to run
 ARG REPOSITORY=ghcr.io/intrinsic-ai
 ARG TAG=latest
-# TODO(wjwwood): this should be used to influence the base image used.
 ARG ROS_DISTRO=jazzy
-FROM ${REPOSITORY}/intrinsic_sdk_cmake:${TAG} AS source
+FROM ${REPOSITORY}/intrinsic_sdk_cmake:${ROS_DISTRO}-${TAG} AS source
 
 # The name of the skill.
 ARG SKILL_NAME
