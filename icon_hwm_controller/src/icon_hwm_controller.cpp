@@ -66,7 +66,9 @@ controller_interface::InterfaceConfiguration IconHwmController::command_interfac
   // See https://github.com/ros-controls/ros2_control/blob/7c5e76766307705b3ef0c28247a17c91814fb311/controller_interface/include/controller_interface/controller_interface_base.hpp#L373-L400
   config.type = controller_interface::interface_configuration_type::INDIVIDUAL;
   for (const auto & dof_name : params_.dof_names) {
-    config.names.push_back(dof_name + "/" + params_.command_interface);
+    for (const auto & interface_type : params_.command_interfaces) {
+      config.names.push_back(dof_name + "/" + interface_type);
+    }
   }
   return config;
 }
@@ -294,7 +296,8 @@ controller_interface::CallbackReturn IconHwmController::on_configure(const rclcp
       std::move(shutdown_server_result.value()));
   }
   {
-    auto read_status_server_result = intrinsic::hal::RemoteTriggerServer::Create(*shm_manager_, "read_status", [this](){ (void)ReadStatus(); });
+    auto read_status_server_result = intrinsic::hal::RemoteTriggerServer::Create(*shm_manager_, "read_status", [this](){ 
+      (void)ReadStatus(); });
     if (!read_status_server_result.has_value()) {
       RCLCPP_ERROR(get_node()->get_logger(), "Failed to create read_status server: %s", read_status_server_result.error().message.c_str());
       return controller_interface::CallbackReturn::ERROR;
@@ -303,7 +306,8 @@ controller_interface::CallbackReturn IconHwmController::on_configure(const rclcp
       std::move(read_status_server_result.value()));
   }
   {
-    auto apply_command_server_result = intrinsic::hal::RemoteTriggerServer::Create(*shm_manager_, "apply_command", [this](){ (void)ApplyCommand(); });
+    auto apply_command_server_result = intrinsic::hal::RemoteTriggerServer::Create(*shm_manager_, "apply_command", [this](){ 
+      (void)ApplyCommand(); });
     if (!apply_command_server_result.has_value()) {
       RCLCPP_ERROR(get_node()->get_logger(), "Failed to create apply_command server: %s", apply_command_server_result.error().message.c_str());
       return controller_interface::CallbackReturn::ERROR;
@@ -553,15 +557,20 @@ intrinsic::RealtimeStatus IconHwmController::ApplyCommand() {
 
   const auto * cmd = cmd_res.value();
   const auto * pos_vec = cmd->position();
+  const auto * vel_vec = cmd->velocity_feedforward();
   
-  if (pos_vec->size() != command_interfaces_.size()) {
-    return {intrinsic::StatusCode::kInternal, "Command vector size mismatch."};
+  if (pos_vec->size() != params_.dof_names.size()) {
+    return {intrinsic::StatusCode::kInternal, "Position command vector size mismatch."};
+  }
+
+  if (vel_vec->size() != params_.dof_names.size()) {
+    return {intrinsic::StatusCode::kInternal, "Velocity command vector size mismatch."};
   }
 
   for (size_t i = 0; i < pos_vec->size(); ++i) {
-    (void)command_interfaces_[i].set_value(pos_vec->Get(i));
+    (void)command_interfaces_[i * 2].set_value(pos_vec->Get(i));
+    (void)command_interfaces_[i * 2 + 1].set_value(vel_vec->Get(i));
   }
-
   return intrinsic::RtOkStatus();
 }
 

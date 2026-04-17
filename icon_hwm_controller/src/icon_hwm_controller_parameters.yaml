@@ -60,18 +60,20 @@ icon_hwm_controller:
       not_empty<>: null,
     }
   }
-  command_interface: {
-    type: string,
-    default_value: "",
-    description: "Name of the interface used by the controller for writing commands to the hardware.",
+  command_interfaces: {
+    type: string_array,
+    default_value: ["position", "velocity"],
+    description: "Names of the interfaces used by the controller for writing commands to the hardware. Usually position, velocity.",
     read_only: true,
     validation: {
       not_empty<>: null,
+      size_gt<>: 0,
+      size_lt<>: 3,
     }
   }
   reference_and_state_interfaces: {
     type: string_array,
-    default_value: [],
+    default_value: ["position", "velocity"],
     description: "Name of the interfaces used by the controller getting hardware states and reference commands. The second interface should be the derivative of the first.",
     read_only: true,
     validation: {
