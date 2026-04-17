@@ -98,10 +98,10 @@ class IconHwmController final : public controller_interface::ControllerInterface
   bool faulted_ = false;
 
   // Helper methods
-  void detect_faults();
-  void update_hwm_state();
-  intrinsic::Status call_switch_controller(const std::vector<std::string>& activate, const std::vector<std::string>& deactivate);
-  intrinsic::Status call_set_hw_state(const std::string& name, uint8_t state);
+  void DetectFaults();
+  void UpdateHwmState();
+  intrinsic::Status CallSwitchController(const std::vector<std::string>& activate, const std::vector<std::string>& deactivate);
+  intrinsic::Status CallSetHwState(const std::string& name, uint8_t state);
 };
 
 }

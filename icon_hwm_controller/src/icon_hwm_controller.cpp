@@ -388,9 +388,9 @@ controller_interface::CallbackReturn IconHwmController::on_cleanup(const rclcpp_
 controller_interface::return_type IconHwmController::update(const rclcpp::Time & /*time*/, const rclcpp::Duration & period) {
   cycle_counter_++;
   
-  update_hwm_state();
+  UpdateHwmState();
 
-  detect_faults();
+  DetectFaults();
 
   // clock_ must not be nullptr here (if it is, the initialization failed)
   if (!clock_) {
@@ -408,7 +408,7 @@ controller_interface::return_type IconHwmController::update(const rclcpp::Time &
   return controller_interface::return_type::OK;
 }
 
-void IconHwmController::detect_faults() {
+void IconHwmController::DetectFaults() {
   faulted_ = false;
   for (size_t i = 0; i < state_interfaces_.size(); ++i) {
     if (std::isnan(state_interfaces_[i].get_optional().value_or(std::numeric_limits<double>::quiet_NaN()))) {
@@ -436,7 +436,7 @@ intrinsic::Status IconHwmController::EnableMotion() {
   state_code_.store(intrinsic_fbs::StateCode::kMotionEnabling);
   
   if (!params_.hardware_interface_name.empty()) {
-    auto res = call_set_hw_state(params_.hardware_interface_name, 3); // 3 = ACTIVE
+    auto res = CallSetHwState(params_.hardware_interface_name, 3); // 3 = ACTIVE
     if (!res.ok()) {
        state_code_.store(intrinsic_fbs::StateCode::kFaulted);
        fault_reason_ = "Failed to activate hardware interface: " + res.message;
@@ -445,7 +445,7 @@ intrinsic::Status IconHwmController::EnableMotion() {
   }
 
   if (!params_.controllers_to_activate.empty() || !params_.controllers_to_deactivate.empty()) {
-    auto res = call_switch_controller(params_.controllers_to_activate, params_.controllers_to_deactivate);
+    auto res = CallSwitchController(params_.controllers_to_activate, params_.controllers_to_deactivate);
     if (!res.ok()) {
        state_code_.store(intrinsic_fbs::StateCode::kFaulted);
        fault_reason_ = "Failed to switch controllers: " + res.message;
@@ -462,7 +462,7 @@ intrinsic::Status IconHwmController::DisableMotion() {
   
   if (!params_.controllers_to_activate.empty()) {
      // Deactivate the controllers we activated
-     (void)call_switch_controller({}, params_.controllers_to_activate);
+     (void)CallSwitchController({}, params_.controllers_to_activate);
   }
 
   state_code_.store(intrinsic_fbs::StateCode::kActivated);
@@ -534,7 +534,7 @@ intrinsic::RealtimeStatus IconHwmController::ApplyCommand() {
   return intrinsic::RtOkStatus();
 }
 
-void IconHwmController::update_hwm_state() {
+void IconHwmController::UpdateHwmState() {
   auto * mutable_state = *hardware_module_state_;
   
   mutable_state->mutate_code(state_code_.load());
@@ -551,7 +551,7 @@ void IconHwmController::update_hwm_state() {
   hardware_module_state_.UpdatedAt(intrinsic::Now());
 }
 
-intrinsic::Status IconHwmController::call_switch_controller(const std::vector<std::string>& activate, const std::vector<std::string>& deactivate) {
+intrinsic::Status IconHwmController::CallSwitchController(const std::vector<std::string>& activate, const std::vector<std::string>& deactivate) {
   if (!switch_controller_client_->wait_for_service(std::chrono::seconds(1))) {
     return {intrinsic::StatusCode::kUnavailable, "SwitchController service not available"};
   }
@@ -573,7 +573,7 @@ intrinsic::Status IconHwmController::call_switch_controller(const std::vector<st
   return intrinsic::OkStatus();
 }
 
-intrinsic::Status IconHwmController::call_set_hw_state(const std::string& name, uint8_t state) {
+intrinsic::Status IconHwmController::CallSetHwState(const std::string& name, uint8_t state) {
   if (!set_hw_state_client_->wait_for_service(std::chrono::seconds(1))) {
     return {intrinsic::StatusCode::kUnavailable, "SetHardwareComponentState service not available"};
   }
