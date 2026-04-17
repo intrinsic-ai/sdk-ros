@@ -61,7 +61,7 @@ done
 SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 
 if [[ -n "$SERVICE_NAME" && -n "$SERVICE_PACKAGE" ]]; then
-  mkdir -p $IMAGES_DIR/$SERVICE_NAME
+  mkdir -p "$IMAGES_DIR/$SERVICE_NAME"
 
   if [[ -n "$CUSTOM_DOCKERFILE" ]]; then
     DOCKERFILE="$CUSTOM_DOCKERFILE"
@@ -69,14 +69,7 @@ if [[ -n "$SERVICE_NAME" && -n "$SERVICE_PACKAGE" ]]; then
     DOCKERFILE="$SCRIPT_DIR/../resources/Dockerfile.service"
   fi
 
-  docker buildx build -t $SERVICE_PACKAGE:$SERVICE_NAME \
-      --builder="$BUILDER_NAME" \
-      --output="\
-        type=docker,\
-        dest=$IMAGES_DIR/$SERVICE_NAME/$SERVICE_NAME.tar,\
-        compression=zstd,\
-        push=false,\
-        name=$SERVICE_PACKAGE:$SERVICE_NAME" \
+  docker build -t $SERVICE_PACKAGE:$SERVICE_NAME \
       --file $DOCKERFILE \
       --build-arg="SERVICE_PACKAGE=$SERVICE_PACKAGE" \
       --build-arg="SERVICE_NAME=$SERVICE_NAME" \
@@ -84,8 +77,12 @@ if [[ -n "$SERVICE_NAME" && -n "$SERVICE_PACKAGE" ]]; then
       --build-arg="SERVICE_EXECUTABLE_NAME=${SERVICE_NAME}_main" \
       --build-arg="ROS_DISTRO=$ROS_DISTRO" \
       .
+  
+  echo "INFO: Saving Service image to tarball..."
+  docker save "$SERVICE_PACKAGE:$SERVICE_NAME" -o "$IMAGES_DIR/$SERVICE_NAME/$SERVICE_NAME.tar"
+
 elif [[ -n "$SKILL_NAME" && -n "$SKILL_PACKAGE" ]]; then
-  mkdir -p $IMAGES_DIR/$SKILL_NAME
+  mkdir -p "$IMAGES_DIR/$SKILL_NAME"
 
   if [[ -n "$CUSTOM_DOCKERFILE" ]]; then
     DOCKERFILE="$CUSTOM_DOCKERFILE"
@@ -93,14 +90,7 @@ elif [[ -n "$SKILL_NAME" && -n "$SKILL_PACKAGE" ]]; then
     DOCKERFILE="$SCRIPT_DIR/../resources/Dockerfile.skill"
   fi
 
-  docker buildx build -t $SKILL_PACKAGE:$SKILL_NAME \
-      --builder="$BUILDER_NAME" \
-      --output="\
-        type=docker,\
-        dest=$IMAGES_DIR/$SKILL_NAME/$SKILL_NAME.tar,\
-        compression=zstd,\
-        push=false,\
-        name=$SKILL_PACKAGE:$SKILL_NAME" \
+  docker build -t $SKILL_PACKAGE:$SKILL_NAME \
       --file $DOCKERFILE \
       --build-arg="SKILL_PACKAGE=$SKILL_PACKAGE" \
       --build-arg="SKILL_NAME=$SKILL_NAME" \
@@ -108,5 +98,12 @@ elif [[ -n "$SKILL_NAME" && -n "$SKILL_PACKAGE" ]]; then
       --build-arg="ROS_DISTRO=$ROS_DISTRO" \
       --build-arg="DEPENDENCIES=$DEPENDENCIES" \
       .
-
+  
+  echo "INFO: Saving Skill image to tarball..."
+  docker save "$SKILL_PACKAGE:$SKILL_NAME" -o "$IMAGES_DIR/$SKILL_NAME/$SKILL_NAME.tar"
+else
+  echo "ERROR: Must provide either service or skill name and package."
+  exit 1
 fi
+
+echo "INFO: Container build and save complete!"
