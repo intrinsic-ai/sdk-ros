@@ -83,7 +83,7 @@ RUN \
     && ccache -s
 
 # exec_depends stage: capture just the exec depends using the source
-FROM ${REPOSITORY}/intrinsic_sdk_cmake_run:${TAG} AS exec_depends
+FROM ${REPOSITORY}/intrinsic_sdk_cmake_run:${ROS_DISTRO}-${TAG} AS exec_depends
 
 ARG SKILL_NAME
 ENV SKILL_WORKSPACE=/opt/${SKILL_NAME}_workspace
@@ -111,7 +111,7 @@ RUN \
     && dpkg --get-selections > /user_exec_apt_packages.txt
 
 # run stage: install exec dependencies + copy install artifacts from build stage
-FROM ${REPOSITORY}/intrinsic_sdk_cmake_run:${TAG} AS run
+FROM ${REPOSITORY}/intrinsic_sdk_cmake_run:${ROS_DISTRO}-${TAG} AS run
 
 ARG SKILL_EXECUTABLE
 ARG SKILL_CONFIG
