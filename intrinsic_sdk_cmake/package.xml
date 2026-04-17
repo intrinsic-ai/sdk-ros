@@ -15,6 +15,7 @@
   <author email="wjwwood@intrinsic.ai">William Woodall</author>
 
   <build_depend>python3-venv</build_depend>
+  <build_depend>ament_index_python</build_depend>
 
   <buildtool_depend>cmake</buildtool_depend>
   <buildtool_depend>bazelisk_vendor</buildtool_depend>
@@ -24,16 +25,17 @@
   <depend>flatbuffers_vendor</depend>
   <depend>grpc_vendor</depend>
   <depend>gz_cmake_vendor</depend>
-  <depend>gz_utils_vendor</depend>
   <depend>gz_math_vendor</depend>
   <depend>gz_msgs_vendor</depend>
   <depend>gz_transport_vendor</depend>
+  <depend>gz_utils_vendor</depend>
   <depend>intrinsic_pybind11_vendor</depend>
+  <depend>intrinsic_sdk_bundle_library_py</depend>
+  <depend>opencensus_cpp_vendor</depend>
+  <depend>ortools_vendor</depend>
   <depend>pybind11_abseil_vendor</depend>
   <depend>pybind11_protobuf_vendor</depend>
   <depend>python3-retrying</depend>
-  <depend>opencensus_cpp_vendor</depend>
-  <depend>ortools_vendor</depend>
 
   <export>
     <build_type>cmake</build_type>

@@ -1,6 +1,22 @@
+# Copyright 2026 Intrinsic Innovation LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 # intrinsic_sdk_cmake build base + user code built and setup to run
 ARG REPOSITORY=ghcr.io/intrinsic-ai
 ARG TAG=latest
+# TODO(wjwwood): this should be used to influence the base image used.
+ARG ROS_DISTRO=jazzy
 FROM ${REPOSITORY}/intrinsic_sdk_cmake:${TAG} AS source
 
 # The name of the skill.
@@ -118,7 +134,9 @@ RUN \
     && apt-get update \
     && apt-cache dumpavail | dpkg --merge-avail \
     && dpkg --set-selections < /user_exec_apt_packages.txt \
-    && apt-get dselect-upgrade -y
+    && apt-get dselect-upgrade -y \
+    && apt-get install -y python3-pip \
+    && pip3 install --upgrade protobuf grpcio grpcio-status --break-system-packages
 
 # Copy build artifacts from user's packages.
 COPY --from=build $SKILL_WORKSPACE/install $SKILL_WORKSPACE/install
