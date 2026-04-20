@@ -212,18 +212,10 @@ install(TARGETS
   INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
 )
 
-# Generate the manifest and default config binarypb files
-add_dependencies(${SERVICE_NAME}_main
-  ${SERVICE_NAME}_manifest
-  ${SERVICE_NAME}_default_config
-)
-
-# Install proto descriptor, manifest, and config files
+# Install proto descriptor file
 install(FILES
   ${CMAKE_CURRENT_BINARY_DIR}/${SERVICE_NAME}_protos.desc
-  ${CMAKE_CURRENT_BINARY_DIR}/service_manifest.binarypb
-  ${CMAKE_CURRENT_BINARY_DIR}/default_config.binarypb
-  DESTINATION share/${PROJECT_NAME}/${SERVICE_NAME}
+  DESTINATION share/${PROJECT_NAME}
 )
 
 install(PROGRAMS
