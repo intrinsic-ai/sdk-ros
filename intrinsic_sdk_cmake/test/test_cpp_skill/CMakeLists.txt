@@ -21,6 +21,12 @@ install(
   DESTINATION share/${PROJECT_NAME}
 )
 
+install(
+  FILES "${CMAKE_CURRENT_BINARY_DIR}/test_cpp_skill.desc"
+  DESTINATION share/${PROJECT_NAME}
+  RENAME test_cpp_skill_protos.desc
+)
+
 # Generate the c++ main file for the skill.
 intrinsic_sdk_generate_skill_main_cc(
   MANIFEST test_cpp_skill.manifest.textproto
