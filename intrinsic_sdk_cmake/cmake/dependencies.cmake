@@ -21,7 +21,28 @@ find_package(opencensus_cpp_vendor REQUIRED)
 find_package(Eigen3 REQUIRED)
 find_package(flatbuffers REQUIRED)
 find_package(Protobuf CONFIG REQUIRED)
-find_package(gRPC CONFIG REQUIRED)
+
+find_library(GRPC_CPP_LIBRARY NAMES grpc++)
+find_path(GRPC_INCLUDE_DIR NAMES grpc/grpc.h)
+find_program(GRPC_CPP_PLUGIN NAMES grpc_cpp_plugin)
+
+if(GRPC_CPP_LIBRARY AND GRPC_INCLUDE_DIR AND GRPC_CPP_PLUGIN)
+  if(NOT TARGET gRPC::grpc++)
+    add_library(gRPC::grpc++ UNKNOWN IMPORTED)
+    set_target_properties(gRPC::grpc++ PROPERTIES
+      IMPORTED_LOCATION "${GRPC_CPP_LIBRARY}"
+      INTERFACE_INCLUDE_DIRECTORIES "${GRPC_INCLUDE_DIR}"
+    )
+  endif()
+  if(NOT TARGET gRPC::grpc_cpp_plugin)
+    add_executable(gRPC::grpc_cpp_plugin IMPORTED)
+    set_target_properties(gRPC::grpc_cpp_plugin PROPERTIES
+      IMPORTED_LOCATION "${GRPC_CPP_PLUGIN}"
+    )
+  endif()
+else()
+  message(FATAL_ERROR "Could not find gRPC++ library, include directory, or plugin")
+endif()
 find_package(gz-msgs11 REQUIRED)
 find_package(gz-transport14 REQUIRED)
 set(PYBIND11_FINDPYTHON ON)

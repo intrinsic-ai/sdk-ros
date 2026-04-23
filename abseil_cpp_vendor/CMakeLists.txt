@@ -10,6 +10,13 @@ endif()
 find_package(ament_cmake REQUIRED)
 find_package(ament_cmake_vendor_package REQUIRED)
 
+set(abseil_satisfied_by_system FALSE)
+find_package(absl QUIET)
+if(absl_FOUND)
+  message(STATUS "Found system Abseil, skipping build.")
+  set(abseil_satisfied_by_system TRUE)
+endif()
+
 ament_vendor(abseil_cpp_vendor
   VCS_URL https://github.com/abseil/abseil-cpp
   VCS_VERSION 20250814.1
@@ -18,6 +25,7 @@ ament_vendor(abseil_cpp_vendor
     -DABSL_BUILD_TESTING:BOOL=OFF
     -DABSL_ENABLE_INSTALL:BOOL=ON
   GLOBAL_HOOK
+  SATISFIED ${abseil_satisfied_by_system}
 )
 
 ament_package()

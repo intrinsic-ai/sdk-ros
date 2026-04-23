@@ -18,6 +18,8 @@ ament_vendor(prometheus_cpp_vendor
   VCS_VERSION v1.1.0
   CMAKE_ARGS
     -DCMAKE_CXX_STANDARD=20
+    -DOVERRIDE_CXX_STANDARD_FLAGS=OFF
+    -DENABLE_TESTING=OFF
     # Standard arguments from the readme:
     #   https://github.com/jupp0r/prometheus-cpp/blob/v1.1.0/README.md#via-cmake
     -DBUILD_SHARED_LIBS=ON

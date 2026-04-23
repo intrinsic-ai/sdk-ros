@@ -1,0 +1,20 @@
+diff --git a/core/CMakeLists.txt b/core/CMakeLists.txt
+index a1d2e3b..b2c3d4e 100644
+--- a/core/CMakeLists.txt
++++ b/core/CMakeLists.txt
+@@ -1,12 +1,14 @@
+ ##################################################
+ # Build a custom protoc plugin
+ set(PROTOC_PLUGIN ${PROJECT_NAME}_protoc_plugin)
+ 
+ gz_add_executable(${PROTOC_PLUGIN}
+   generator/Generator.cc
+   generator/generator_main.cc)
++find_package(absl REQUIRED)
+ target_link_libraries(${PROTOC_PLUGIN}
+   protobuf::libprotoc
+-  protobuf::libprotobuf)
++  protobuf::libprotobuf
++  absl::raw_hash_set)
+ target_include_directories(${PROTOC_PLUGIN} PRIVATE ${PROTOBUF_INCLUDE_DIR})
+ target_compile_features(${PROTOC_PLUGIN} PRIVATE ${GZ_CXX_11_FEATURES})
