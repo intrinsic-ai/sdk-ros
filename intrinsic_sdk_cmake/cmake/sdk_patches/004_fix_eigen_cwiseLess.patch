@@ -1,0 +1,21 @@
+--- a/intrinsic/icon/control/algorithms/joint_position_pid_velocity_controller.cc
++++ b/intrinsic/icon/control/algorithms/joint_position_pid_velocity_controller.cc
+@@ -229,17 +229,17 @@
+       filters_.velocity_butterworth_initialized = true;
+     }
+     filters_.butterworth_velocity_filter->Update(velocity_state);
+     velocity_error_filtered = velocity_feedforward -
+                               filters_.butterworth_velocity_filter->GetOutput();
+   } else {
+     velocity_error_filtered = velocity_error;
+   }
+ 
+   eigenmath::VectorNd is_not_saturated =
+-      state_.previous_velocity_command.cwiseAbs()
+-          .cwiseLess(params_.max_velocity_command)
+-          .cast<double>();
++      (state_.previous_velocity_command.cwiseAbs().array() < params_.max_velocity_command.array())
++          .cast<double>()
++          .matrix();
+   state_.integral_control += is_not_saturated.cwiseProduct(
+       params_.k_i.cwiseProduct(position_error * params_.cycle_time_sec));
