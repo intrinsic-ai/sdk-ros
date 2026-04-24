@@ -3,6 +3,13 @@ project(flowstate_ros_bridge)
 
 include(GNUInstallDirs)
 
+# Find lttng-ust using PkgConfig to avoid hardcoding paths
+find_package(PkgConfig REQUIRED)
+pkg_check_modules(LTTNG_UST REQUIRED lttng-ust IMPORTED_TARGET)
+
+# Add library path found by PkgConfig to linker search path for targets that might not inherit it
+link_directories(${LTTNG_UST_LIBRARY_DIRS})
+
 # Default to C++20
 if(NOT CMAKE_CXX_STANDARD)
   set(CMAKE_CXX_STANDARD 20)
@@ -160,6 +167,7 @@ target_link_libraries(flowstate_ros_bridge_component
   ${tf2_msgs_TARGETS}
   tf2_ros::tf2_ros
   ${visualization_msgs_TARGETS}
+  PkgConfig::LTTNG_UST
 )
 target_compile_features(flowstate_ros_bridge_component PUBLIC cxx_std_17)
 set_property(TARGET flowstate_ros_bridge_component PROPERTY POSITION_INDEPENDENT_CODE ON)
