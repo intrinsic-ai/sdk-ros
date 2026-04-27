@@ -16,7 +16,8 @@
 ARG REPOSITORY=ghcr.io/intrinsic-ai
 ARG TAG=latest
 ARG ROS_DISTRO=jazzy
-FROM ${REPOSITORY}/intrinsic_sdk_cmake:${ROS_DISTRO}-${TAG} AS source
+ARG SKILL_TYPE=cpp
+FROM ${REPOSITORY}/intrinsic_sdk_cmake:${TAG} AS source
 
 # The name of the skill.
 ARG SKILL_NAME
@@ -41,6 +42,13 @@ ADD ./ $SKILL_WORKSPACE/src
 FROM source AS build
 
 ARG SKILL_PACKAGE
+ARG SKILL_TYPE
+ARG ROS_DISTRO
+
+RUN if [ "$ROS_DISTRO" != "jazzy" ]; then \
+        echo "Error: Only ROS_DISTRO=jazzy is supported for skills currently." >&2; \
+        exit 1; \
+    fi
 
 # Install build and run dependencies for the user's packages.
 RUN \
@@ -52,6 +60,11 @@ RUN \
     && echo 'Binary::apt::APT::Keep-Downloaded-Packages "true";' >/etc/apt/apt.conf.d/keep-cache \
     && apt-get update \
     && (rosdep init || true) \
+    && echo "python3-absl-py:" > /etc/ros/rosdep/custom.yaml \
+    && echo "  ubuntu: [python3-absl]" >> /etc/ros/rosdep/custom.yaml \
+    && echo "python3-retrying:" >> /etc/ros/rosdep/custom.yaml \
+    && echo "  ubuntu: [python3-retrying]" >> /etc/ros/rosdep/custom.yaml \
+    && echo "yaml file:///etc/ros/rosdep/custom.yaml" > /etc/ros/rosdep/sources.list.d/50-custom.list \
     && rosdep update \
     && cd $SKILL_WORKSPACE \
     && rosdep install \
@@ -82,15 +95,22 @@ RUN \
         --packages-up-to $SKILL_PACKAGE \
     && ccache -s
 
+# Copy pybind11_abseil if python skill
+RUN mkdir -p $SKILL_WORKSPACE/bindings/pybind11_abseil \
+    && if [ -d $SKILL_WORKSPACE/build/pybind11_abseil_vendor/pybind11_abseil_vendor-prefix/src/pybind11_abseil_vendor-build ]; then \
+        cp -r $SKILL_WORKSPACE/build/pybind11_abseil_vendor/pybind11_abseil_vendor-prefix/src/pybind11_abseil_vendor-build/* $SKILL_WORKSPACE/bindings/pybind11_abseil/; \
+    fi
+
 # exec_depends stage: capture just the exec depends using the source
-FROM ${REPOSITORY}/intrinsic_sdk_cmake_run:${ROS_DISTRO}-${TAG} AS exec_depends
+FROM ${REPOSITORY}/intrinsic_sdk_cmake_run:${TAG} AS exec_depends
 
 ARG SKILL_NAME
+ARG SKILL_TYPE
 ENV SKILL_WORKSPACE=/opt/${SKILL_NAME}_workspace
 
 COPY --from=source \
-    $SKILL_WORKSPACE \
-    $SKILL_WORKSPACE
+    $SKILL_WORKSPACE/src \
+    $SKILL_WORKSPACE/src
 
 RUN \
     --mount=type=cache,target=/var/cache/apt,sharing=locked \
@@ -101,6 +121,11 @@ RUN \
     && echo 'Binary::apt::APT::Keep-Downloaded-Packages "true";' >/etc/apt/apt.conf.d/keep-cache \
     && apt-get update \
     && (rosdep init || true) \
+    && echo "python3-absl-py:" > /etc/ros/rosdep/custom.yaml \
+    && echo "  ubuntu: [python3-absl]" >> /etc/ros/rosdep/custom.yaml \
+    && echo "python3-retrying:" >> /etc/ros/rosdep/custom.yaml \
+    && echo "  ubuntu: [python3-retrying]" >> /etc/ros/rosdep/custom.yaml \
+    && echo "yaml file:///etc/ros/rosdep/custom.yaml" > /etc/ros/rosdep/sources.list.d/50-custom.list \
     && rosdep update \
     && cd $SKILL_WORKSPACE \
     && rosdep install \
@@ -111,7 +136,7 @@ RUN \
     && dpkg --get-selections > /user_exec_apt_packages.txt
 
 # run stage: install exec dependencies + copy install artifacts from build stage
-FROM ${REPOSITORY}/intrinsic_sdk_cmake_run:${ROS_DISTRO}-${TAG} AS run
+FROM ${REPOSITORY}/intrinsic_sdk_cmake_run:${TAG} AS run
 
 ARG SKILL_EXECUTABLE
 ARG SKILL_CONFIG
@@ -119,6 +144,8 @@ ARG SKILL_ASSET_ID_ORG
 
 ARG SKILL_NAME
 ENV SKILL_WORKSPACE=/opt/${SKILL_NAME}_workspace
+ARG SKILL_TYPE
+ENV SKILL_TYPE=$SKILL_TYPE
 
 # Install run dependencies for user's packages.
 COPY --from=exec_depends \
@@ -140,6 +167,10 @@ RUN \
 # Copy build artifacts from user's packages.
 COPY --from=build $SKILL_WORKSPACE/install $SKILL_WORKSPACE/install
 
+# Copy pybind11_abseil bindings
+COPY --from=build $SKILL_WORKSPACE/bindings/pybind11_abseil /opt/bindings/pybind11_abseil
+ENV PYTHONPATH="/opt/bindings/pybind11_abseil"
+
 # Ensure skill executable and config file exist.
 ENV SKILL_EXECUTABLE_ABS=$SKILL_WORKSPACE/install/$SKILL_EXECUTABLE
 RUN ls $SKILL_EXECUTABLE_ABS \
@@ -152,7 +183,12 @@ RUN ls $SKILL_CONFIG_ABS \
 
 # Link skill executable and skill config file into well known locations needed by Flowstate.
 # Also ensure the user's workspace is sourced so the skill main can be run correctly.
+RUN if [ "$SKILL_TYPE" = "python" ]; then \
+        sed -i '1i #!/usr/bin/env python3' "$SKILL_EXECUTABLE_ABS" && chmod +x "$SKILL_EXECUTABLE_ABS"; \
+    fi
+
 RUN set -x \
+
     && mkdir -p /skills \
     && ln -sf $SKILL_EXECUTABLE_ABS /skills/skill_service \
     && ln -sf $SKILL_CONFIG_ABS /skills/skill_service_config.proto.bin \
@@ -165,6 +201,4 @@ LABEL "ai.intrinsic.asset-id"="${SKILL_ASSET_ID_ORG}.${SKILL_NAME}"
 LABEL "ai.intrinsic.skill-image-name"="${SKILL_NAME}"
 
 # Execute the skill main by default, but note that Flowstate will likely override this statement.
-CMD [ \
-    "/skills/skill_service", \
-    "--skill_service_config_filename=/skills/skill_service_config.proto.bin"]
+CMD ["sh", "-c", "if [ \"$SKILL_TYPE\" = \"python\" ]; then python3 /skills/skill_service --skill_service_config_filename=/skills/skill_service_config.proto.bin; else /skills/skill_service --skill_service_config_filename=/skills/skill_service_config.proto.bin; fi"]

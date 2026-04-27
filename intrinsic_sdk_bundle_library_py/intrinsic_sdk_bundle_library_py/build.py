@@ -103,11 +103,47 @@ def build_container(args):
     tag = f'{package}:{name}'
     images_dir = args.images_dir or './images'
 
-    # Podman build
-    cmd = ['podman', 'build', '-t', tag, '-f', dockerfile]
+    # Ensure .dockerignore exists to avoid sending large directories to build context
+    dockerignore_path = '.dockerignore'
+    if not os.path.exists(dockerignore_path):
+        print(f'Creating {dockerignore_path}...')
+        try:
+            with open(dockerignore_path, 'w') as f:
+                f.write('images\nbuild\nlog\ninstall\n')
+        except Exception as e:
+            print(f'Warning: Could not create {dockerignore_path}: {e}')
+
+    # Ensure builder exists
+    builder_name = args.builder_name or 'container-builder'
+    try:
+        run_command(['docker', 'buildx', 'inspect', '--builder', builder_name])
+    except Exception:
+        print(f"Builder {builder_name} not found. Creating it...")
+        run_command(['docker', 'buildx', 'create', '--name', builder_name, '--driver', 'docker-container'])
+        run_command(['docker', 'buildx', 'use', builder_name])
+
+    tar_dir = os.path.join(images_dir, name)
+    os.makedirs(tar_dir, exist_ok=True)
+    tar_path = os.path.join(tar_dir, f'{name}.tar')
+
+    # Docker buildx build
+    cmd = ['docker', 'buildx', 'build', '-t', tag, '-f', dockerfile, '--builder', builder_name]
+    if args.no_cache:
+        cmd.append('--no-cache')
+
+    # Output flag
+    output_arg = (
+        f"type=docker,"
+        f"dest={tar_path},"
+        f"compression=zstd,"
+        f"push=false,"
+        f"name={tag}"
+    )
+    cmd.extend(['--output', output_arg])
 
     # Build args
     cmd.extend(['--build-arg', f'ROS_DISTRO={args.ros_distro}'])
+    cmd.extend(['--build-arg', f'SKILL_TYPE={args.skill_type}'])
     if args.service_name:
         cmd.extend([
             '--build-arg', f'SERVICE_PACKAGE={package}',
@@ -119,7 +155,7 @@ def build_container(args):
             '--build-arg', f'SKILL_PACKAGE={package}',
             '--build-arg', f'SKILL_NAME={name}',
         ])
-        skill_executable = args.skill_executable or f'{name}_main'
+        skill_executable = args.skill_executable or f'lib/{package}/{name}_main'
         cmd.extend(['--build-arg', f'SKILL_EXECUTABLE={skill_executable}'])
 
         skill_config = args.skill_config or f'share/{package}/{name}_config.pbbin'
@@ -134,14 +170,10 @@ def build_container(args):
     cmd.append('.')
 
     run_command(cmd)
-
-    # Save to tar
-    tar_dir = os.path.join(images_dir, name)
-    os.makedirs(tar_dir, exist_ok=True)
-    tar_path = os.path.join(tar_dir, f'{name}.tar')
-
-    run_command(['podman', 'save', '-o', tar_path, tag])
-    print(f'Saved image to {tar_path}')
+    print(f'Saved compressed image to {tar_path}')
+    
+    print(f'Stopping builder {builder_name}...')
+    run_command(['docker', 'buildx', 'stop', builder_name])
 
 
 def build_bundle(args):
@@ -169,10 +201,13 @@ def build_bundle(args):
 
     # Extract descriptor
     container_name = f'temp_container_{name}'
-    run_command(['podman', 'create', '--name', container_name, f'{package}:{name}'])
+    run_command(['podman', 'create', '--replace', '--name', container_name, f'{package}:{name}'])
 
     desc_path = os.path.join(images_dir, name, f'{name}_protos.desc')
-    src_path = f'/opt/ros/overlay/install/share/{package}/{name}_protos.desc'
+    if args.service_name:
+        src_path = f'/opt/ros/overlay/install/share/{package}/{name}_protos.desc'
+    else:
+        src_path = f'/opt/{name}_workspace/install/share/{package}/{name}_protos.desc'
 
     run_command(['podman', 'cp', f'{container_name}:{src_path}', desc_path])
     run_command(['podman', 'rm', '-f', container_name])
@@ -204,6 +239,9 @@ def build_bundle(args):
 
     run_command(inbuild_cmd)
 
+    bundle_path = os.path.join(images_dir, name, f'{name}.bundle.tar')
+
+
 
 def main():
     parser = argparse.ArgumentParser(description='Build container and bundle for skills/services.')
@@ -223,11 +261,12 @@ def main():
     parser_container.add_argument('--skill_executable')
     parser_container.add_argument('--skill_config')
     parser_container.add_argument('--skill_asset_id_org')
+    parser_container.add_argument('--skill_type', choices=['cpp', 'python'], default='cpp')
+    parser_container.add_argument('--no-cache', action='store_true', help='Do not use cache when building the image')
 
     # Build bundle parser
     parser_bundle = subparsers.add_parser('bundle', help='Build bundle')
     parser_bundle.add_argument('--images_dir', default='./images')
-    parser_bundle.add_argument('--builder_name', default='container-builder')
     parser_bundle.add_argument('--service_name')
     parser_bundle.add_argument('--service_package')
     parser_bundle.add_argument('--skill_name')
