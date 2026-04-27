@@ -2,16 +2,23 @@
 
 This directory contains tests for the `intrinsic_sdk_bundle_library_py` package.
 
-## 1. Standard Linting Tests
-These tests check code style, copyright headers, and docstrings.
+## 1. Unit Tests and Linting
+These tests verify the logic of the package and check code style.
 
-To run these tests, use `colcon test` from the workspace root:
+### Running all tests
+To run all tests (including unit tests and linting), use `colcon test` from the workspace root:
 ```bash
 colcon test --packages-select intrinsic_sdk_bundle_library_py
 ```
 Or run `pytest` directly in this directory (if dependencies are installed):
 ```bash
 pytest test/
+```
+
+### Running specific tests
+To run only the unit tests for `build.py`:
+```bash
+pytest test/test_build.py
 ```
 
 ## 2. Functional Tests
