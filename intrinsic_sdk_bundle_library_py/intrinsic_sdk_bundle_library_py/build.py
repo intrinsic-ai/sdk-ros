@@ -206,10 +206,17 @@ def build_bundle(args):
     desc_path = os.path.join(images_dir, name, f'{name}_protos.desc')
     if args.service_name:
         src_path = f'/opt/ros/overlay/install/share/{package}/{name}_protos.desc'
+        try:
+            run_command(['podman', 'cp', f'{container_name}:{src_path}', desc_path])
+        except subprocess.CalledProcessError:
+            # Fallback to searching in the service's own package directory
+            print(f"Failed to copy from {src_path}, trying fallback path...")
+            src_path = f'/opt/ros/overlay/install/share/{name}/{name}_protos.desc'
+            run_command(['podman', 'cp', f'{container_name}:{src_path}', desc_path])
     else:
         src_path = f'/opt/{name}_workspace/install/share/{package}/{name}_protos.desc'
+        run_command(['podman', 'cp', f'{container_name}:{src_path}', desc_path])
 
-    run_command(['podman', 'cp', f'{container_name}:{src_path}', desc_path])
     run_command(['podman', 'rm', '-f', container_name])
 
     # Get SDK version and download inbuild
