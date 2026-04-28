@@ -1,0 +1,30 @@
+metadata {
+  id {
+    package: "com.example"
+    name: "test_python_service"
+  }
+  vendor {
+    display_name: "Intrinsic"
+  }
+  documentation {
+    description: "Test Python service."
+  }
+  display_name: "test_python_service"
+}
+service_def {
+  real_spec {
+    image {
+      archive_filename: "test_python_service.tar"
+    }
+  }
+  sim_spec {
+    image {
+      archive_filename: "test_python_service.tar"
+    }
+  }
+}
+assets {
+  default_configuration_filename: "default_config.binarypb",
+  parameter_descriptor_filename: "parameter-descriptor-set.proto.bin",
+  image_filenames: ["test_python_service.tar"]
+}

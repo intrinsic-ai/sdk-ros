@@ -94,5 +94,60 @@ class TestBuild(unittest.TestCase):
                 break
         self.assertTrue(found_bundle)
 
+    @patch('intrinsic_sdk_bundle_library_py.build.run_command')
+    def test_build_container_service(self, mock_run_command):
+        args = MagicMock()
+        args.service_name = "test_service"
+        args.service_package = "test_package"
+        args.skill_name = None
+        args.skill_package = None
+        args.dockerfile = None
+        args.images_dir = "./images"
+        args.builder_name = "test-builder"
+        args.no_cache = False
+        args.ros_distro = "jazzy"
+        args.skill_type = "cpp"
+        args.dependencies = None
+
+        mock_run_command.return_value = MagicMock()
+
+        build.build_container(args)
+        
+        calls = mock_run_command.call_args_list
+        found_build = False
+        for call in calls:
+            args_list = call[0][0]
+            if 'docker' in args_list and 'buildx' in args_list and 'build' in args_list:
+                found_build = True
+                break
+        self.assertTrue(found_build)
+
+    @patch('intrinsic_sdk_bundle_library_py.build.download_inbuild', return_value='./inbuild')
+    @patch('intrinsic_sdk_bundle_library_py.build.get_sdk_version', return_value='v0.1.0')
+    @patch('intrinsic_sdk_bundle_library_py.build.run_command')
+    @patch('os.path.exists', return_value=True)
+    def test_build_bundle_service(self, mock_exists, mock_run_command, mock_get_version, mock_download):
+        args = MagicMock()
+        args.service_name = "test_service"
+        args.service_package = "test_package"
+        args.skill_name = None
+        args.skill_package = None
+        args.manifest_path = "manifest.textproto"
+        args.images_dir = "./images"
+        args.default_config = None
+
+        mock_run_command.return_value = MagicMock()
+
+        build.build_bundle(args)
+        
+        calls = mock_run_command.call_args_list
+        found_bundle = False
+        for call in calls:
+            args_list = call[0][0]
+            if './inbuild' in args_list and 'service' in args_list and 'bundle' in args_list:
+                found_bundle = True
+                break
+        self.assertTrue(found_bundle)
+
 if __name__ == '__main__':
     unittest.main()
