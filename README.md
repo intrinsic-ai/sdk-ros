@@ -56,3 +56,7 @@ python3 -c 'from intrinsic.world.python.object_world_client import ObjectWorldCl
 ## Building and packaging the flowstate_ros_bridge
 
 See [Building the flowstate_ros_bridge bundle](flowstate_ros_bridge/README.md) for more details on how to build and package the bridge.
+
+## Building and packaging an Intrinsic Skill
+
+See [Generic ROS 2 Action Skill for Intrinsic](generic_action_skill/README.md) for details on building and packaing a custom Intrinsic skill for use in Flowstate
