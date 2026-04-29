@@ -97,7 +97,7 @@ RUN sed -i '1i #!/usr/bin/env python3' "$SKILL_EXEC_PATH" && chmod +x "$SKILL_EX
 # Setup the runner
 RUN echo '#!/bin/bash' > /run_skill.sh \
     && echo 'set -e' >> /run_skill.sh \
-    && echo 'source /opt/ros/jazzy/setup.bash' >> /run_skill.sh \
+    && echo 'source /opt/ros/${ROS_DISTRO}/setup.bash' >> /run_skill.sh \
     && echo 'source /opt/ros/underlay/install/setup.bash' >> /run_skill.sh \
     && echo 'source /opt/ros/overlay/install/setup.bash' >> /run_skill.sh \
     && echo 'export RMW_IMPLEMENTATION=rmw_zenoh_cpp' >> /run_skill.sh \
