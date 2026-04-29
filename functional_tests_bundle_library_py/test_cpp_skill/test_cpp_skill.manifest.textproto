@@ -1,0 +1,25 @@
+id {
+  package: "com.example"
+  name: "test_cpp_skill"
+}
+display_name: "Test C++ Skill"
+vendor {
+  display_name: "Intrinsic"
+}
+documentation {
+  description: "Skill that is only to test C++ skill development works."
+}
+options {
+  supports_cancellation: true
+  cc_config {
+    create_skill: "::TestCppSkill::CreateSkill"
+  }
+}
+dependencies {
+}
+parameter {
+  message_full_name: "com.example.TestCppSkillParams"
+}
+return_type {
+  message_full_name: "com.example.TestCppSkillResult"
+}

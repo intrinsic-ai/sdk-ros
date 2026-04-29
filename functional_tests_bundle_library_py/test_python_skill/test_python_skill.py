@@ -5,12 +5,23 @@ from concurrent import futures
 import grpc
 from absl import logging, app, flags
 from intrinsic.skills.python import skill_interface
+import rclpy
+from rclpy.node import Node
+from std_msgs.msg import String
 
 FLAGS = flags.FLAGS
 flags.DEFINE_integer("port", 8003, "Port to listen on.", allow_override=True)
 flags.DEFINE_string("skill_service_config_filename", "", "Path to config.", allow_override=True)
 
 class TestPythonSkill(skill_interface.Skill):
+    def __init__(self):
+        super().__init__()
+        if not rclpy.ok():
+            rclpy.init()
+        self.node = Node("test_python_skill_node")
+        self.publisher = self.node.create_publisher(String, "test_python_skill_topic", 10)
+        logging.info("TestPythonSkill initialized with ROS publisher")
+
     def execute(self, request, context):
         logging.info("Executing TestPythonSkill")
         from test_python_skill import test_python_skill_pb2
@@ -19,8 +30,15 @@ class TestPythonSkill(skill_interface.Skill):
         try:
             input_val = request.params.input_data
             logging.info(f"Received input_data: {input_val}")
+            
+            # Publish to ROS topic
+            msg = String()
+            msg.data = f"Skill received: {input_val}"
+            self.publisher.publish(msg)
+            logging.info(f"Published to ROS topic: {msg.data}")
+            
         except Exception as e:
-            logging.warning(f"Failed to read input_data: {e}")
+            logging.warning(f"Failed to read or publish input_data: {e}")
             
         return test_python_skill_pb2.TestPythonSkillResult(message=f"Received: {input_val}")
 

@@ -22,7 +22,7 @@ pytest test/test_build.py
 ```
 
 ## 2. Functional Tests
-To verify that the build and bundle workflow works correctly for both C++ and Python, we use test skills and services located in the `src/sdk-ros/functional_tests_bundle_library_py` directory.
+To verify that the build and bundle workflow works correctly for both C++ and Python, we use test skills and services located in the [functional_tests_bundle_library_py](../../functional_tests_bundle_library_py) directory.
 
 ### Python Skill Test
 To test building and bundling a Python skill:

@@ -1,6 +1,9 @@
 cmake_minimum_required(VERSION 3.8)
 project(test_python_skill)
 
+find_package(ament_cmake REQUIRED)
+find_package(intrinsic_sdk_cmake REQUIRED)
+
 # Generate descriptor set from proto
 intrinsic_sdk_protobuf_generate(
   NAME test_python_skill
@@ -38,13 +41,13 @@ install(
   FILES 
     "${CMAKE_CURRENT_BINARY_DIR}/test_python_skill_config.pbbin"
     "${CMAKE_CURRENT_BINARY_DIR}/test_python_skill_protos.desc"
-  DESTINATION share/intrinsic_sdk_cmake
+  DESTINATION share/${PROJECT_NAME}
 )
 
 # Install Python script as executable
 install(PROGRAMS
   test_python_skill.py
-  DESTINATION lib/intrinsic_sdk_cmake
+  DESTINATION lib/${PROJECT_NAME}
   RENAME test_python_skill_main
 )
 
@@ -59,3 +62,6 @@ install(
     "test_python_skill.py"
   DESTINATION "lib/python3.12/site-packages/${PROJECT_NAME}"
 )
+
+ament_package()
+

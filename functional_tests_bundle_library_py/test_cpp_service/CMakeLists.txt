@@ -1,6 +1,9 @@
 cmake_minimum_required(VERSION 3.8)
 project(test_cpp_service)
 
+find_package(ament_cmake REQUIRED)
+find_package(intrinsic_sdk_cmake REQUIRED)
+
 find_package(rclcpp REQUIRED)
 
 set(SERVICE_NAME "test_cpp_service")
@@ -23,10 +26,13 @@ target_link_libraries(${SERVICE_NAME}_main
   rclcpp::rclcpp
 )
 
-install(TARGETS ${SERVICE_NAME}_main DESTINATION lib/intrinsic_sdk_cmake)
+install(TARGETS ${SERVICE_NAME}_main DESTINATION lib/${PROJECT_NAME})
 
 install(FILES
   ${CMAKE_CURRENT_BINARY_DIR}/${SERVICE_NAME}_protos.desc
-  DESTINATION share/intrinsic_sdk_cmake
+  DESTINATION share/${PROJECT_NAME}
 )
+
+ament_package()
+
 
