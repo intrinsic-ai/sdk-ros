@@ -22,7 +22,7 @@ pytest test/test_build.py
 ```
 
 ## 2. Functional Tests
-To verify that the build and bundle workflow works correctly for both C++ and Python skills, we use test skills located in the `intrinsic_sdk_cmake` package.
+To verify that the build and bundle workflow works correctly for both C++ and Python, we use test skills and services located in the `src/sdk-ros/functional_tests_bundle_library_py` directory.
 
 ### Python Skill Test
 To test building and bundling a Python skill:
@@ -30,14 +30,14 @@ To test building and bundling a Python skill:
 # 1. Build container (OCI image)
 python3 src/sdk-ros/intrinsic_sdk_bundle_library_py/intrinsic_sdk_bundle_library_py/build.py container \
   --skill_name test_python_skill \
-  --skill_package intrinsic_sdk_cmake \
+  --skill_package test_python_skill \
   --skill_type python
 
 # 2. Build bundle
 python3 src/sdk-ros/intrinsic_sdk_bundle_library_py/intrinsic_sdk_bundle_library_py/build.py bundle \
   --skill_name test_python_skill \
-  --skill_package intrinsic_sdk_cmake \
-  --manifest_path src/sdk-ros/intrinsic_sdk_cmake/test/test_python_skill/test_python_skill.manifest.textproto
+  --skill_package test_python_skill \
+  --manifest_path src/sdk-ros/functional_tests_bundle_library_py/test_python_skill/test_python_skill.manifest.textproto
 ```
 
 ### C++ Skill Test
@@ -46,14 +46,14 @@ To test building and bundling a C++ skill:
 # 1. Build container
 python3 src/sdk-ros/intrinsic_sdk_bundle_library_py/intrinsic_sdk_bundle_library_py/build.py container \
   --skill_name test_cpp_skill \
-  --skill_package intrinsic_sdk_cmake \
+  --skill_package test_cpp_skill \
   --skill_type cpp
 
 # 2. Build bundle
 python3 src/sdk-ros/intrinsic_sdk_bundle_library_py/intrinsic_sdk_bundle_library_py/build.py bundle \
   --skill_name test_cpp_skill \
-  --skill_package intrinsic_sdk_cmake \
-  --manifest_path src/sdk-ros/intrinsic_sdk_cmake/test/test_cpp_skill/test_cpp_skill.manifest.textproto
+  --skill_package test_cpp_skill \
+  --manifest_path src/sdk-ros/functional_tests_bundle_library_py/test_cpp_skill/test_cpp_skill.manifest.textproto
 ```
 
 ### Python Service Test
@@ -62,14 +62,14 @@ To test building and bundling a Python service:
 # 1. Build container
 python3 src/sdk-ros/intrinsic_sdk_bundle_library_py/intrinsic_sdk_bundle_library_py/build.py container \
   --service_name test_python_service \
-  --service_package intrinsic_sdk_cmake
+  --service_package test_python_service
 
 # 2. Build bundle
 python3 src/sdk-ros/intrinsic_sdk_bundle_library_py/intrinsic_sdk_bundle_library_py/build.py bundle \
   --service_name test_python_service \
-  --service_package intrinsic_sdk_cmake \
-  --manifest_path src/sdk-ros/intrinsic_sdk_cmake/test/test_python_service/test_python_service.manifest.textproto \
-  --default_config src/sdk-ros/intrinsic_sdk_cmake/test/test_python_service/test_python_service_default_config.pbtxt
+  --service_package test_python_service \
+  --manifest_path src/sdk-ros/functional_tests_bundle_library_py/test_python_service/test_python_service.manifest.textproto \
+  --default_config src/sdk-ros/functional_tests_bundle_library_py/test_python_service/test_python_service_default_config.pbtxt
 ```
 
 
@@ -79,14 +79,14 @@ To test building and bundling a C++ service:
 # 1. Build container
 python3 src/sdk-ros/intrinsic_sdk_bundle_library_py/intrinsic_sdk_bundle_library_py/build.py container \
   --service_name test_cpp_service \
-  --service_package intrinsic_sdk_cmake
+  --service_package test_cpp_service
 
 # 2. Build bundle
 python3 src/sdk-ros/intrinsic_sdk_bundle_library_py/intrinsic_sdk_bundle_library_py/build.py bundle \
   --service_name test_cpp_service \
-  --service_package intrinsic_sdk_cmake \
-  --manifest_path src/sdk-ros/intrinsic_sdk_cmake/test/test_cpp_service/test_cpp_service.manifest.textproto \
-  --default_config src/sdk-ros/intrinsic_sdk_cmake/test/test_cpp_service/test_cpp_service_default_config.pbtxt
+  --service_package test_cpp_service \
+  --manifest_path src/sdk-ros/functional_tests_bundle_library_py/test_cpp_service/test_cpp_service.manifest.textproto \
+  --default_config src/sdk-ros/functional_tests_bundle_library_py/test_cpp_service/test_cpp_service_default_config.pbtxt
 ```
 
 ## 3. Installation and Verification
@@ -105,6 +105,7 @@ To verify that it works correctly, check the skill logs for:
 - `Handling Predict call` and successful return of `PredictResult`.
 - `Executing TestPythonSkill` when the skill is executed.
 - `Received input_data: <value>` to verify parameter passing.
+- `Published to ROS topic: Skill received: <value>` to verify ROS publishing.
 
 ### C++ Skill
 To install the C++ skill bundle:
