@@ -1,0 +1,5 @@
+# proto-file: test_cpp_service.proto
+# proto-message: TestCppServiceConfig
+[type.googleapis.com/intrinsic.TestCppServiceConfig] {
+  message: "Hello from test C++ service"
+}

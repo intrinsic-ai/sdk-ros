@@ -1,6 +1,12 @@
 # Fetch the sdk and make it available for use locally.
 
-set(SDK_VERSION_JSON_FILE "${CMAKE_CURRENT_SOURCE_DIR}/cmake/sdk_version.json")
+find_package(Python3 REQUIRED COMPONENTS Interpreter)
+execute_process(
+  COMMAND ${Python3_EXECUTABLE} -c "from ament_index_python.packages import get_package_share_directory; print(get_package_share_directory('intrinsic_sdk_bundle_library_py'))"
+  OUTPUT_VARIABLE intrinsic_sdk_bundle_library_py_SHARE_DIR
+  OUTPUT_STRIP_TRAILING_WHITESPACE
+)
+set(SDK_VERSION_JSON_FILE "${intrinsic_sdk_bundle_library_py_SHARE_DIR}/resource/sdk_version.json")
 file(READ "${SDK_VERSION_JSON_FILE}" sdk_version_json)
 string(JSON sdk_version GET ${sdk_version_json} "sdk_version")
 string(JSON sdk_checksum GET ${sdk_version_json} "sdk_checksum")
