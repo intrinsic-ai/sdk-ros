@@ -93,7 +93,7 @@ RUN sed --in-place \
         --expression '$iexport RMW_IMPLEMENTATION=rmw_zenoh_cpp' \
         /ros_entrypoint.sh \
     && sed --in-place \
-        --expression '$iexport ENV ROS_HOME=/tmp' \
+        --expression '$iexport ROS_HOME=/tmp' \
         /ros_entrypoint.sh \
     && sed --in-place \
         --expression '$iexport ZENOH_CONFIG_OVERRIDE='\'connect/endpoints=[\"tcp/zenoh-router.app-intrinsic-base.svc.cluster.local:7447\"]\''' \

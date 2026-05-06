@@ -108,4 +108,62 @@ jobs:
           tags: |
             test_intrinsic_sdk_cmake_images:temp
 
+      - name: Test test_python_skill Docker Image
+        uses: docker/build-push-action@ca052bb54ab0790a636c9b5f226502c73d547a25 # was: docker/build-push-action@v5
+        with:
+          context: functional_tests_bundle_library_py/test_python_skill
+          file: intrinsic_sdk_bundle_library_py/resource/skill.Dockerfile
+          build-args: |
+            REPOSITORY=localhost:5000
+            TAG=temp
+            SKILL_NAME=test_python_skill
+            SKILL_PACKAGE=test_python_skill
+            SKILL_TYPE=python
+            SKILL_EXECUTABLE=lib/test_python_skill/test_python_skill_main
+            SKILL_CONFIG=share/test_python_skill/test_python_skill_config.pbbin
+          tags: |
+            test_python_skill:temp
+
+      - name: Test test_python_service Docker Image
+        uses: docker/build-push-action@ca052bb54ab0790a636c9b5f226502c73d547a25 # was: docker/build-push-action@v5
+        with:
+          context: .
+          file: intrinsic_sdk_bundle_library_py/resource/service.Dockerfile
+          build-args: |
+            REPOSITORY=localhost:5000
+            TAG=temp
+            SERVICE_NAME=test_python_service
+            SERVICE_PACKAGE=test_python_service
+          tags: |
+            test_python_service:temp
+
+      - name: Test test_cpp_skill Docker Image
+        uses: docker/build-push-action@ca052bb54ab0790a636c9b5f226502c73d547a25 # was: docker/build-push-action@v5
+        with:
+          context: functional_tests_bundle_library_py/test_cpp_skill
+          file: intrinsic_sdk_bundle_library_py/resource/skill.Dockerfile
+          build-args: |
+            REPOSITORY=localhost:5000
+            TAG=temp
+            SKILL_NAME=test_cpp_skill
+            SKILL_PACKAGE=test_cpp_skill
+            SKILL_TYPE=cpp
+            SKILL_EXECUTABLE=lib/test_cpp_skill/test_cpp_skill_main
+            SKILL_CONFIG=share/test_cpp_skill/test_cpp_skill_config.pbbin
+          tags: |
+            test_cpp_skill:temp
+
+      - name: Test test_cpp_service Docker Image
+        uses: docker/build-push-action@ca052bb54ab0790a636c9b5f226502c73d547a25 # was: docker/build-push-action@v5
+        with:
+          context: .
+          file: intrinsic_sdk_bundle_library_py/resource/service.Dockerfile
+          build-args: |
+            REPOSITORY=localhost:5000
+            TAG=temp
+            SERVICE_NAME=test_cpp_service
+            SERVICE_PACKAGE=test_cpp_service
+          tags: |
+            test_cpp_service:temp
+
       - run: echo "🍏 This job's status is ${{ job.status }}."

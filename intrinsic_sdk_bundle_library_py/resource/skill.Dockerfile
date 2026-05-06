@@ -60,6 +60,7 @@ RUN \
     && echo 'Binary::apt::APT::Keep-Downloaded-Packages "true";' >/etc/apt/apt.conf.d/keep-cache \
     && apt-get update \
     && (rosdep init || true) \
+    # TODO(susanachl): Try to get these upstream in ros/rosdistro \
     && echo "python3-absl-py:" > /etc/ros/rosdep/custom.yaml \
     && echo "  ubuntu: [python3-absl]" >> /etc/ros/rosdep/custom.yaml \
     && echo "python3-retrying:" >> /etc/ros/rosdep/custom.yaml \
@@ -121,6 +122,7 @@ RUN \
     && echo 'Binary::apt::APT::Keep-Downloaded-Packages "true";' >/etc/apt/apt.conf.d/keep-cache \
     && apt-get update \
     && (rosdep init || true) \
+    # TODO(susanachl): Try to get these upstream in ros/rosdistro \
     && echo "python3-absl-py:" > /etc/ros/rosdep/custom.yaml \
     && echo "  ubuntu: [python3-absl]" >> /etc/ros/rosdep/custom.yaml \
     && echo "python3-retrying:" >> /etc/ros/rosdep/custom.yaml \
@@ -201,4 +203,4 @@ LABEL "ai.intrinsic.asset-id"="${SKILL_ASSET_ID_ORG}.${SKILL_NAME}"
 LABEL "ai.intrinsic.skill-image-name"="${SKILL_NAME}"
 
 # Execute the skill main by default, but note that Flowstate will likely override this statement.
-CMD ["sh", "-c", "if [ \"$SKILL_TYPE\" = \"python\" ]; then python3 /skills/skill_service --skill_service_config_filename=/skills/skill_service_config.proto.bin; else /skills/skill_service --skill_service_config_filename=/skills/skill_service_config.proto.bin; fi"]
+CMD ["/skills/skill_service", "--skill_service_config_filename=/skills/skill_service_config.proto.bin"]

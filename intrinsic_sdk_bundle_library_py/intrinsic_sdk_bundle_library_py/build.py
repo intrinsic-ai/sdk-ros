@@ -22,6 +22,7 @@ import urllib.request
 
 
 def run_command(cmd, check=True):
+    assert isinstance(cmd, list), "cmd must be a list"
     print(f"Running: {' '.join(cmd)}")
     return subprocess.run(cmd, check=check)
 
@@ -126,54 +127,56 @@ def build_container(args):
     os.makedirs(tar_dir, exist_ok=True)
     tar_path = os.path.join(tar_dir, f'{name}.tar')
 
-    # Docker buildx build
-    cmd = ['docker', 'buildx', 'build', '-t', tag, '-f', dockerfile, '--builder', builder_name]
-    if args.no_cache:
-        cmd.append('--no-cache')
+    try:
+        # Docker buildx build
+        cmd = ['docker', 'buildx', 'build', '-t', tag, '-f', dockerfile, '--builder', builder_name]
+        if args.no_cache:
+            cmd.append('--no-cache')
 
-    # Output flag
-    output_arg = (
-        f"type=docker,"
-        f"dest={tar_path},"
-        f"compression=zstd,"
-        f"push=false,"
-        f"name={tag}"
-    )
-    cmd.extend(['--output', output_arg])
+        # Output flag
+        output_arg = (
+            f"type=docker,"
+            f"dest={tar_path},"
+            f"compression=zstd,"
+            f"push=false,"
+            f"name={tag}"
+        )
+        cmd.extend(['--output', output_arg])
 
-    # Build args
-    cmd.extend(['--build-arg', f'ROS_DISTRO={args.ros_distro}'])
-    cmd.extend(['--build-arg', f'SKILL_TYPE={args.skill_type}'])
-    if args.service_name:
-        cmd.extend([
-            '--build-arg', f'SERVICE_PACKAGE={package}',
-            '--build-arg', f'SERVICE_NAME={name}',
-            '--build-arg', f'SERVICE_EXECUTABLE_NAME={name}_main'
-        ])
-    else:
-        cmd.extend([
-            '--build-arg', f'SKILL_PACKAGE={package}',
-            '--build-arg', f'SKILL_NAME={name}',
-        ])
-        skill_executable = args.skill_executable or f'lib/{package}/{name}_main'
-        cmd.extend(['--build-arg', f'SKILL_EXECUTABLE={skill_executable}'])
+        # Build args
+        cmd.extend(['--build-arg', f'ROS_DISTRO={args.ros_distro}'])
+        cmd.extend(['--build-arg', f'SKILL_TYPE={args.skill_type}'])
+        if args.service_name:
+            cmd.extend([
+                '--build-arg', f'SERVICE_PACKAGE={package}',
+                '--build-arg', f'SERVICE_NAME={name}',
+                '--build-arg', f'SERVICE_EXECUTABLE_NAME={name}_main'
+            ])
+        else:
+            cmd.extend([
+                '--build-arg', f'SKILL_PACKAGE={package}',
+                '--build-arg', f'SKILL_NAME={name}',
+            ])
+            skill_executable = args.skill_executable or f'lib/{package}/{name}_main'
+            cmd.extend(['--build-arg', f'SKILL_EXECUTABLE={skill_executable}'])
 
-        skill_config = args.skill_config or f'share/{package}/{name}_config.pbbin'
-        cmd.extend(['--build-arg', f'SKILL_CONFIG={skill_config}'])
+            skill_config = args.skill_config or f'share/{package}/{name}_config.pbbin'
+            cmd.extend(['--build-arg', f'SKILL_CONFIG={skill_config}'])
 
-        if args.skill_asset_id_org:
-            cmd.extend(['--build-arg', f'SKILL_ASSET_ID_ORG={args.skill_asset_id_org}'])
+            if args.skill_asset_id_org:
+                cmd.extend(['--build-arg', f'SKILL_ASSET_ID_ORG={args.skill_asset_id_org}'])
 
-    if args.dependencies:
-        cmd.extend(['--build-arg', f'DEPENDENCIES={args.dependencies}'])
+        if args.dependencies:
+            cmd.extend(['--build-arg', f'DEPENDENCIES={args.dependencies}'])
 
-    cmd.append('.')
+        cmd.append('.')
 
-    run_command(cmd)
-    print(f'Saved compressed image to {tar_path}')
-    
-    print(f'Stopping builder {builder_name}...')
-    run_command(['docker', 'buildx', 'stop', builder_name])
+        run_command(cmd)
+        print(f'Saved compressed image to {tar_path}')
+    finally:
+        if not args.keep_builder:
+            print(f'Stopping builder {builder_name}...')
+            run_command(['docker', 'buildx', 'stop', builder_name])
 
 
 def build_bundle(args):
@@ -278,6 +281,7 @@ def main():
     parser_container.add_argument('--skill_asset_id_org')
     parser_container.add_argument('--skill_type', choices=['cpp', 'python'], default='cpp')
     parser_container.add_argument('--no-cache', action='store_true', help='Do not use cache when building the image')
+    parser_container.add_argument('--keep-builder', action='store_true', help='Do not stop the buildx builder after build')
 
     # Build bundle parser
     parser_bundle = subparsers.add_parser('bundle', help='Build bundle')
