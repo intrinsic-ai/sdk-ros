@@ -143,3 +143,22 @@ inctl asset install images/test_cpp_service/test_cpp_service.bundle.tar \
 To verify that it works correctly, check the logs for:
 - `Test service node started!`
 
+
+## 4. Customizing Build Context for Services
+
+By default, the `service.Dockerfile` assumes a standard ROS workspace structure where the repository is located at `src/sdk-ros` relative to the workspace root.
+
+If you are building from a different directory structure (for example, in a CI environment where the repository contents are directly at the workspace root), you can use the following optional arguments with the `container` command to override the defaults:
+
+- `--source-dir`: Overrides the `SOURCE_DIR` build argument in `service.Dockerfile` (defaults to `src/sdk-ros`).
+- `--overlay-source`: Overrides the `OVERLAY_SOURCE` build argument in `service.Dockerfile` (defaults to `src`).
+
+Example usage in CI (where context is the repo root):
+```bash
+python3 intrinsic_sdk_bundle_library_py/intrinsic_sdk_bundle_library_py/build.py container \
+  --service_name test_python_service \
+  --service_package test_python_service \
+  --source-dir . \
+  --overlay-source .
+```
+

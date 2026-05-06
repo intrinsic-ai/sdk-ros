@@ -134,6 +134,8 @@ jobs:
             TAG=temp
             SERVICE_NAME=test_python_service
             SERVICE_PACKAGE=test_python_service
+            SOURCE_DIR=.
+            OVERLAY_SOURCE=.
           tags: |
             test_python_service:temp
 
@@ -163,6 +165,8 @@ jobs:
             TAG=temp
             SERVICE_NAME=test_cpp_service
             SERVICE_PACKAGE=test_cpp_service
+            SOURCE_DIR=.
+            OVERLAY_SOURCE=.
           tags: |
             test_cpp_service:temp
 

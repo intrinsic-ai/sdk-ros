@@ -31,7 +31,8 @@ ENV RMW_IMPLEMENTATION=rmw_zenoh_cpp
 # underlay stage: base + dependencies built
 FROM base AS underlay
 
-ADD src/sdk-ros /opt/ros/underlay/src/sdk-ros
+ARG SOURCE_DIR=src/sdk-ros
+ADD ${SOURCE_DIR} /opt/ros/underlay/src/sdk-ros
 
 RUN . /opt/ros/${ROS_DISTRO}/setup.sh \
     && apt-get update \
@@ -59,7 +60,8 @@ RUN apt-get update \
     && apt install -y ros-${ROS_DISTRO}-rmw-zenoh-cpp python3-protobuf ${DEPENDENCIES} \
     && rm -rf /var/lib/apt/lists/*
 
-ADD src /opt/ros/overlay/src
+ARG OVERLAY_SOURCE=src
+ADD ${OVERLAY_SOURCE} /opt/ros/overlay/src
 
 RUN . /opt/ros/${ROS_DISTRO}/setup.sh \
     && . /opt/ros/underlay/install/setup.sh \

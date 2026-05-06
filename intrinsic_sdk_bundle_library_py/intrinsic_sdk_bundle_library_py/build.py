@@ -168,6 +168,10 @@ def build_container(args):
 
         if args.dependencies:
             cmd.extend(['--build-arg', f'DEPENDENCIES={args.dependencies}'])
+        if args.source_dir:
+            cmd.extend(['--build-arg', f'SOURCE_DIR={args.source_dir}'])
+        if args.overlay_source:
+            cmd.extend(['--build-arg', f'OVERLAY_SOURCE={args.overlay_source}'])
 
         cmd.append('.')
 
@@ -282,6 +286,8 @@ def main():
     parser_container.add_argument('--skill_type', choices=['cpp', 'python'], default='cpp')
     parser_container.add_argument('--no-cache', action='store_true', help='Do not use cache when building the image')
     parser_container.add_argument('--keep-builder', action='store_true', help='Do not stop the buildx builder after build')
+    parser_container.add_argument('--source-dir', help='Override SOURCE_DIR build arg in service.Dockerfile')
+    parser_container.add_argument('--overlay-source', help='Override OVERLAY_SOURCE build arg in service.Dockerfile')
 
     # Build bundle parser
     parser_bundle = subparsers.add_parser('bundle', help='Build bundle')
