@@ -99,7 +99,6 @@ RUN \
     && export PATH="/usr/lib/ccache:$PATH" \
     && ccache -z \
     && cd $SKILL_WORKSPACE \
-    && rm -f src/package.xml \
     && colcon build \
         --cmake-args -DBUILD_TESTING=ON \
         --merge-install \
