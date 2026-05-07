@@ -32,7 +32,16 @@ ENV RMW_IMPLEMENTATION=rmw_zenoh_cpp
 FROM base AS underlay
 
 ARG SOURCE_DIR=src/sdk-ros
+ARG SERVICE_PACKAGE
 ADD ${SOURCE_DIR} /opt/ros/underlay/src/sdk-ros
+
+# Clean up unused test packages to prevent rosdep from installing their dependencies.
+RUN if [ -d /opt/ros/underlay/src/sdk-ros/intrinsic_sdk_bundle_library_py/test/functional_tests ]; then \
+        echo "Cleaning up unused test packages..." \
+        && cd /opt/ros/underlay/src/sdk-ros/intrinsic_sdk_bundle_library_py/test/functional_tests \
+        && find . -maxdepth 1 -type d ! -name "$SERVICE_PACKAGE" ! -name "." -exec rm -rf {} +; \
+    fi
+
 
 RUN . /opt/ros/${ROS_DISTRO}/setup.sh \
     && apt-get update \

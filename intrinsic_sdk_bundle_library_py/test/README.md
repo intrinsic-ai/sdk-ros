@@ -22,7 +22,7 @@ pytest test/test_build.py
 ```
 
 ## 2. Functional Tests
-To verify that the build and bundle workflow works correctly for both C++ and Python, we use test skills and services located in the [functional_tests_bundle_library_py](../../functional_tests_bundle_library_py) directory.
+To verify that the build and bundle workflow works correctly for both C++ and Python, we use test skills and services located in the [functional_tests](./functional_tests) directory.
 
 ### Python Skill Test
 To test building and bundling a Python skill:
@@ -37,7 +37,7 @@ python3 src/sdk-ros/intrinsic_sdk_bundle_library_py/intrinsic_sdk_bundle_library
 python3 src/sdk-ros/intrinsic_sdk_bundle_library_py/intrinsic_sdk_bundle_library_py/build.py bundle \
   --skill_name test_python_skill \
   --skill_package test_python_skill \
-  --manifest_path src/sdk-ros/functional_tests_bundle_library_py/test_python_skill/test_python_skill.manifest.textproto
+  --manifest_path src/sdk-ros/intrinsic_sdk_bundle_library_py/test/functional_tests/test_python_skill/test_python_skill.manifest.textproto
 ```
 
 ### C++ Skill Test
@@ -53,7 +53,7 @@ python3 src/sdk-ros/intrinsic_sdk_bundle_library_py/intrinsic_sdk_bundle_library
 python3 src/sdk-ros/intrinsic_sdk_bundle_library_py/intrinsic_sdk_bundle_library_py/build.py bundle \
   --skill_name test_cpp_skill \
   --skill_package test_cpp_skill \
-  --manifest_path src/sdk-ros/functional_tests_bundle_library_py/test_cpp_skill/test_cpp_skill.manifest.textproto
+  --manifest_path src/sdk-ros/intrinsic_sdk_bundle_library_py/test/functional_tests/test_cpp_skill/test_cpp_skill.manifest.textproto
 ```
 
 ### Python Service Test
@@ -68,8 +68,8 @@ python3 src/sdk-ros/intrinsic_sdk_bundle_library_py/intrinsic_sdk_bundle_library
 python3 src/sdk-ros/intrinsic_sdk_bundle_library_py/intrinsic_sdk_bundle_library_py/build.py bundle \
   --service_name test_python_service \
   --service_package test_python_service \
-  --manifest_path src/sdk-ros/functional_tests_bundle_library_py/test_python_service/test_python_service.manifest.textproto \
-  --default_config src/sdk-ros/functional_tests_bundle_library_py/test_python_service/test_python_service_default_config.pbtxt
+  --manifest_path src/sdk-ros/intrinsic_sdk_bundle_library_py/test/functional_tests/test_python_service/test_python_service.manifest.textproto \
+  --default_config src/sdk-ros/intrinsic_sdk_bundle_library_py/test/functional_tests/test_python_service/test_python_service_default_config.pbtxt
 ```
 
 
@@ -85,8 +85,8 @@ python3 src/sdk-ros/intrinsic_sdk_bundle_library_py/intrinsic_sdk_bundle_library
 python3 src/sdk-ros/intrinsic_sdk_bundle_library_py/intrinsic_sdk_bundle_library_py/build.py bundle \
   --service_name test_cpp_service \
   --service_package test_cpp_service \
-  --manifest_path src/sdk-ros/functional_tests_bundle_library_py/test_cpp_service/test_cpp_service.manifest.textproto \
-  --default_config src/sdk-ros/functional_tests_bundle_library_py/test_cpp_service/test_cpp_service_default_config.pbtxt
+  --manifest_path src/sdk-ros/intrinsic_sdk_bundle_library_py/test/functional_tests/test_cpp_service/test_cpp_service.manifest.textproto \
+  --default_config src/sdk-ros/intrinsic_sdk_bundle_library_py/test/functional_tests/test_cpp_service/test_cpp_service_default_config.pbtxt
 ```
 
 ## 3. Installation and Verification

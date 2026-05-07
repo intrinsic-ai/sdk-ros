@@ -38,6 +38,14 @@ ENV SKILL_WORKSPACE=/opt/${SKILL_NAME}_workspace
 # Add the user's code to the container.
 ADD ./ $SKILL_WORKSPACE/src
 
+# Clean up unused test packages to prevent rosdep from installing their dependencies.
+RUN if [ -d $SKILL_WORKSPACE/src/test/functional_tests ]; then \
+        echo "Cleaning up unused test packages..." \
+        && cd $SKILL_WORKSPACE/src/test/functional_tests \
+        && find . -maxdepth 1 -type d ! -name "$SKILL_PACKAGE" ! -name "." -exec rm -rf {} +; \
+    fi
+
+
 # build stage: build dependencies + build the packages
 FROM source AS build
 
@@ -90,10 +98,11 @@ RUN \
     && export PATH="/usr/lib/ccache:$PATH" \
     && ccache -z \
     && cd $SKILL_WORKSPACE \
+    && rm -f src/package.xml \
     && colcon build \
         --cmake-args -DBUILD_TESTING=ON \
         --merge-install \
-        --packages-up-to $SKILL_PACKAGE \
+        --paths src/test/functional_tests/$SKILL_PACKAGE \
     && ccache -s
 
 # Copy pybind11_abseil if python skill
