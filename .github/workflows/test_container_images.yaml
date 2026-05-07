@@ -111,7 +111,7 @@ jobs:
       - name: Test test_python_skill Docker Image
         uses: docker/build-push-action@ca052bb54ab0790a636c9b5f226502c73d547a25 # was: docker/build-push-action@v5
         with:
-          context: functional_tests_bundle_library_py/test_python_skill
+          context: intrinsic_sdk_bundle_library_py/test/functional_tests/test_python_skill
           file: intrinsic_sdk_bundle_library_py/resource/skill.Dockerfile
           build-args: |
             REPOSITORY=localhost:5000
@@ -135,14 +135,14 @@ jobs:
             SERVICE_NAME=test_python_service
             SERVICE_PACKAGE=test_python_service
             SOURCE_DIR=.
-            OVERLAY_SOURCE=.
+            OVERLAY_SOURCE=intrinsic_sdk_bundle_library_py/test/functional_tests/test_python_service
           tags: |
             test_python_service:temp
 
       - name: Test test_cpp_skill Docker Image
         uses: docker/build-push-action@ca052bb54ab0790a636c9b5f226502c73d547a25 # was: docker/build-push-action@v5
         with:
-          context: functional_tests_bundle_library_py/test_cpp_skill
+          context: intrinsic_sdk_bundle_library_py/test/functional_tests/test_cpp_skill
           file: intrinsic_sdk_bundle_library_py/resource/skill.Dockerfile
           build-args: |
             REPOSITORY=localhost:5000
@@ -166,7 +166,7 @@ jobs:
             SERVICE_NAME=test_cpp_service
             SERVICE_PACKAGE=test_cpp_service
             SOURCE_DIR=.
-            OVERLAY_SOURCE=.
+            OVERLAY_SOURCE=intrinsic_sdk_bundle_library_py/test/functional_tests/test_cpp_service
           tags: |
             test_cpp_service:temp
 
