@@ -82,6 +82,7 @@ RUN . /opt/ros/${ROS_DISTRO}/setup.sh \
       --packages-up-to=${SERVICE_PACKAGE} \
       --packages-skip intrinsic_sdk grpc_vendor
 
+
 # result stage: base + copied install folders from the overlay + service setup
 FROM base
 

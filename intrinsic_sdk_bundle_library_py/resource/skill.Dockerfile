@@ -35,8 +35,9 @@ ARG SKILL_ASSET_ID_ORG=com.example
 # things in opt like ros or intrinsic_sdk_cmake.
 ENV SKILL_WORKSPACE=/opt/${SKILL_NAME}_workspace
 
+ARG SOURCE_DIR=.
 # Add the user's code to the container.
-ADD ./ $SKILL_WORKSPACE/src
+ADD ${SOURCE_DIR} $SKILL_WORKSPACE/src
 
 # Clean up unused test packages to prevent rosdep from installing their dependencies.
 RUN if [ -d $SKILL_WORKSPACE/src/test/functional_tests ]; then \
@@ -102,7 +103,7 @@ RUN \
     && colcon build \
         --cmake-args -DBUILD_TESTING=ON \
         --merge-install \
-        --paths src/test/functional_tests/$SKILL_PACKAGE \
+        --packages-up-to $SKILL_PACKAGE \
     && ccache -s
 
 # Copy pybind11_abseil if python skill
