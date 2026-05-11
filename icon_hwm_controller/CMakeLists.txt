@@ -95,6 +95,7 @@ target_link_libraries(icon_hwm_controller PUBLIC
   ${controller_manager_msgs_TARGETS}
   ${lifecycle_msgs_TARGETS}
   ${std_msgs_TARGETS}
+  ${icon_hwm_controller_msgs_TARGETS}
 )
 
 pluginlib_export_plugin_description_file(controller_interface icon_hwm_controller.xml)
@@ -198,5 +199,6 @@ ament_export_dependencies(
   lifecycle_msgs
   std_msgs
   generate_parameter_library
+  icon_hwm_controller_msgs
 )
 ament_package()

@@ -22,6 +22,7 @@
   <depend>std_msgs</depend>
   <depend>controller_manager_msgs</depend>
   <depend>lifecycle_msgs</depend>
+  <depend>icon_hwm_controller_msgs</depend>
 
   <test_depend>ament_lint_auto</test_depend>
   <test_depend>ament_lint_common</test_depend>

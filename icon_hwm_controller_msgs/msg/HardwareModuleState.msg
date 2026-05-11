@@ -1,0 +1,17 @@
+# StateCode enum constants
+uint8 DEACTIVATED = 0
+uint8 DEACTIVATING = 1
+uint8 ACTIVATED = 2
+uint8 ACTIVATING = 3
+uint8 MOTION_ENABLED = 4
+uint8 MOTION_ENABLING = 5
+uint8 MOTION_DISABLING = 6
+uint8 FAULTED = 7
+uint8 CLEARING_FAULTS = 8
+uint8 INIT_FAILED = 9
+uint8 FATALLY_FAULTED = 10
+uint8 PREPARING = 11
+uint8 PREPARED = 12
+
+uint8 code
+uint8[256] message
