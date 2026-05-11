@@ -72,6 +72,9 @@ target_include_directories(${PROJECT_NAME} PUBLIC
   "$<INSTALL_INTERFACE:include/${PROJECT_NAME}>")
 target_link_libraries(${PROJECT_NAME}
   PUBLIC
+    absl::failure_signal_handler
+    absl::symbolize
+    absl::stacktrace
     absl::base
     absl::flags_parse
     absl::flags_usage
