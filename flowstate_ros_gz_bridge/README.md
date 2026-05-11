@@ -8,10 +8,14 @@ Building and sideloading the bridge is similar to how other services are install
 
 ```bash
 ./src/sdk-ros/scripts/build_container.sh --service_package flowstate_ros_gz_bridge --service_name flowstate_ros_gz_bridge_service
-./src/sdk-ros/scripts/build_bundle.sh --service_package flowstate_ros_gz_bridge --service_name flowstate_ros_gz_bridge_service
+./src/sdk-ros/scripts/build_bundle.sh \
+  --service_package flowstate_ros_gz_bridge \
+  --service_name flowstate_ros_gz_bridge_service \
+  --manifest_path src/sdk-ros/flowstate_ros_gz_bridge/flowstate_ros_gz_bridge_service.manifest.textproto \
+  --default_config src/sdk-ros/flowstate_ros_gz_bridge/flowstate_ros_gz_bridge_service_default_config.pbtxt
 
 # Replace with your organization and cluster
-inctl asset install --org $INTRINSIC_ORGANIZATION --cluster $INTRINSIC_CONTEXT images/flowstate_ros_gz_bridge_service.bundle.tar
+inctl asset install --org $INTRINSIC_ORGANIZATION --cluster $INTRINSIC_CONTEXT images/flowstate_ros_gz_bridge_service/flowstate_ros_gz_bridge_service.bundle.tar
 ```
 ### Instantiate the service
 

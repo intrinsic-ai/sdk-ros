@@ -40,23 +40,16 @@ target_link_libraries(
   intrinsic_sdk_cmake::intrinsic_sdk_cmake
 )
 
-add_dependencies(${SERVICE_NAME}_service_main
-  ${SERVICE_NAME}_service_manifest
-  ${SERVICE_NAME}_service_default_config
-)
-
 # Install the flowstate_ros_gz_bridge service
 install(
   TARGETS ${SERVICE_NAME}_service_main
   DESTINATION lib/${PROJECT_NAME}
 )
 
-# Install the proto descriptor database, manifest and default config
+# Install the proto descriptor database
 install(FILES
   ${CMAKE_CURRENT_BINARY_DIR}/${SERVICE_NAME}_service_protos.desc
-  ${CMAKE_CURRENT_BINARY_DIR}/service_manifest.binarypb
-  ${CMAKE_CURRENT_BINARY_DIR}/default_config.binarypb
-  DESTINATION "share/${PROJECT_NAME}/${SERVICE_NAME}_service"
+  DESTINATION "share/${PROJECT_NAME}"
 )
 
 ament_package()
