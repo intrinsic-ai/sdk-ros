@@ -16,10 +16,12 @@
 #include <cstdlib>
 #include <filesystem>
 #include <fstream>
+#include <optional>
 #include <memory>
 
 #include "google/protobuf/util/json_util.h"
 
+#include "intrinsic/assets/proto/v1/resolved_dependency.pb.h"
 #include "intrinsic/resources/proto/runtime_context.pb.h"
 #include "rclcpp/rclcpp.hpp"
 #include "flowstate_ros_gz_bridge_config.pb.h"
@@ -34,10 +36,16 @@ class FlowstateRosGzBridge : public ros_gz_bridge::RosGzBridge {
   using SimConnection = intrinsic::simulation::SimConnection;
   // Constructor
   explicit FlowstateRosGzBridge(
+      std::optional<intrinsic_proto::assets::v1::ResolvedDependency> resolved_deps,
       const std::string& simulation_server_address,
       const rclcpp::NodeOptions& options = rclcpp::NodeOptions())
     : ros_gz_bridge::RosGzBridge(options) {
-      auto res = SimConnection::Create(simulation_server_address);
+      absl::StatusOr<std::shared_ptr<SimConnection>> res;
+      if (resolved_deps.has_value()) {
+        res = SimConnection::CreateFromResolvedDependency(*resolved_deps);
+      } else {
+        res = SimConnection::Create(simulation_server_address);
+      }
       if (res.ok())
       {
         this->sim_conn_ = *res;
@@ -76,25 +84,26 @@ intrinsic_proto::config::RuntimeContext GetRuntimeContext() {
   if (!runtime_context.ParseFromIstream(&runtime_context_file)) {
     // Return default context for running locally
     std::cerr << "Warning: using default RuntimeContext\n";
-    flowstate::RosGzBridgeConfig default_ros_config = MakeTestConfig();
-    runtime_context.mutable_config()->PackFrom(default_ros_config);
+    flowstate::RosGzBridgeServiceConfig default_service_config;
+    *default_service_config.mutable_ros_gz_bridge_config() = MakeTestConfig();
+    runtime_context.mutable_config()->PackFrom(default_service_config);
   }
   return runtime_context;
 }
 
 int main(int , char**) {
   auto runtime_context = GetRuntimeContext();
-  flowstate::RosGzBridgeConfig ros_config;
-  if (!runtime_context.config().UnpackTo(&ros_config)) {
+  flowstate::RosGzBridgeServiceConfig service_config;
+  if (!runtime_context.config().UnpackTo(&service_config)) {
     std::cerr << "Unable to unpack runtime_context\n";
     return EXIT_FAILURE;
   }
 
-  // Parse it to json
+  // Parse the bridge config to json
   std::string json_config;
   google::protobuf::util::JsonPrintOptions options;
   options.preserve_proto_field_names = true;
-  const auto status = google::protobuf::util::MessageToJsonString(ros_config, &json_config, options);
+  const auto status = google::protobuf::util::MessageToJsonString(service_config.ros_gz_bridge_config(), &json_config, options);
   if (status.ok()) {
     // A bit hacky, manually remove the top field to flatten the structure
     // and make it a repeated yaml
@@ -125,8 +134,13 @@ int main(int , char**) {
   // Get ROS arguments
   std::vector<const char *> ros_argv = {"--ros-args", "-p", config_file_param.c_str()};
 
+  std::optional<intrinsic_proto::assets::v1::ResolvedDependency> resolved_deps = std::nullopt;
+  if (service_config.has_gazebo_simulator()) {
+    resolved_deps = service_config.gazebo_simulator();
+  }
+
   rclcpp::init(ros_argv.size(), ros_argv.data());
-  rclcpp::spin(std::make_shared<FlowstateRosGzBridge>(runtime_context.simulation_server_address()));
+  rclcpp::spin(std::make_shared<FlowstateRosGzBridge>(resolved_deps, runtime_context.simulation_server_address()));
   rclcpp::shutdown();
   return EXIT_SUCCESS;
 }
