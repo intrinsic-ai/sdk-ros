@@ -23,10 +23,11 @@ add_custom_target(intrinsic_sdk_protos_python_rename_googleapis
 file(GLOB_RECURSE intrinsic_python_SRCS
   RELATIVE "${intrinsic_sdk_SOURCE_DIR}"
   "${intrinsic_sdk_SOURCE_DIR}/**/*.py"
+  "${intrinsic_sdk_SOURCE_DIR}/**/*.pyi"
 )
 list(FILTER intrinsic_python_SRCS EXCLUDE REGEX "/\\.github/")
 list(FILTER intrinsic_python_SRCS EXCLUDE REGEX "/examples/")
-list(FILTER intrinsic_python_SRCS EXCLUDE REGEX "_test\\.py$")
+list(FILTER intrinsic_python_SRCS EXCLUDE REGEX "_test\\.pyi?$")
 
 # Overlay sdk Python files on top of generated protobuf Python files.
 set(copied_python_sdk_files "")
@@ -61,6 +62,7 @@ set(python_packages_to_install
   "googleapis"  # This one is a re-namespacing of the generated googleapis proto python packages
   "intrinsic"
   "protoc_gen_openapiv2"  # This one should be fixed to have a better python package name
+  "cel"
   # "src"  # This one is disabled because it isn't being used atm and is a weird layout
   # "third_party"  # This one contains protobuf versions of ROS messages and is unused atm
 )

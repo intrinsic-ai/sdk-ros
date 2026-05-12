@@ -37,21 +37,30 @@ colcon build \
 
 ### Using the SDK in Python
 
-To use the SDK in Python, you must additionally create a virtualenv and install a few dependencies which are not provided by the SDK, nor are the ones available in Ubuntu's apt new enough.
+A recent version of gRPC is vendored with the SDK. From within a solution, you can connect to cloud gRPC services.
 
-For example, you could:
+For example:
 
-```bash
-# Setup the venv and activate it
-python3 -m venv --system-site-packages venv
-source ./venv/bin/activate
-# Install the new dependencies
-# (venv)
-pip install -U grpcio protobuf retrying
-# Test that it is working
-# (venv)
-python3 -c 'from intrinsic.world.python.object_world_client import ObjectWorldClient'
+```python
+from intrinsic.frontend.solution_service.proto.solution_service_pb2 import (
+    GetStatusRequest,
+)
+from intrinsic.frontend.solution_service.proto.solution_service_pb2_grpc import (
+    SolutionServiceStub,
+)
+from intrinsic.frontend.solution_service.proto.status_pb2 import Status
+from intrinsic.util.grpc.grpc_utils import create_cloud_channel
+
+
+def main():
+    with create_cloud_channel() as channel:
+        stub = SolutionServiceStub(channel)
+        response = stub.GetStatus(GetStatusRequest())
 ```
+
+Connecting to gRPC services from outside the solution (i.e. from your laptop) is not supported yet.
+
+<!-- TODO: implement authentication for out of cluster connections -->
 
 ## Building and packaging the flowstate_ros_bridge
 
