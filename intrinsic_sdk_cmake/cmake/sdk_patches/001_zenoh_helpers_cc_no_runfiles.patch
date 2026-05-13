@@ -1,5 +1,5 @@
---- a/intrinsic/platform/pubsub/zenoh_util/zenoh_helpers.cc	2026-03-17 17:56:14.511113379 +0000
-+++ b/intrinsic/platform/pubsub/zenoh_util/zenoh_helpers.cc	2026-03-17 18:20:43.751982100 +0000
+--- a/intrinsic/platform/pubsub/zenoh_util/zenoh_helpers.cc	2026-05-06 20:23:45.229207000 +0000
++++ b/intrinsic/platform/pubsub/zenoh_util/zenoh_helpers.cc	2026-05-07 07:20:25.229618669 +0000
 @@ -2,7 +2,9 @@
  
  #include "intrinsic/platform/pubsub/zenoh_util/zenoh_helpers.h"
@@ -25,7 +25,7 @@
  bool RunningUnderTest() {
    return (getenv("TEST_TMPDIR") != nullptr) ||
           (getenv("PORTSERVER_ADDRESS") != nullptr);
-@@ -27,26 +26,32 @@
+@@ -27,25 +26,32 @@
    return getenv("KUBERNETES_SERVICE_HOST") != nullptr;
  }
  
@@ -39,7 +39,6 @@
 +
  std::string GetZenohRunfilesPath(absl::string_view file_path) {
 -  std::string error;
--  std::string path = std::string(file_path);
 -  std::string repository = BAZEL_CURRENT_REPOSITORY;
 -  std::string apparentRepoName = "";
 -  std::unique_ptr<Runfiles> runfiles;
@@ -49,6 +48,14 @@
 -    runfiles.reset(Runfiles::Create(repository, &error));
 -  } else {
 -    runfiles.reset(Runfiles::Create(program_invocation_name, &error));
+-  }
+-
+-  if (RunningInKubernetes() || RunningUnderTest()) {
+-    apparentRepoName = "ai_intrinsic_sdks";
+-  } else {
+-    apparentRepoName = repository;
+-  }
+-  return runfiles->Rlocation(absl::StrCat(apparentRepoName, "/", file_path));
 +  // Patched by intrinsic-dev/intrinsic_sdk_ros.git to work in a CMake context.
 +  // TODO(wjwwood): consider using ament_index to make this code relocatable.
 +  std::array<std::filesystem::path, 2> prefix_paths = {
@@ -62,14 +69,8 @@
 +    if (std::filesystem::exists(possible_path)) {
 +      return possible_path.string();
 +    }
-   }
- 
--  if (RunningInKubernetes() || RunningUnderTest()) {
--    apparentRepoName = "ai_intrinsic_sdks";
--  } else {
--    apparentRepoName = repository;
--  }
--  return runfiles->Rlocation(absl::StrCat(apparentRepoName, "/", file_path));
++   }
++
 +  // Return the original file_path if nothing better was found.
 +  return std::string(file_path);
  }
