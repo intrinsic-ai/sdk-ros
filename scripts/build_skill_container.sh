@@ -68,7 +68,7 @@ if [[ ! -f "${PACKAGE_DIR}/package.xml" ]]; then
   exit 1
 fi
 
-DOCKERFILE=$(pwd)/src/sdk-ros/intrinsic_sdk_cmake/cmake/api/skill/resource/skill.Dockerfile
+DOCKERFILE=$(pwd)/src/sdk-ros/intrinsic_sdk_bundle_library_py/resource/skill.Dockerfile
 
 mkdir -p "$IMAGES_DIR/$SKILL_NAME"
 IMAGE_DIR=$(pwd)/$IMAGES_DIR/$SKILL_NAME

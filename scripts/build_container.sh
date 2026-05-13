@@ -71,7 +71,7 @@ if [[ -n "$SERVICE_NAME" && -n "$SERVICE_PACKAGE" ]]; then
   if [[ -n "$CUSTOM_DOCKERFILE" ]]; then
     DOCKERFILE="$CUSTOM_DOCKERFILE"
   else
-    DOCKERFILE="$SCRIPT_DIR/../resources/Dockerfile.service"
+    DOCKERFILE="$SCRIPT_DIR/../intrinsic_sdk_bundle_library_py/resource/service.Dockerfile"
   fi
 
   docker buildx build -t $SERVICE_PACKAGE:$SERVICE_NAME \
@@ -95,7 +95,7 @@ elif [[ -n "$SKILL_NAME" && -n "$SKILL_PACKAGE" ]]; then
   if [[ -n "$CUSTOM_DOCKERFILE" ]]; then
     DOCKERFILE="$CUSTOM_DOCKERFILE"
   else
-    DOCKERFILE="$SCRIPT_DIR/../resources/Dockerfile.skill"
+    DOCKERFILE="$SCRIPT_DIR/../intrinsic_sdk_bundle_library_py/resource/skill.Dockerfile"
   fi
 
   docker buildx build -t $SKILL_PACKAGE:$SKILL_NAME \

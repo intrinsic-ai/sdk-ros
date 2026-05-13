@@ -80,7 +80,7 @@ fi
 SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 
 # Parse the SDK_VERSION from sdk_version.json
-SDK_VERSION_FILE="$SCRIPT_DIR/../intrinsic_sdk_cmake/cmake/sdk_version.json"
+SDK_VERSION_FILE="$SCRIPT_DIR/../intrinsic_sdk_bundle_library_py/resource/sdk_version.json"
 SDK_VERSION=$(grep -oP '"sdk_version": "\K[^"]+' "$SDK_VERSION_FILE")
 
 # Download the 'inbuild' tool if it doesn't exist
