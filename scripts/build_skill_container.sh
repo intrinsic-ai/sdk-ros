@@ -2,7 +2,7 @@
 
 echo "=================================================================================================" >&2
 echo "WARNING: This script is deprecated and will be removed in a future release." >&2
-echo "Please transition to using the new Python library: intrinsic_sdk_bundle_library_py" >&2
+echo "Please transition to using the command-line tool: intrinsic_sdk_build container" >&2
 echo "=================================================================================================" >&2
 
 if [ ! -d "src/sdk-ros" ]; then
