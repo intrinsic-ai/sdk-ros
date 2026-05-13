@@ -292,6 +292,7 @@ def main():
     # Build bundle parser
     parser_bundle = subparsers.add_parser('bundle', help='Build bundle')
     parser_bundle.add_argument('--images_dir', default='./images')
+    parser_bundle.add_argument('--builder_name', default='container-builder', help='Ignored, for backward compatibility with scripts')
     parser_bundle.add_argument('--service_name')
     parser_bundle.add_argument('--service_package')
     parser_bundle.add_argument('--skill_name')
