@@ -1,0 +1,30 @@
+metadata {
+  id {
+    package: "com.example"
+    name: "flowstate_ros_gz_bridge_service"
+  }
+  vendor {
+    display_name: "Intrinsic"
+  }
+  documentation {
+    description: "A bridge between Gazebo running in Flowstate and ROS."
+  }
+  display_name: "ROS Gazebo bridge"
+}
+service_def {
+  real_spec {
+    image {
+      archive_filename: "flowstate_ros_gz_bridge_service.tar"
+    }
+  }
+  sim_spec {
+    image {
+      archive_filename: "flowstate_ros_gz_bridge_service.tar"
+    }
+  }
+}
+assets {
+  default_configuration_filename: "default_config.binarypb",
+  parameter_descriptor_filename: "parameter-descriptor-set.proto.bin",
+  image_filenames: ["flowstate_ros_gz_bridge_service.tar"]
+}

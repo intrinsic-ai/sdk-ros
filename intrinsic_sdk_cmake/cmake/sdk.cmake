@@ -72,6 +72,9 @@ target_include_directories(${PROJECT_NAME} PUBLIC
   "$<INSTALL_INTERFACE:include/${PROJECT_NAME}>")
 target_link_libraries(${PROJECT_NAME}
   PUBLIC
+    absl::failure_signal_handler
+    absl::symbolize
+    absl::stacktrace
     absl::base
     absl::flags_parse
     absl::flags_usage
@@ -81,8 +84,8 @@ target_link_libraries(${PROJECT_NAME}
     Eigen3::Eigen
     flatbuffers::flatbuffers
     gRPC::grpc++
-    gz-msgs11::gz-msgs11
-    gz-transport14::gz-transport14
+    gz-msgs::gz-msgs
+    gz-transport::gz-transport
     ortools::ortools
     opencensus-cpp::stats
     protobuf::libprotobuf

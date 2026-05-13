@@ -226,6 +226,11 @@ bool ExecutiveBridge::initialize(ROSNodeInterfaces ros_node_interfaces,
             result->message = start_result.status().ToString();
             goal_handle->abort(std::move(result));
           }
+        } else {
+          auto result = std::make_shared<StartProcess::Result>();
+          result->success = false;
+          result->message = "Process not found";
+          goal_handle->abort(std::move(result));
         }
       });
 
