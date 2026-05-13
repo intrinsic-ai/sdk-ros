@@ -1,0 +1,23 @@
+--- a/intrinsic/icon/utils/strerror.h	2026-05-11 17:52:10.269743474 +0000
++++ b/intrinsic/icon/utils/strerror.h	2026-05-11 17:54:08.772844870 +0000
+@@ -4,7 +4,7 @@
+ #define INTRINSIC_ICON_UTILS_STRERROR_H_
+
+ #include <cstddef>
+-#include <cstdio>
++#include <cstring>
+
+ #include "intrinsic/icon/utils/fixed_str_cat.h"
+ #include "intrinsic/icon/utils/fixed_string.h"
+@@ -22,8 +22,9 @@
+ // https://www.club.cc.cmu.edu/~cmccabe/blog_strerror.html.
+ template <std::size_t N = 128>
+ icon::FixedString<N> StrError(const int err) {
+-  if (err >= 0 && err < ::sys_nerr) {
+-    return icon::FixedStrCat<N>(::sys_errlist[err]);
++  const char* desc = strerrordesc_np(err);
++  if (desc != nullptr) {
++    return icon::FixedStrCat<N>(desc);
+   }
+   return icon::FixedStrCat<N>("Unknown error ", err);
+ }

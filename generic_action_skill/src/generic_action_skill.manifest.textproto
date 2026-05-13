@@ -1,0 +1,21 @@
+# proto-file: https://github.com/intrinsic-ai/sdk/blob/main/intrinsic/skills/proto/skill_manifest.proto
+# proto-message: intrinsic_proto.skill.SkillManifest
+id {
+  package: "com.example"
+  name: "generic_action_skill"
+}
+display_name: "Generic ROS 2 Action Skill"
+vendor {
+  display_name: "Intrinsic"
+}
+options {
+  supports_cancellation: true
+  python_config {
+    # This tells Intrinsic where to find the Python script and the Protobuf file
+    skill_module: "generic_action_skill.generic_action_skill"
+    proto_module: "generic_action_skill.generic_action_skill_pb2"
+    create_skill: "generic_action_skill.generic_action_skill.GenericActionSkill"
+  }
+}
+parameter { message_full_name: "com.example.GenericActionSkillParams" }
+return_type { message_full_name: "com.example.GenericActionSkillResult" }

@@ -1,0 +1,14 @@
+syntax = "proto3";
+package com.example;
+
+message GenericActionSkillParams {
+  string action_name = 1;      // e.g., "/insert_cable"
+  string action_type = 2;      // e.g., "aic_task_interfaces/action/InsertCable"
+  string goal_yaml = 3;        // The goal arguments as a YAML string
+  double timeout_sec = 4;      // Execution timeout
+}
+
+message GenericActionSkillResult {
+  string status = 1;           // SUCCEEDED, ABORTED, etc.
+  string result_yaml = 2;      // The result payload serialized back into YAML
+}
