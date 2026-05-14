@@ -1,3 +1,9 @@
+cmake_minimum_required(VERSION 3.8)
+project(test_cpp_skill)
+
+find_package(ament_cmake REQUIRED)
+find_package(intrinsic_sdk_cmake REQUIRED)
+
 # Generate the skill's protobuf files, protobuf library, and descriptor set file.
 intrinsic_sdk_protobuf_generate(
   NAME test_cpp_skill
@@ -75,5 +81,8 @@ intrinsic_sdk_generate_skill_container_image(
 # intrisic_sdk_generate_skill_bundle(
 
 # )
+
+ament_package()
+
 
 
