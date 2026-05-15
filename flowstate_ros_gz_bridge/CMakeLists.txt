@@ -3,6 +3,13 @@ project(flowstate_ros_gz_bridge)
 
 set(SERVICE_NAME "flowstate_ros_gz_bridge")
 
+# Find lttng-ust using PkgConfig to avoid hardcoding paths
+find_package(PkgConfig REQUIRED)
+pkg_check_modules(LTTNG_UST REQUIRED lttng-ust IMPORTED_TARGET)
+
+# Add library path found by PkgConfig to linker search path for targets that might not inherit it
+link_directories(${LTTNG_UST_LIBRARY_DIRS})
+
 # Default to C++20
 if(NOT CMAKE_CXX_STANDARD)
   set(CMAKE_CXX_STANDARD 20)

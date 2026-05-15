@@ -9,7 +9,20 @@ endif()
 
 find_package(ament_cmake REQUIRED)
 find_package(ament_cmake_vendor_package REQUIRED)
-find_package(gz_cmake_vendor REQUIRED)
+
+set(gz_utils_satisfied_by_system FALSE)
+find_package(gz-utils QUIET)
+if(gz-utils_FOUND AND gz-utils_VERSION VERSION_GREATER_EQUAL 4.0.0)
+  message(STATUS "Found gz-utils 4+, skipping build.")
+  set(gz_utils_satisfied_by_system TRUE)
+else()
+  message(STATUS "gz-utils 4+ not found, building.")
+  set(gz_utils_satisfied_by_system FALSE)
+endif()
+
+if(NOT gz_utils_satisfied_by_system)
+  find_package(gz_cmake_vendor REQUIRED)
+endif()
 
 ament_vendor(gz_utils_vendor
   VCS_URL https://github.com/gazebosim/gz-utils
@@ -17,6 +30,7 @@ ament_vendor(gz_utils_vendor
   VCS_VERSION gz-utils4_4.0.0
   CMAKE_ARGS
     -DGZ_UTILS_VENDOR_CLI11=ON
+  SATISFIED ${gz_utils_satisfied_by_system}
   GLOBAL_HOOK
 )
 
