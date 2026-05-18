@@ -78,7 +78,7 @@ RUN apt-get update \
        python3-pip \
        ${DEPENDENCIES} \
     && rm -rf /var/lib/apt/lists/* \
-    && pip3 install --upgrade protobuf grpcio grpcio-status --break-system-packages
+    && pip3 install --upgrade --ignore-installed typing_extensions protobuf grpcio grpcio-status --break-system-packages
 
 COPY --from=overlay /opt/ros/underlay/install /opt/ros/underlay/install
 COPY --from=overlay /opt/ros/overlay/install /opt/ros/overlay/install
@@ -97,7 +97,7 @@ RUN sed -i '1i #!/usr/bin/env python3' "$SKILL_EXEC_PATH" && chmod +x "$SKILL_EX
 # Setup the runner
 RUN echo '#!/bin/bash' > /run_skill.sh \
     && echo 'set -e' >> /run_skill.sh \
-    && echo 'source /opt/ros/jazzy/setup.bash' >> /run_skill.sh \
+    && echo 'source /opt/ros/${ROS_DISTRO}/setup.bash' >> /run_skill.sh \
     && echo 'source /opt/ros/underlay/install/setup.bash' >> /run_skill.sh \
     && echo 'source /opt/ros/overlay/install/setup.bash' >> /run_skill.sh \
     && echo 'export RMW_IMPLEMENTATION=rmw_zenoh_cpp' >> /run_skill.sh \
