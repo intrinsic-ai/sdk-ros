@@ -16,10 +16,12 @@
 #include <cstdlib>
 #include <filesystem>
 #include <fstream>
+#include <optional>
 #include <memory>
 
 #include "google/protobuf/util/json_util.h"
 
+#include "intrinsic/assets/proto/v1/resolved_dependency.pb.h"
 #include "intrinsic/resources/proto/runtime_context.pb.h"
 #include "rclcpp/rclcpp.hpp"
 #include "flowstate_ros_gz_bridge_config.pb.h"
@@ -28,28 +30,16 @@
 
 #include "sim_connection.h"
 
+using SimConnection = intrinsic::simulation::SimConnection;
 
 class FlowstateRosGzBridge : public ros_gz_bridge::RosGzBridge {
  public:
-  using SimConnection = intrinsic::simulation::SimConnection;
   // Constructor
   explicit FlowstateRosGzBridge(
-      const std::string& simulation_server_address,
+      std::shared_ptr<SimConnection> sim_conn,
       const rclcpp::NodeOptions& options = rclcpp::NodeOptions())
-    : ros_gz_bridge::RosGzBridge(options) {
-      auto res = SimConnection::Create(simulation_server_address);
-      if (res.ok())
-      {
-        this->sim_conn_ = *res;
-        // Set the gz::transport::Node for the ros gz bridge to the simulation connection node
-        this->gz_node_ = this->sim_conn_->Node();
-      }
-      else
-      {
-        RCLCPP_ERROR(this->get_logger(), "Failed initializing Simulation Connection");
-        // TODO(luca) a make function that returns a pointer instead so we can fail
-        return;
-      }
+    : ros_gz_bridge::RosGzBridge(options), sim_conn_(std::move(sim_conn)) {
+      this->gz_node_ = this->sim_conn_->Node();
     }
  private:
   std::shared_ptr<SimConnection> sim_conn_;
@@ -76,25 +66,26 @@ intrinsic_proto::config::RuntimeContext GetRuntimeContext() {
   if (!runtime_context.ParseFromIstream(&runtime_context_file)) {
     // Return default context for running locally
     std::cerr << "Warning: using default RuntimeContext\n";
-    flowstate::RosGzBridgeConfig default_ros_config = MakeTestConfig();
-    runtime_context.mutable_config()->PackFrom(default_ros_config);
+    flowstate::RosGzBridgeServiceConfig default_service_config;
+    *default_service_config.mutable_ros_gz_bridge_config() = MakeTestConfig();
+    runtime_context.mutable_config()->PackFrom(default_service_config);
   }
   return runtime_context;
 }
 
 int main(int , char**) {
   auto runtime_context = GetRuntimeContext();
-  flowstate::RosGzBridgeConfig ros_config;
-  if (!runtime_context.config().UnpackTo(&ros_config)) {
+  flowstate::RosGzBridgeServiceConfig service_config;
+  if (!runtime_context.config().UnpackTo(&service_config)) {
     std::cerr << "Unable to unpack runtime_context\n";
     return EXIT_FAILURE;
   }
 
-  // Parse it to json
+  // Parse the bridge config to json
   std::string json_config;
   google::protobuf::util::JsonPrintOptions options;
   options.preserve_proto_field_names = true;
-  const auto status = google::protobuf::util::MessageToJsonString(ros_config, &json_config, options);
+  const auto status = google::protobuf::util::MessageToJsonString(service_config.ros_gz_bridge_config(), &json_config, options);
   if (status.ok()) {
     // A bit hacky, manually remove the top field to flatten the structure
     // and make it a repeated yaml
@@ -125,8 +116,27 @@ int main(int , char**) {
   // Get ROS arguments
   std::vector<const char *> ros_argv = {"--ros-args", "-p", config_file_param.c_str()};
 
+  std::shared_ptr<SimConnection> sim_conn;
+  if (service_config.has_gazebo_simulator()) {
+    auto res = SimConnection::CreateFromResolvedDependency(service_config.gazebo_simulator());
+    if (!res.ok()) {
+      std::cerr << "Failed initializing SimConnection from resolved dep: "
+                << res.status() << std::endl;
+      return EXIT_FAILURE;
+    }
+    sim_conn = *res;
+  } else {
+    auto res = SimConnection::Create(runtime_context.simulation_server_address());
+    if (!res.ok()) {
+      std::cerr << "Failed initializing SimConnection from simulation server address: "
+                << res.status() << std::endl;
+      return EXIT_FAILURE;
+    }
+    sim_conn = *res;
+  }
+
   rclcpp::init(ros_argv.size(), ros_argv.data());
-  rclcpp::spin(std::make_shared<FlowstateRosGzBridge>(runtime_context.simulation_server_address()));
+  rclcpp::spin(std::make_shared<FlowstateRosGzBridge>(std::move(sim_conn)));
   rclcpp::shutdown();
   return EXIT_SUCCESS;
 }

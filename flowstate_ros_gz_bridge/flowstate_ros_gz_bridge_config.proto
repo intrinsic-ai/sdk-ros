@@ -2,6 +2,9 @@ syntax = "proto3";
 
 package flowstate;
 
+import "intrinsic/assets/proto/field_metadata.proto";
+import "intrinsic/assets/proto/v1/resolved_dependency.proto";
+
 message RosGzBridgeConfig {
   enum BridgeDirection {
     DIRECTION_UNSPECIFIED = 0;
@@ -41,4 +44,16 @@ message RosGzBridgeConfig {
   }
 
   repeated BridgeConfig bridges = 1;
+}
+
+message RosGzBridgeServiceConfig {
+  RosGzBridgeConfig ros_gz_bridge_config = 1;
+
+  // Dependency on Gazebo simulator asset.
+  // If unset, the bridge will assume that Gazebo is running at
+  // `runtime_context.simulation_server_address`.
+  optional intrinsic_proto.assets.v1.ResolvedDependency gazebo_simulator = 2
+      [(intrinsic_proto.assets.field_metadata).dependency = {
+        requires: "grpc://intrinsic_proto.simulation.v1.GazeboService",
+      }];
 }
