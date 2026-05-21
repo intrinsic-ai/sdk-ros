@@ -1,7 +1,9 @@
 #!/usr/bin/env bash
 
 IMAGES_DIR=./images
+PROTOS_DESC_DIR=./bazel_ros_build_artifacts
 BUILDER_NAME=container-builder
+USING_BAZEL_BINARY="false"
 
 while [[ $# -gt 0 ]]; do
   case $1 in
@@ -45,6 +47,20 @@ while [[ $# -gt 0 ]]; do
       shift # past argument
       shift # past value
       ;;
+    --using_bazel_binary)
+      if [[ "$2" == "true" ]]; then
+        USING_BAZEL_BINARY="true"
+        shift # past argument
+        shift # past value
+      elif [[ "$2" == "false" ]]; then
+        USING_BAZEL_BINARY="false"
+        shift # past argument
+        shift # past value
+      else
+        USING_BAZEL_BINARY="false"
+        shift # past argument
+      fi
+      ;;
     -*|--*)
       echo "Unknown option $1"
       exit 1
@@ -86,21 +102,38 @@ if [ ! -f ./inbuild ]; then
 fi
 
 if [[ -n "$SERVICE_NAME" && -n "$SERVICE_PACKAGE" ]]; then
+  if [[ "$USING_BAZEL_BINARY" == "true" ]]; then
+    if docker image inspect "$SERVICE_PACKAGE:$SERVICE_NAME" >/dev/null 2>&1; then
+      echo "INFO: Removing existing image $SERVICE_PACKAGE:$SERVICE_NAME..."
+      docker rmi -f "$SERVICE_PACKAGE:$SERVICE_NAME"
+    fi
+  fi
+
   echo "INFO: Loading newly built service image into local daemon..."
   docker load -i "$IMAGES_DIR/$SERVICE_NAME/$SERVICE_NAME.tar"
   
-  echo "INFO: Extracting config and descriptor set from container..."
-  docker create --name "temp_container_service" "$SERVICE_PACKAGE:$SERVICE_NAME"
-  docker cp "temp_container_service:/opt/ros/overlay/install/share/${SERVICE_PACKAGE}/${SERVICE_NAME}_protos.desc" \
-   "$IMAGES_DIR/$SERVICE_NAME/${SERVICE_NAME}_protos.desc"
-  docker rm -f "temp_container_service"
-  
   INBUILD_ARGS=(
-    "--file_descriptor_set" "$IMAGES_DIR/$SERVICE_NAME/${SERVICE_NAME}_protos.desc"
     "--manifest" "$MANIFEST_PATH"
     "--oci_image" "$IMAGES_DIR/$SERVICE_NAME/$SERVICE_NAME.tar"
     "--output" "$IMAGES_DIR/$SERVICE_NAME/$SERVICE_NAME.bundle.tar"
   )
+
+  if [[ "$USING_BAZEL_BINARY" == "true" ]]; then
+    for desc_file in "$PROTOS_DESC_DIR/$SERVICE_NAME"/*_protos.desc; do
+      if [[ -f "$desc_file" ]]; then
+        INBUILD_ARGS+=("--file_descriptor_set" "$desc_file")
+        echo "INFO: Adding file descriptor set: $desc_file"
+      fi
+    done
+  else
+    echo "INFO: Extracting config and descriptor set from container..."
+    docker create --name "temp_container_service" "$SERVICE_PACKAGE:$SERVICE_NAME"
+    docker cp "temp_container_service:/opt/ros/overlay/install/share/${SERVICE_PACKAGE}/${SERVICE_NAME}_protos.desc" \
+     "$IMAGES_DIR/$SERVICE_NAME/${SERVICE_NAME}_protos.desc"
+    docker rm -f "temp_container_service"
+
+    INBUILD_ARGS+=("--file_descriptor_set" "$IMAGES_DIR/$SERVICE_NAME/${SERVICE_NAME}_protos.desc")
+  fi
 
   if [[ -n "$DEFAULT_CONFIG" ]]; then
       INBUILD_ARGS+=("--default_config" "$DEFAULT_CONFIG")
@@ -108,8 +141,15 @@ if [[ -n "$SERVICE_NAME" && -n "$SERVICE_PACKAGE" ]]; then
 
   echo "INFO: Building the service bundle..."
   ./inbuild service bundle "${INBUILD_ARGS[@]}"
+  echo "INFO: Done."
 
 elif [[ -n "$SKILL_NAME" && -n "$SKILL_PACKAGE" ]]; then
+  if [[ "$USING_BAZEL_BINARY" == "true" ]]; then
+    if docker image inspect "$SKILL_PACKAGE:$SKILL_NAME" >/dev/null 2>&1; then
+      echo "INFO: Removing existing image $SKILL_PACKAGE:$SKILL_NAME..."
+      docker rmi -f "$SKILL_PACKAGE:$SKILL_NAME"
+    fi
+  fi
   echo "INFO: Loading newly built skill image into local daemon..."
   docker load -i "$IMAGES_DIR/$SKILL_NAME/$SKILL_NAME.tar"
 
