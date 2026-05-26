@@ -37,6 +37,7 @@ done
 
 set -o errexit
 set -o verbose
+
 src/sdk-ros/scripts/build_container.sh \
   --ros_distro "$ROS_DISTRO" \
   --service_name flowstate_ros_bridge \

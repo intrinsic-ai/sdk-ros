@@ -2,7 +2,7 @@
 <?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="3">
   <name>flowstate_ros_bridge</name>
-  <version>0.0.1</version>
+  <version>0.0.2</version>
   <description>A bridge between Flowstate services and ROS applications</description>
   <maintainer email="morganquigley@intrinsic.ai">Morgan Quigley</maintainer>
   <maintainer email="yadunund@intrinsic.ai">Yadunund Vijay</maintainer>
