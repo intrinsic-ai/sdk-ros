@@ -3,6 +3,7 @@
 
 ARG REPOSITORY=ghcr.io/intrinsic-ai
 ARG TAG=latest
+ARG ROS_DISTRO=jazzy
 FROM ${REPOSITORY}/intrinsic_sdk_cmake_base:${TAG} AS base
 
 # source stage: base + source added
@@ -19,6 +20,8 @@ RUN cd /opt/intrinsic/intrinsic_sdk_cmake/src/intrinsic_sdk_ros \
 # build_export stage: source + rosdep install build_export depends
 FROM source AS build_export
 
+ARG ROS_DISTRO
+
 # Setup rosdep
 RUN \
     --mount=type=cache,target=/var/cache/apt,sharing=locked \
@@ -33,7 +36,7 @@ RUN \
 # Bootstrap rosdep
 RUN set -x \
     && rosdep init \
-    && rosdep update --rosdistro jazzy
+    && rosdep update --rosdistro ${ROS_DISTRO}
 
 # Install exec-like dependencies for the packages in intrinsic_sdk_cmake and
 # save them for re-install in a later stage.
@@ -43,7 +46,7 @@ RUN set -x \
 RUN \
     --mount=type=cache,target=/var/cache/apt,sharing=locked \
     --mount=type=cache,target=/var/lib/apt,sharing=locked \
-    . /opt/ros/jazzy/setup.sh \
+    . /opt/ros/${ROS_DISTRO}/setup.sh \
     && set -x \
     && rm -f /etc/apt/apt.conf.d/docker-clean \
     && echo 'Binary::apt::APT::Keep-Downloaded-Packages "true";' >/etc/apt/apt.conf.d/keep-cache \
@@ -51,7 +54,7 @@ RUN \
     && echo "python3-absl-py:" > /etc/ros/rosdep/custom.yaml \
     && echo "  ubuntu: [python3-absl]" >> /etc/ros/rosdep/custom.yaml \
     && echo "yaml file:///etc/ros/rosdep/custom.yaml" > /etc/ros/rosdep/sources.list.d/50-custom.list \
-    && rosdep update --rosdistro jazzy \
+    && rosdep update --rosdistro ${ROS_DISTRO} \
     && cd /opt/intrinsic/intrinsic_sdk_cmake \
     && touch src/intrinsic_sdk_ros/intrinsic_sdk/COLCON_IGNORE \
     && touch src/intrinsic_sdk_ros/intrinsic_sdk_ros/COLCON_IGNORE \
@@ -72,6 +75,8 @@ RUN \
 
 # build stage: build_export + rosdep install all depends + packages up to intrinsic_sdk_cmake built
 FROM build_export AS build
+
+ARG ROS_DISTRO
 
 # Install other development tools.
 RUN \
@@ -104,12 +109,12 @@ RUN set -x \
 RUN \
     --mount=type=cache,target=/var/cache/apt,sharing=locked \
     --mount=type=cache,target=/var/lib/apt,sharing=locked \
-    . /opt/ros/jazzy/setup.sh \
+    . /opt/ros/${ROS_DISTRO}/setup.sh \
     && set -x \
     && rm -f /etc/apt/apt.conf.d/docker-clean \
     && echo 'Binary::apt::APT::Keep-Downloaded-Packages "true";' >/etc/apt/apt.conf.d/keep-cache \
     && apt-get update \
-    && rosdep update --rosdistro jazzy \
+    && rosdep update --rosdistro ${ROS_DISTRO} \
     && cd /opt/intrinsic/intrinsic_sdk_cmake \
     && touch src/intrinsic_sdk_ros/intrinsic_sdk/COLCON_IGNORE \
     && touch src/intrinsic_sdk_ros/intrinsic_sdk_ros/COLCON_IGNORE \
@@ -121,7 +126,7 @@ RUN \
 # Build intrinsic_sdk_cmake and all of its dependencies.
 RUN \
     --mount=type=cache,target=/ccache/ \
-    . /opt/ros/jazzy/setup.sh \
+    . /opt/ros/${ROS_DISTRO}/setup.sh \
     && set -x \
     && export CCACHE_DIR=/ccache \
     && export PATH="/usr/lib/ccache:$PATH" \
@@ -136,6 +141,8 @@ RUN \
 
 # result stage: base + copy install artifacts + re-installed build_export depends + dev tools
 FROM base AS result
+
+ARG ROS_DISTRO
 
 # Get the installed artifacts from the build stage.
 COPY --from=build \
@@ -183,7 +190,7 @@ RUN \
 # Bootstrap rosdep
 RUN set -x \
     && rosdep init \
-    && rosdep update --rosdistro jazzy
+    && rosdep update --rosdistro ${ROS_DISTRO}
 
 # Setup colcon mixin and metadata.
 RUN set -x \
