@@ -109,23 +109,31 @@ function(intrinsic_sdk_generate_skill_container_image)
 
   set(OUT_DIR ${CMAKE_CURRENT_BINARY_DIR})
 
+  find_package(Python3 REQUIRED COMPONENTS Interpreter)
+  execute_process(
+    COMMAND ${Python3_EXECUTABLE} -c "from ament_index_python.packages import get_package_share_directory; print(get_package_share_directory('intrinsic_sdk_bundle_library_py'))"
+    OUTPUT_VARIABLE intrinsic_sdk_bundle_library_py_SHARE_DIR
+    OUTPUT_STRIP_TRAILING_WHITESPACE
+  )
+  set(DOCKERFILE_PATH "${intrinsic_sdk_bundle_library_py_SHARE_DIR}/resource/skill.Dockerfile")
+
   # Generate container image using the skill Dockerfile.
   add_custom_target(
     ${arg_TARGET}
     BYPRODUCTS ${arg_CONTAINER_IMAGE_OUTPUT}
     COMMAND podman build
-      -f "${intrinsic_sdk_cmake_API_DIR}/skill/resource/skill.Dockerfile"
+      -f "${DOCKERFILE_PATH}"
       --build-arg SKILL_NAME=${arg_SKILL_NAME}
       --build-arg SKILL_PACKAGE=${arg_SKILL_PACKAGE}
       --build-arg SKILL_EXECUTABLE=${arg_SKILL_EXECUTABLE}
       --build-arg SKILL_CONFIG=${arg_SKILL_CONFIG}
       --build-arg SKILL_ASSET_ID_ORG=${arg_SKILL_ASSET_ID_ORG}
-      --tag {arg_CONTAINER_TAG_NAME}
+      --tag ${arg_CONTAINER_TAG_NAME}
       .
     COMMAND podman save
       --format="docker-archive"
       --output="${arg_CONTAINER_IMAGE_OUTPUT}"
-      {arg_CONTAINER_TAG_NAME}
+      ${arg_CONTAINER_TAG_NAME}
     WORKING_DIRECTORY ${arg_CONTAINER_CONTEXT_DIRECTORY}
     COMMENT "Generating skill container image for ${arg_SKILL_NAME}: ${arg_CONTAINER_IMAGE_OUTPUT}"
   )

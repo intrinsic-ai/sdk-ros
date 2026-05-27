@@ -1,5 +1,10 @@
 #!/usr/bin/env bash
 
+echo "=================================================================================================" >&2
+echo "WARNING: This script is deprecated and will be removed in a future release." >&2
+echo "Please transition to using the command-line tool: intrinsic_sdk_build container" >&2
+echo "=================================================================================================" >&2
+
 IMAGES_DIR=./images
 BUILDER_NAME=container-builder
 ROS_DISTRO=jazzy
@@ -66,7 +71,7 @@ if [[ -n "$SERVICE_NAME" && -n "$SERVICE_PACKAGE" ]]; then
   if [[ -n "$CUSTOM_DOCKERFILE" ]]; then
     DOCKERFILE="$CUSTOM_DOCKERFILE"
   else
-    DOCKERFILE="$SCRIPT_DIR/../resources/Dockerfile.service"
+    DOCKERFILE="$SCRIPT_DIR/../intrinsic_sdk_bundle_library_py/resource/service.Dockerfile"
   fi
 
   docker buildx build -t $SERVICE_PACKAGE:$SERVICE_NAME \
@@ -90,7 +95,7 @@ elif [[ -n "$SKILL_NAME" && -n "$SKILL_PACKAGE" ]]; then
   if [[ -n "$CUSTOM_DOCKERFILE" ]]; then
     DOCKERFILE="$CUSTOM_DOCKERFILE"
   else
-    DOCKERFILE="$SCRIPT_DIR/../resources/Dockerfile.skill"
+    DOCKERFILE="$SCRIPT_DIR/../intrinsic_sdk_bundle_library_py/resource/skill.Dockerfile"
   fi
 
   docker buildx build -t $SKILL_PACKAGE:$SKILL_NAME \

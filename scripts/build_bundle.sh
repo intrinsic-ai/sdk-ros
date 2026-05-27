@@ -1,5 +1,10 @@
 #!/usr/bin/env bash
 
+echo "=================================================================================================" >&2
+echo "WARNING: This script is deprecated and will be removed in a future release." >&2
+echo "Please transition to using the command-line tool: intrinsic_sdk_build bundle" >&2
+echo "=================================================================================================" >&2
+
 IMAGES_DIR=./images
 BUILDER_NAME=container-builder
 
@@ -75,7 +80,7 @@ fi
 SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 
 # Parse the SDK_VERSION from sdk_version.json
-SDK_VERSION_FILE="$SCRIPT_DIR/../intrinsic_sdk_cmake/cmake/sdk_version.json"
+SDK_VERSION_FILE="$SCRIPT_DIR/../intrinsic_sdk_bundle_library_py/resource/sdk_version.json"
 SDK_VERSION=$(grep -oP '"sdk_version": "\K[^"]+' "$SDK_VERSION_FILE")
 
 # Download the 'inbuild' tool if it doesn't exist

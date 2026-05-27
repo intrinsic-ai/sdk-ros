@@ -1,5 +1,10 @@
 #!/usr/bin/env bash
 
+echo "=================================================================================================" >&2
+echo "WARNING: This script is deprecated and will be removed in a future release." >&2
+echo "Please transition to using the command-line tool: intrinsic_sdk_build container" >&2
+echo "=================================================================================================" >&2
+
 if [ ! -d "src/sdk-ros" ]; then
   echo "This script must be run at the top of a Colcon workspace."
   exit
@@ -63,7 +68,7 @@ if [[ ! -f "${PACKAGE_DIR}/package.xml" ]]; then
   exit 1
 fi
 
-DOCKERFILE=$(pwd)/src/sdk-ros/intrinsic_sdk_cmake/cmake/api/skill/resource/skill.Dockerfile
+DOCKERFILE=$(pwd)/src/sdk-ros/intrinsic_sdk_bundle_library_py/resource/skill.Dockerfile
 
 mkdir -p "$IMAGES_DIR/$SKILL_NAME"
 IMAGE_DIR=$(pwd)/$IMAGES_DIR/$SKILL_NAME
