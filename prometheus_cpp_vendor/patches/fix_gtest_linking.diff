@@ -1,0 +1,12 @@
+diff --git a/pull/tests/integration/CMakeLists.txt b/pull/tests/integration/CMakeLists.txt
+index 1111111..2222222 100644
+--- a/pull/tests/integration/CMakeLists.txt
++++ b/pull/tests/integration/CMakeLists.txt
+@@ -36,6 +36,7 @@
+   target_link_libraries(prometheus_pull_integration_test
+     PRIVATE
+       ${PROJECT_NAME}::pull
+       CURL::libcurl
+       GTest::gmock_main
++      GTest::gtest
+   )

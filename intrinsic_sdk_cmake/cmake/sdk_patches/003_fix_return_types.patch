@@ -1,0 +1,50 @@
+--- a/intrinsic/world/objects/object_world_client.cc
++++ b/intrinsic/world/objects/object_world_client.cc
+@@ -144,6 +144,7 @@
+           "'TransformNodeReferenceByName.transform_node_reference_by_name' "
+           "must be set.");
+   }
++  return absl::InternalError("Unexpected fallthrough in GetTransformNodeByNameReference");
+ }
+
+ }  // namespace
+--- a/intrinsic/world/objects/object_world_client.cc
++++ b/intrinsic/world/objects/object_world_client.cc
+@@ -160,6 +161,7 @@
+           "The oneof 'TransformNodeReference.transform_node_reference' must be "
+           "set.");
+   }
++  return absl::InternalError("Unexpected fallthrough in GetTransformNode");
+ }
+
+ absl::StatusOr<WorldObject> ObjectWorldClient::GetRootObject() const {
+--- a/intrinsic/world/objects/object_world_client.cc
++++ b/intrinsic/world/objects/object_world_client.cc
+@@ -177,6 +179,7 @@
+       return absl::InvalidArgumentError(
+           "The oneof 'ObjectReference.object_reference' must be set.");
+   }
++  return absl::InternalError("Unexpected fallthrough in GetObject");
+ }
+
+ absl::StatusOr<WorldObject> ObjectWorldClient::GetObject(
+--- a/intrinsic/world/objects/object_world_client.cc
++++ b/intrinsic/world/objects/object_world_client.cc
+@@ -274,6 +277,7 @@
+     case ObjectReference::OBJECT_REFERENCE_NOT_SET:
+       return absl::InvalidArgumentError("");
+   }
++  return absl::InternalError("Unexpected fallthrough in GetKinematicObject");
+ }
+
+ absl::StatusOr<KinematicObject> ObjectWorldClient::GetKinematicObject(
+--- a/intrinsic/world/objects/object_world_client.cc
++++ b/intrinsic/world/objects/object_world_client.cc
+@@ -358,6 +362,7 @@
+     case FrameReference::FRAME_REFERENCE_NOT_SET:
+       return absl::InvalidArgumentError("");
+   }
++  return absl::InternalError("Unexpected fallthrough in GetFrame");
+ }
+
+ absl::StatusOr<Frame> ObjectWorldClient::GetFrame(
