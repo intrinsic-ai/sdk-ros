@@ -110,6 +110,7 @@ jobs:
           build-args: |
             REPOSITORY=localhost:5000
             TAG=temp
+            BASE_IMAGE_TAG=temp
           tags: |
             localhost:5000/intrinsic_sdk_cmake:temp
       - name: Build intrinsic_sdk_cmake_run Docker Image
@@ -123,6 +124,8 @@ jobs:
           build-args: |
             REPOSITORY=localhost:5000
             TAG=temp
+            BUILD_IMAGE_TAG=temp
+            BASE_IMAGE_TAG=temp
           tags: |
             localhost:5000/intrinsic_sdk_cmake_run:temp
 

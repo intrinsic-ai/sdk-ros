@@ -4,7 +4,8 @@
 ARG REPOSITORY=ghcr.io/intrinsic-ai
 ARG TAG=latest
 ARG ROS_DISTRO=jazzy
-FROM ${REPOSITORY}/intrinsic_sdk_cmake_base:${TAG}-${ROS_DISTRO} AS base
+ARG BASE_IMAGE_TAG=${TAG}-${ROS_DISTRO}
+FROM ${REPOSITORY}/intrinsic_sdk_cmake_base:${BASE_IMAGE_TAG} AS base
 
 # source stage: base + source added
 FROM base AS source

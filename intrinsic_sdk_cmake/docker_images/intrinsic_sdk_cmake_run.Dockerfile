@@ -1,9 +1,11 @@
 ARG REPOSITORY=ghcr.io/intrinsic-ai
 ARG TAG=latest
 ARG ROS_DISTRO=jazzy
-FROM ${REPOSITORY}/intrinsic_sdk_cmake:${TAG}-${ROS_DISTRO} as build_image
+ARG BUILD_IMAGE_TAG=${TAG}-${ROS_DISTRO}
+ARG BASE_IMAGE_TAG=${TAG}-${ROS_DISTRO}
+FROM ${REPOSITORY}/intrinsic_sdk_cmake:${BUILD_IMAGE_TAG} as build_image
 
-FROM ${REPOSITORY}/intrinsic_sdk_cmake_base:${TAG}-${ROS_DISTRO} as result
+FROM ${REPOSITORY}/intrinsic_sdk_cmake_base:${BASE_IMAGE_TAG} as result
 
 # Get the installed artifacts from the build stage.
 COPY --from=build_image \

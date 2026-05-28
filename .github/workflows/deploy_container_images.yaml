@@ -12,6 +12,8 @@ concurrency:
   # Cancel all but the latest run of this workflow, because only the latest run of this
   # workflow matters, as it overwrites the latest tag of the container images.
   cancel-in-progress: true
+env:
+  ROS_DISTRO: jazzy
 jobs:
   build-test:
     uses: ./.github/workflows/test_container_images.yaml
@@ -73,32 +75,32 @@ jobs:
         run: |
           docker image tag \
             localhost:5000/intrinsic_sdk_cmake_base:temp \
-            ghcr.io/intrinsic-ai/intrinsic_sdk_cmake_base:${{ env.INTRINSIC_AI_SDK_VERSION }}
+            ghcr.io/intrinsic-ai/intrinsic_sdk_cmake_base:${{ env.INTRINSIC_AI_SDK_VERSION }}-${{ env.ROS_DISTRO }}
           docker image tag \
             localhost:5000/intrinsic_sdk_cmake_base:temp \
-            ghcr.io/intrinsic-ai/intrinsic_sdk_cmake_base:latest
-          docker push ghcr.io/intrinsic-ai/intrinsic_sdk_cmake_base:${{ env.INTRINSIC_AI_SDK_VERSION }}
-          docker push ghcr.io/intrinsic-ai/intrinsic_sdk_cmake_base:latest
+            ghcr.io/intrinsic-ai/intrinsic_sdk_cmake_base:latest-${{ env.ROS_DISTRO }}
+          docker push ghcr.io/intrinsic-ai/intrinsic_sdk_cmake_base:${{ env.INTRINSIC_AI_SDK_VERSION }}-${{ env.ROS_DISTRO }}
+          docker push ghcr.io/intrinsic-ai/intrinsic_sdk_cmake_base:latest-${{ env.ROS_DISTRO }}
       - name: Tag intrinsic_sdk_cmake Container Image
         run: |
           docker image tag \
             localhost:5000/intrinsic_sdk_cmake:temp \
-            ghcr.io/intrinsic-ai/intrinsic_sdk_cmake:${{ env.INTRINSIC_AI_SDK_VERSION }}
+            ghcr.io/intrinsic-ai/intrinsic_sdk_cmake:${{ env.INTRINSIC_AI_SDK_VERSION }}-${{ env.ROS_DISTRO }}
           docker image tag \
             localhost:5000/intrinsic_sdk_cmake:temp \
-            ghcr.io/intrinsic-ai/intrinsic_sdk_cmake:latest
-          docker push ghcr.io/intrinsic-ai/intrinsic_sdk_cmake:${{ env.INTRINSIC_AI_SDK_VERSION }}
-          docker push ghcr.io/intrinsic-ai/intrinsic_sdk_cmake:latest
+            ghcr.io/intrinsic-ai/intrinsic_sdk_cmake:latest-${{ env.ROS_DISTRO }}
+          docker push ghcr.io/intrinsic-ai/intrinsic_sdk_cmake:${{ env.INTRINSIC_AI_SDK_VERSION }}-${{ env.ROS_DISTRO }}
+          docker push ghcr.io/intrinsic-ai/intrinsic_sdk_cmake:latest-${{ env.ROS_DISTRO }}
       - name: Tag intrinsic_sdk_cmake_run Container Image
         run: |
           docker image tag \
             localhost:5000/intrinsic_sdk_cmake_run:temp \
-            ghcr.io/intrinsic-ai/intrinsic_sdk_cmake_run:${{ env.INTRINSIC_AI_SDK_VERSION }}
+            ghcr.io/intrinsic-ai/intrinsic_sdk_cmake_run:${{ env.INTRINSIC_AI_SDK_VERSION }}-${{ env.ROS_DISTRO }}
           docker image tag \
             localhost:5000/intrinsic_sdk_cmake_run:temp \
-            ghcr.io/intrinsic-ai/intrinsic_sdk_cmake_run:latest
-          docker push ghcr.io/intrinsic-ai/intrinsic_sdk_cmake_run:${{ env.INTRINSIC_AI_SDK_VERSION }}
-          docker push ghcr.io/intrinsic-ai/intrinsic_sdk_cmake_run:latest
+            ghcr.io/intrinsic-ai/intrinsic_sdk_cmake_run:latest-${{ env.ROS_DISTRO }}
+          docker push ghcr.io/intrinsic-ai/intrinsic_sdk_cmake_run:${{ env.INTRINSIC_AI_SDK_VERSION }}-${{ env.ROS_DISTRO }}
+          docker push ghcr.io/intrinsic-ai/intrinsic_sdk_cmake_run:latest-${{ env.ROS_DISTRO }}
 
       # TODO(wjwwood): use actions/attest-build-provenance to write the attestation info to the
       #   container registry, see:
