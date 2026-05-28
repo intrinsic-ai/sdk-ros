@@ -4,10 +4,16 @@
 ARG REPOSITORY=ghcr.io/intrinsic-ai
 ARG TAG=latest
 ARG ROS_DISTRO=jazzy
-FROM ${REPOSITORY}/intrinsic_sdk_cmake_base:${TAG} AS base
+FROM ${REPOSITORY}/intrinsic_sdk_cmake_base:${TAG}-${ROS_DISTRO} AS base
 
 # source stage: base + source added
 FROM base AS source
+
+ARG ROS_DISTRO
+RUN if [ ! -f "/opt/ros/${ROS_DISTRO}/setup.sh" ]; then \
+        echo "Error: ROS_DISTRO=${ROS_DISTRO} mismatch with base image. Could not find /opt/ros/${ROS_DISTRO}/setup.sh" >&2 \
+        && exit 1; \
+    fi
 
 ADD ./ /opt/intrinsic/intrinsic_sdk_cmake/src/intrinsic_sdk_ros
 
