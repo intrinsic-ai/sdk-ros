@@ -1,9 +1,8 @@
 ARG REPOSITORY=ghcr.io/intrinsic-ai
 ARG TAG=latest
 ARG ROS_DISTRO=jazzy
-ARG BUILD_IMAGE_TAG=${TAG}-${ROS_DISTRO}
 ARG BASE_IMAGE_TAG=${TAG}-${ROS_DISTRO}
-FROM ${REPOSITORY}/intrinsic_sdk_cmake:${BUILD_IMAGE_TAG} as build_image
+FROM ${REPOSITORY}/intrinsic_sdk_cmake:${BASE_IMAGE_TAG} as build_image
 
 FROM ${REPOSITORY}/intrinsic_sdk_cmake_base:${BASE_IMAGE_TAG} as result
 
