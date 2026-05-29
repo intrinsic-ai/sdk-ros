@@ -113,7 +113,7 @@ $ podman build \
   .
 ```
 
-Note that if you want to build it off of a different tag of the base image, you'll need to change the `TAG` argument.
+Note that if you want to build it off of a different version tag of the base image, you can change the `TAG` argument (e.g. `--build-arg TAG=temp`), which will still append the ROS distro automatically. Alternatively, you can completely override the base tag format by passing `BASE_IMAGE_TAG` (e.g. `--build-arg BASE_IMAGE_TAG=my-custom-tag`).
 
 #### (Optional) push to local container registry
 
