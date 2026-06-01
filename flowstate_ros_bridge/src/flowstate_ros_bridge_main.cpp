@@ -92,6 +92,8 @@ int main(int argc, char* argv[]) {
                                        bridge_plugins_proto.end());
   rclcpp::Parameter bridge_plugins_param("bridge_plugins", plugin_list);
   params.push_back(std::move(bridge_plugins_param));
+  params.emplace_back("strip_flowstate_tf_prefix",
+                      ros_config.strip_flowstate_tf_prefix());
 
   const auto& s = ros_config.sensors();
   params.emplace_back("enable_robot_joint_state_topic",
