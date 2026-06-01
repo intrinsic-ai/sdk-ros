@@ -21,6 +21,7 @@
 #include "absl/log/log.h"
 #include "absl/status/status.h"
 #include "absl/strings/str_format.h"
+#include "absl/strings/strip.h"
 #include "intrinsic/eigenmath/types.h"
 #include "intrinsic/math/proto_conversion.h"
 #include "intrinsic/util/eigen.h"
@@ -29,6 +30,9 @@
 namespace flowstate_ros_bridge {
 
 constexpr const char* kTfPrefixParamName = "world_tf_prefix";
+constexpr const char* kStripFlowstateTfPrefixParamName =
+    "strip_flowstate_tf_prefix";
+constexpr const char* kRemapTfNamesParamName = "remap_tf_names";
 constexpr const char* kResourceServiceName = "flowstate_get_resource";
 constexpr const char* kMeshUrlPrefixParamName = "mesh_url_prefix";
 constexpr const char* kEnableRobotJointStateTopicParamName =
@@ -56,6 +60,11 @@ void WorldBridge::declare_ros_parameters(
 
   param_interface->declare_parameter(kTfPrefixParamName,
                                      rclcpp::ParameterValue{""});
+  param_interface->declare_parameter(kStripFlowstateTfPrefixParamName,
+                                     rclcpp::ParameterValue{""});
+  param_interface->declare_parameter(
+      kRemapTfNamesParamName,
+      rclcpp::ParameterValue(std::vector<std::string>{}));
   param_interface->declare_parameter(
       kMeshUrlPrefixParamName,
       rclcpp::ParameterValue{"http://localhost:8123/"});
@@ -118,6 +127,20 @@ bool WorldBridge::initialize(ROSNodeInterfaces ros_node_interfaces,
 
   data_->tf_prefix_ = param_interface->get_parameter(kTfPrefixParamName)
                           .get_value<std::string>();
+  data_->strip_flowstate_tf_prefix_ =
+      param_interface->get_parameter(kStripFlowstateTfPrefixParamName)
+          .get_value<std::string>();
+
+  std::vector<std::string> remap_tf_names =
+      param_interface->get_parameter(kRemapTfNamesParamName).as_string_array();
+  if (remap_tf_names.size() % 2 != 0) {
+    throw std::runtime_error(
+        "remap_tf_names parameter must have an even size. The parameter is an array of "
+        "frame_id to be remapped and the new frame_id in pairs.");
+  }
+  for (size_t i = 0; i < remap_tf_names.size(); i += 2) {
+    data_->remap_tf_names_[remap_tf_names[i]] = remap_tf_names[i + 1];
+  }
 
   std::shared_ptr<rclcpp::node_interfaces::NodeTopicsInterface>
       topics_interface =
@@ -270,7 +293,8 @@ absl::Status WorldBridge::Data::SendObjectVisualizationMessages(
             continue;
           }
           const auto& geo_ref = geometry.geo_ref();
-          const std::string object_name = object.Name().value();
+          const std::string object_name = std::string(
+              absl::StripPrefix(object.Name().value(), strip_flowstate_tf_prefix_));
           const std::vector<absl::string_view> parts =
               absl::StrSplit(object_name, '/');
           const absl::string_view short_name = parts.back();
@@ -392,15 +416,33 @@ void WorldBridge::TfCallback(const intrinsic_proto::TFMessage& tf_proto) {
     geometry_msgs::msg::TransformStamped* ts_ros = &tf_ros.transforms[tf_idx++];
     ts_ros->header.stamp.sec = ts_proto.header().stamp().seconds();
     ts_ros->header.stamp.nanosec = ts_proto.header().stamp().nanos();
-    ts_ros->header.frame_id = data_->tf_prefix_ + ts_proto.header().frame_id();
-    ts_ros->child_frame_id = data_->tf_prefix_ + ts_proto.child_frame_id();
+
+    // Strip away Flowstate TF prefix if it exists
+    const std::string frame_id = std::string(
+        absl::StripPrefix(ts_proto.header().frame_id(), data_->strip_flowstate_tf_prefix_));
+
+    const std::string child_frame_id = std::string(
+        absl::StripPrefix(ts_proto.child_frame_id(), data_->strip_flowstate_tf_prefix_));
+
+    ts_ros->header.frame_id = data_->tf_prefix_ + frame_id;
+    ts_ros->child_frame_id = data_->tf_prefix_ + child_frame_id;
+
+    // remap frame_id and child_frame_id if they match any keys
+    const auto child_remap_it = data_->remap_tf_names_.find(ts_ros->child_frame_id);
+    if (child_remap_it != data_->remap_tf_names_.end()) {
+      ts_ros->child_frame_id = child_remap_it->second;
+    }
+    const auto parent_remap_it = data_->remap_tf_names_.find(ts_ros->header.frame_id);
+    if (parent_remap_it != data_->remap_tf_names_.end()) {
+      ts_ros->header.frame_id = parent_remap_it->second;
+    }
 
     new_tf_frame_names.insert(ts_ros->child_frame_id);
     if (!data_->tf_frame_names_.contains(ts_ros->child_frame_id)) {
       // We parse the "OBJECT_NAME/ENTITY_NAME" string to get the OBJECT_NAME
       LOG(INFO) << "new child_frame_id: " << ts_ros->child_frame_id;
-      const std::size_t str_end = ts_proto.child_frame_id().find('/');
-      new_object_names.insert(ts_proto.child_frame_id().substr(0, str_end));
+      const std::size_t str_end = child_frame_id.find('/');
+      new_object_names.insert(child_frame_id.substr(0, str_end));
     }
     // The auto-generated CDR types do not currently have assignment operators
     // or helper conversion functions from the corresponding protos, so we need

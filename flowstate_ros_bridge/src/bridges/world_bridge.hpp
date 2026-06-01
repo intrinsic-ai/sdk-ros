@@ -107,6 +107,8 @@ class WorldBridge : public BridgeInterface {
     std::shared_ptr<rclcpp::Publisher<visualization_msgs::msg::MarkerArray>>
         workcell_markers_pub_;
     std::string tf_prefix_;
+    std::string strip_flowstate_tf_prefix_;
+    absl::flat_hash_map<std::string, std::string> remap_tf_names_;
     std::shared_ptr<rclcpp::Service<GetResource>> get_resource_srv_;
     absl::flat_hash_map<std::string, std::vector<uint8_t>> renderables_;
     absl::flat_hash_set<std::string> tf_frame_names_;
