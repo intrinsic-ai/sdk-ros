@@ -52,6 +52,10 @@ class WorldBridge : public BridgeInterface {
  private:
   void TfCallback(const intrinsic_proto::TFMessage&);
 
+  static std::string StripTfPrefixes(
+      absl::string_view frame,
+      const std::vector<std::string>& prefixes);
+
   void RobotStateCallback(const intrinsic_proto::data_logger::LogItem&);
 
   // Helper method for unpacking data in the RobotStatus proto and publishing
@@ -107,7 +111,7 @@ class WorldBridge : public BridgeInterface {
     std::shared_ptr<rclcpp::Publisher<visualization_msgs::msg::MarkerArray>>
         workcell_markers_pub_;
     std::string tf_prefix_;
-    std::string strip_flowstate_tf_prefix_;
+    std::vector<std::string> strip_flowstate_tf_prefixes_;
     absl::flat_hash_map<std::string, std::string> remap_tf_names_;
     std::shared_ptr<rclcpp::Service<GetResource>> get_resource_srv_;
     absl::flat_hash_map<std::string, std::vector<uint8_t>> renderables_;

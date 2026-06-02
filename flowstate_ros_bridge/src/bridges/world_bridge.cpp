@@ -60,8 +60,9 @@ void WorldBridge::declare_ros_parameters(
 
   param_interface->declare_parameter(kTfPrefixParamName,
                                      rclcpp::ParameterValue{""});
-  param_interface->declare_parameter(kStripFlowstateTfPrefixParamName,
-                                     rclcpp::ParameterValue{""});
+  param_interface->declare_parameter(
+      kStripFlowstateTfPrefixParamName,
+      rclcpp::ParameterValue(std::vector<std::string>{}));
   param_interface->declare_parameter(
       kRemapTfNamesParamName,
       rclcpp::ParameterValue(std::vector<std::string>{}));
@@ -127,9 +128,9 @@ bool WorldBridge::initialize(ROSNodeInterfaces ros_node_interfaces,
 
   data_->tf_prefix_ = param_interface->get_parameter(kTfPrefixParamName)
                           .get_value<std::string>();
-  data_->strip_flowstate_tf_prefix_ =
+  data_->strip_flowstate_tf_prefixes_ =
       param_interface->get_parameter(kStripFlowstateTfPrefixParamName)
-          .get_value<std::string>();
+          .as_string_array();
 
   std::vector<std::string> remap_tf_names =
       param_interface->get_parameter(kRemapTfNamesParamName).as_string_array();
@@ -293,8 +294,8 @@ absl::Status WorldBridge::Data::SendObjectVisualizationMessages(
             continue;
           }
           const auto& geo_ref = geometry.geo_ref();
-          const std::string object_name = std::string(
-              absl::StripPrefix(object.Name().value(), strip_flowstate_tf_prefix_));
+          const std::string object_name =
+              StripTfPrefixes(object.Name().value(), strip_flowstate_tf_prefixes_);
           const std::vector<absl::string_view> parts =
               absl::StrSplit(object_name, '/');
           const absl::string_view short_name = parts.back();
@@ -401,6 +402,22 @@ absl::Status WorldBridge::Data::SendObjectVisualizationMessages(
 ///=============================================================================
 WorldBridge::Data::~Data() {}
 
+///=============================================================================
+std::string WorldBridge::StripTfPrefixes(
+    absl::string_view frame,
+    const std::vector<std::string>& prefixes) {
+  absl::string_view stripped = frame;
+  for (const auto& prefix : prefixes) {
+    // Add check to only strip the prefix once per frame
+    if (!prefix.empty() && absl::StartsWith(stripped, prefix)) {
+      stripped = absl::StripPrefix(stripped, prefix);
+      break;
+    }
+  }
+  return std::string(stripped);
+}
+
+///=============================================================================
 void WorldBridge::TfCallback(const intrinsic_proto::TFMessage& tf_proto) {
   rclcpp::Clock clock;
   const rclcpp::Time t_start = clock.now();
@@ -417,12 +434,12 @@ void WorldBridge::TfCallback(const intrinsic_proto::TFMessage& tf_proto) {
     ts_ros->header.stamp.sec = ts_proto.header().stamp().seconds();
     ts_ros->header.stamp.nanosec = ts_proto.header().stamp().nanos();
 
-    // Strip away Flowstate TF prefix if it exists
-    const std::string frame_id = std::string(
-        absl::StripPrefix(ts_proto.header().frame_id(), data_->strip_flowstate_tf_prefix_));
+    // Strip away Flowstate TF prefixes
+    const std::string frame_id =
+        StripTfPrefixes(ts_proto.header().frame_id(), data_->strip_flowstate_tf_prefixes_);
 
-    const std::string child_frame_id = std::string(
-        absl::StripPrefix(ts_proto.child_frame_id(), data_->strip_flowstate_tf_prefix_));
+    const std::string child_frame_id =
+        StripTfPrefixes(ts_proto.child_frame_id(), data_->strip_flowstate_tf_prefixes_);
 
     ts_ros->header.frame_id = data_->tf_prefix_ + frame_id;
     ts_ros->child_frame_id = data_->tf_prefix_ + child_frame_id;
