@@ -92,12 +92,13 @@ class TestBuild(unittest.TestCase):
                 break
         self.assertTrue(found_build)
 
+    @patch('shutil.which', return_value=None)
     @patch('intrinsic_sdk_bundle_library_py.build.download_inbuild', return_value='./inbuild')
     @patch('intrinsic_sdk_bundle_library_py.build.get_sdk_version', return_value='v0.1.0')
     @patch('intrinsic_sdk_bundle_library_py.build.run_command')
     @patch('os.path.exists', return_value=True)
     def test_build_bundle_skill(
-        self, mock_exists, mock_run_command, mock_get_version, mock_download
+        self, mock_exists, mock_run_command, mock_get_version, mock_download, mock_which
     ):
         args = MagicMock()
         args.service_name = None
@@ -149,12 +150,13 @@ class TestBuild(unittest.TestCase):
                 break
         self.assertTrue(found_build)
 
+    @patch('shutil.which', return_value=None)
     @patch('intrinsic_sdk_bundle_library_py.build.download_inbuild', return_value='./inbuild')
     @patch('intrinsic_sdk_bundle_library_py.build.get_sdk_version', return_value='v0.1.0')
     @patch('intrinsic_sdk_bundle_library_py.build.run_command')
     @patch('os.path.exists', return_value=True)
     def test_build_bundle_service(
-        self, mock_exists, mock_run_command, mock_get_version, mock_download
+        self, mock_exists, mock_run_command, mock_get_version, mock_download, mock_which
     ):
         args = MagicMock()
         args.service_name = 'test_service'

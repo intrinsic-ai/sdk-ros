@@ -24,8 +24,17 @@ pytest test/test_build.py
 ## 2. Functional Tests
 To verify that the build and bundle workflow works correctly for both C++ and Python, we use test skills and services located in the [functional_tests](./functional_tests) directory.
 
+Ensure you have sourced your workspace (`source install/setup.bash`) before running these tests.
+
 ### Python Skill Test
-To test building and bundling a Python skill:
+To test building and bundling the Python skill:
+
+**Using the Colcon Extension (Recommended):**
+```bash
+colcon bundle --packages-select test_python_skill
+```
+
+**Using the Standalone CLI (Manual):**
 ```bash
 # 1. Build container (OCI image)
 python3 src/sdk-ros/intrinsic_sdk_bundle_library_py/intrinsic_sdk_bundle_library_py/build.py container \
@@ -41,7 +50,14 @@ python3 src/sdk-ros/intrinsic_sdk_bundle_library_py/intrinsic_sdk_bundle_library
 ```
 
 ### C++ Skill Test
-To test building and bundling a C++ skill:
+To test building and bundling the C++ skill:
+
+**Using the Colcon Extension (Recommended):**
+```bash
+colcon bundle --packages-select test_cpp_skill
+```
+
+**Using the Standalone CLI (Manual):**
 ```bash
 # 1. Build container
 python3 src/sdk-ros/intrinsic_sdk_bundle_library_py/intrinsic_sdk_bundle_library_py/build.py container \
@@ -57,7 +73,14 @@ python3 src/sdk-ros/intrinsic_sdk_bundle_library_py/intrinsic_sdk_bundle_library
 ```
 
 ### Python Service Test
-To test building and bundling a Python service:
+To test building and bundling the Python service:
+
+**Using the Colcon Extension (Recommended):**
+```bash
+colcon bundle --packages-select test_python_service
+```
+
+**Using the Standalone CLI (Manual):**
 ```bash
 # 1. Build container
 python3 src/sdk-ros/intrinsic_sdk_bundle_library_py/intrinsic_sdk_bundle_library_py/build.py container \
@@ -72,9 +95,15 @@ python3 src/sdk-ros/intrinsic_sdk_bundle_library_py/intrinsic_sdk_bundle_library
   --default_config src/sdk-ros/intrinsic_sdk_bundle_library_py/test/functional_tests/test_python_service/test_python_service_default_config.pbtxt
 ```
 
-
 ### C++ Service Test
-To test building and bundling a C++ service:
+To test building and bundling the C++ service:
+
+**Using the Colcon Extension (Recommended):**
+```bash
+colcon bundle --packages-select test_cpp_service
+```
+
+**Using the Standalone CLI (Manual):**
 ```bash
 # 1. Build container
 python3 src/sdk-ros/intrinsic_sdk_bundle_library_py/intrinsic_sdk_bundle_library_py/build.py container \
