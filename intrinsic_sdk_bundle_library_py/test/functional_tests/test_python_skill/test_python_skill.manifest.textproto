@@ -1,0 +1,25 @@
+id {
+  package: "com.example"
+  name: "test_python_skill"
+}
+display_name: "Test Python Skill"
+vendor {
+  display_name: "Intrinsic"
+}
+documentation {
+  description: "Skill that is only to test Python skill development works."
+}
+options {
+  supports_cancellation: true
+  python_config {
+    skill_module: "test_python_skill.test_python_skill"
+    proto_module: "test_python_skill.test_python_skill_pb2"
+    create_skill: "test_python_skill.test_python_skill.TestPythonSkill"
+  }
+}
+parameter {
+  message_full_name: "test_python_skill.TestPythonSkillParams"
+}
+return_type {
+  message_full_name: "test_python_skill.TestPythonSkillResult"
+}

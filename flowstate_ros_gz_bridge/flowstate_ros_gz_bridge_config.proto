@@ -1,0 +1,44 @@
+syntax = "proto3";
+
+package flowstate;
+
+message RosGzBridgeConfig {
+  enum BridgeDirection {
+    DIRECTION_UNSPECIFIED = 0;
+    BIDIRECTIONAL = 1;
+    GZ_TO_ROS = 2;
+    ROS_TO_GZ = 3;
+  }
+
+  enum QoSProfile {
+    QOS_UNSPECIFIED = 0;
+    CLOCK = 1;
+    SENSOR_DATA = 2;
+    PARAMETERS = 3;
+    SERVICES = 4;
+    PARAMETER_EVENTS = 5;
+    ROSOUT = 6;
+    SYSTEM_DEFAULT = 7;
+    BEST_AVAILABLE = 8;
+  }
+
+  message BridgeConfig {
+    // Taken from https://github.com/gazebosim/ros_gz/blob/fb0399298e1eed95ebdab938c7deb6a4b50e8930/ros_gz_bridge/src/bridge_config.cpp#L29-L42
+    optional string service_name = 1;
+    optional string topic_name = 2;
+    optional string ros_topic_name = 3;
+    optional string gz_topic_name = 4;
+    optional string ros_type_name = 5;
+    optional string gz_type_name = 6;
+    optional BridgeDirection direction = 7;
+    optional uint64 publisher_queue = 8;
+    optional uint64 subscriber_queue = 9;
+    optional QoSProfile qos_profile = 10;
+    optional bool lazy = 11;
+    optional string gz_req_type_name = 12;
+    optional string gz_rep_type_name = 13;
+    optional string frame_id = 14;
+  }
+
+  repeated BridgeConfig bridges = 1;
+}

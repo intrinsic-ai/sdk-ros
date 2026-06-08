@@ -1,0 +1,5 @@
+# proto-file: test_python_service.proto
+# proto-message: TestPythonServiceConfig
+[type.googleapis.com/intrinsic.TestPythonServiceConfig] {
+  message: "Hello from test Python service"
+}
