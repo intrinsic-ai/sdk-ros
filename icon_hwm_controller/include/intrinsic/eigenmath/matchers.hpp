@@ -19,21 +19,27 @@
 #include "intrinsic/eigenmath/types.hpp"
 #include "intrinsic/math/pose3.hpp"
 
-namespace intrinsic {
-namespace eigenmath {
-namespace testing {
-namespace matchers_internal {
+namespace intrinsic
+{
+namespace eigenmath
+{
+namespace testing
+{
+namespace matchers_internal
+{
 // Return whether the type T has a difference operator.
-template <typename T, typename = void>
+template<typename T, typename = void>
 static constexpr bool HasDifferenceOp = false;
-template <typename T>
+template<typename T>
 static constexpr bool HasDifferenceOp<
-    T, std::void_t<decltype(std::declval<T>() - std::declval<T>())>> = true;
+  T, std::void_t<decltype(std::declval<T>() - std::declval<T>())>> = true;
 
-template <typename ArgType, typename ExpectedType, typename Scalar>
-bool GenericIsApprox(ArgType&& arg, ExpectedType&& expected,
-                     Scalar first_tolerance, Scalar second_tolerance,
-                     ::testing::MatchResultListener* result_listener) {
+template<typename ArgType, typename ExpectedType, typename Scalar>
+bool GenericIsApprox(
+  ArgType && arg, ExpectedType && expected,
+  Scalar first_tolerance, Scalar second_tolerance,
+  ::testing::MatchResultListener * result_listener)
+{
   using TestType = std::decay_t<ArgType>;
   if constexpr (HasDifferenceOp<TestType>) {
     // If either tensor (vector/matrix/others) has at least one NaN, we will
@@ -55,7 +61,7 @@ bool GenericIsApprox(ArgType&& arg, ExpectedType&& expected,
     // arg and expected, which is 0 in case of a zero vector/matrix.
     // See, for example,
     // https://cs.corp.google.com/piper///depot/google3/third_party/eigen3/Eigen/src/Core/Fuzzy.h?l=93
-    if ((arg - expected).cwiseAbs().maxCoeff() < first_tolerance) return true;
+    if ((arg - expected).cwiseAbs().maxCoeff() < first_tolerance) {return true;}
     return expected.isApprox(arg, first_tolerance);
   } else if constexpr (IsPose<TestType>) {
     if (expected.isApprox(arg, first_tolerance, second_tolerance)) {
@@ -64,9 +70,10 @@ bool GenericIsApprox(ArgType&& arg, ExpectedType&& expected,
     decltype(arg) delta = arg * expected.inverse();
     *result_listener << "\n difference:\n" << delta;
     if constexpr (std::decay_t<
-                      decltype(delta.translation())>::RowsAtCompileTime == 2) {
+        decltype(delta.translation())>::RowsAtCompileTime == 2)
+    {
       const decltype(arg.translation()) translation_diff =
-          (arg.translation() - expected.translation()).eval();
+        (arg.translation() - expected.translation()).eval();
       *result_listener << "\n translation difference = "
                        << translation_diff.transpose()
                        << " (norm = " << translation_diff.norm() << " m)";
@@ -75,7 +82,7 @@ bool GenericIsApprox(ArgType&& arg, ExpectedType&& expected,
                        << " (norm = " << so2_diff.norm() << " rad)";
     } else {
       const decltype(arg.translation()) translation_diff =
-          (arg.translation() - expected.translation()).eval();
+        (arg.translation() - expected.translation()).eval();
       *result_listener << "\n translation difference = "
                        << translation_diff.transpose()
                        << " (norm = " << translation_diff.norm() << " m)";
@@ -130,18 +137,20 @@ MATCHER_P(IsApprox, expected,
 
 // Returns a matcher that checks if some actual range matches the expected
 // range of values using the IsApprox matcher for each element.
-template <typename Range>
-auto ElementsAreApprox(Range&& expected, double tolerance) {
+template<typename Range>
+auto ElementsAreApprox(Range && expected, double tolerance)
+{
   return ::testing::ElementsAreArray(gtl::projection_view(
       expected,
-      [tolerance](const auto& elem) { return IsApprox(elem, tolerance); }));
+             [tolerance](const auto & elem) {return IsApprox(elem, tolerance);}));
 }
 
-template <typename Range>
-auto UnorderedElementsAreApprox(Range&& expected, double tolerance) {
+template<typename Range>
+auto UnorderedElementsAreApprox(Range && expected, double tolerance)
+{
   return ::testing::UnorderedElementsAreArray(gtl::projection_view(
       expected,
-      [tolerance](const auto& elem) { return IsApprox(elem, tolerance); }));
+             [tolerance](const auto & elem) {return IsApprox(elem, tolerance);}));
 }
 
 // Returns true if the arg is approximately the same eigenvector as the given
@@ -237,14 +246,15 @@ MATCHER_P(IsApproxUndirected, tolerance,
               ::testing::PrintToString(tolerance)) {
   using std::get;
   return (get<1>(arg).from.isApprox(get<0>(arg).from, tolerance) &&
-          get<1>(arg).to.isApprox(get<0>(arg).to, tolerance)) ||
+         get<1>(arg).to.isApprox(get<0>(arg).to, tolerance)) ||
          (get<1>(arg).to.isApprox(get<0>(arg).from, tolerance) &&
-          get<1>(arg).from.isApprox(get<0>(arg).to, tolerance));
+         get<1>(arg).from.isApprox(get<0>(arg).to, tolerance));
 }
-template <typename T>
-auto IsApproxUndirected(T&& expected, double tolerance)
-    -> decltype(::testing::internal::MatcherBindSecond(
-        IsApproxUndirected(tolerance), std::forward<T>(expected))) {
+template<typename T>
+auto IsApproxUndirected(T && expected, double tolerance)
+-> decltype(::testing::internal::MatcherBindSecond(
+        IsApproxUndirected(tolerance), std::forward<T>(expected)))
+{
   return ::testing::internal::MatcherBindSecond(IsApproxUndirected(tolerance),
                                                 std::forward<T>(expected));
 }
@@ -254,13 +264,14 @@ MATCHER_P(IsApproxDirected, tolerance,
           "has endpoints approximately equal to with tolerance " +
               ::testing::PrintToString(tolerance)) {
   using std::get;
-  return (get<1>(arg).from.isApprox(get<0>(arg).from, tolerance) &&
-          get<1>(arg).to.isApprox(get<0>(arg).to, tolerance));
+  return  get<1>(arg).from.isApprox(get<0>(arg).from, tolerance) &&
+         get<1>(arg).to.isApprox(get<0>(arg).to, tolerance);
 }
-template <typename T>
-auto IsApproxDirected(T&& expected, double tolerance)
-    -> decltype(::testing::internal::MatcherBindSecond(
-        IsApproxDirected(tolerance), std::forward<T>(expected))) {
+template<typename T>
+auto IsApproxDirected(T && expected, double tolerance)
+-> decltype(::testing::internal::MatcherBindSecond(
+        IsApproxDirected(tolerance), std::forward<T>(expected)))
+{
   return ::testing::internal::MatcherBindSecond(IsApproxDirected(tolerance),
                                                 std::forward<T>(expected));
 }
@@ -274,74 +285,74 @@ auto IsApproxDirected(T&& expected, double tolerance)
 MATCHER_P2(IsApproximatelyPosed, proto_msg, tolerance, "matches pose update") {
   // Search the proto for nested pose fields
   std::vector<std::string> pose_fields;
-  std::function<void(const google::protobuf::Message&, std::string)>
+  std::function<void(const google::protobuf::Message &, std::string)>
       add_pose_fields =
-          [&](const google::protobuf::Message& msg, std::string path) {
-            std::vector<const google::protobuf::FieldDescriptor*> msg_fields;
-            msg.GetReflection()->ListFields(msg, &msg_fields);
-            for (auto* msg_field : msg_fields) {
-              auto* nested_msg = msg_field->message_type();
-              if (!nested_msg) {
-                continue;
-              }
+    [&](const google::protobuf::Message & msg, std::string path) {
+      std::vector<const google::protobuf::FieldDescriptor *> msg_fields;
+      msg.GetReflection()->ListFields(msg, &msg_fields);
+      for (auto * msg_field : msg_fields) {
+        auto * nested_msg = msg_field->message_type();
+        if (!nested_msg) {
+          continue;
+        }
 
-              const std::string msg_field_path =
-                  path.empty() ? std::string(msg_field->name())
-                               : absl::StrCat(path, ".", msg_field->name());
-              std::string_view nested_msg_type(nested_msg->full_name());
+        const std::string msg_field_path =
+          path.empty() ? std::string(msg_field->name()) :
+          absl::StrCat(path, ".", msg_field->name());
+        std::string_view nested_msg_type(nested_msg->full_name());
               // TODO(b/225404481): Support non-deprecated pose protos
-              if (nested_msg_type == "blue.messages_proto.Pose3D") {
-                pose_fields.push_back(msg_field_path);
-              } else {
-                add_pose_fields(msg.GetReflection()->GetMessage(msg, msg_field),
+        if (nested_msg_type == "blue.messages_proto.Pose3D") {
+          pose_fields.push_back(msg_field_path);
+        } else {
+          add_pose_fields(msg.GetReflection()->GetMessage(msg, msg_field),
                                 msg_field_path);
-              }
-            }
-          };
+        }
+      }
+    };
   add_pose_fields(proto_msg, "");
 
   // Compare all proto fields using custom approximate matcher
-  std::function<bool(const google::protobuf::Message&,
-                     const google::protobuf::Message&, std::string)>
-      check_poses = [&](const google::protobuf::Message& want,
-                        const google::protobuf::Message& got,
-                        std::string path_to_pose) {
-        if (path_to_pose.empty()) {
-          blue::messages_proto::Pose3D want_pose_proto;
-          if (!want_pose_proto.MergeFromString(want.SerializeAsCord())) {
-            return false;
-          }
+  std::function<bool(const google::protobuf::Message &,
+    const google::protobuf::Message &, std::string)>
+      check_poses = [&](const google::protobuf::Message & want,
+    const google::protobuf::Message & got,
+    std::string path_to_pose) {
+      if (path_to_pose.empty()) {
+        blue::messages_proto::Pose3D want_pose_proto;
+        if (!want_pose_proto.MergeFromString(want.SerializeAsCord())) {
+          return false;
+        }
 
-          blue::messages_proto::Pose3D got_pose_proto;
-          if (!got_pose_proto.MergeFromString(got.SerializeAsCord())) {
-            return false;
-          }
+        blue::messages_proto::Pose3D got_pose_proto;
+        if (!got_pose_proto.MergeFromString(got.SerializeAsCord())) {
+          return false;
+        }
 
-          absl::StatusOr<Pose3d> want_pose =
-              blue::messages_proto::FromProto(want_pose_proto);
-          absl::StatusOr<Pose3d> got_pose =
-              blue::messages_proto::FromProto(got_pose_proto);
+        absl::StatusOr<Pose3d> want_pose =
+          blue::messages_proto::FromProto(want_pose_proto);
+        absl::StatusOr<Pose3d> got_pose =
+          blue::messages_proto::FromProto(got_pose_proto);
 
-          if (!want_pose.ok() || !got_pose.ok()) {
-            return false;
-          }
+        if (!want_pose.ok() || !got_pose.ok()) {
+          return false;
+        }
 
-          return want_pose->isApprox(*got_pose, tolerance);
-        } else {
+        return want_pose->isApprox(*got_pose, tolerance);
+      } else {
           // Get the next field one level deeper
-          std::vector<std::string> field_paths =
-              absl::StrSplit(path_to_pose, '.');
-          const absl::string_view field_path = field_paths[0];
-          const std::string remaining_path =
-              absl::StrJoin(field_paths.begin() + 1, field_paths.end(), ".");
+        std::vector<std::string> field_paths =
+          absl::StrSplit(path_to_pose, '.');
+        const absl::string_view field_path = field_paths[0];
+        const std::string remaining_path =
+          absl::StrJoin(field_paths.begin() + 1, field_paths.end(), ".");
 
           // Extract the field from each message
-          auto message_for_field =
-              [](const google::protobuf::Message& msg,
-                 absl::string_view field) -> const google::protobuf::Message& {
-            std::vector<const google::protobuf::FieldDescriptor*> msg_fields;
+        auto message_for_field =
+          [](const google::protobuf::Message & msg,
+          absl::string_view field) -> const google::protobuf::Message & {
+            std::vector<const google::protobuf::FieldDescriptor *> msg_fields;
             msg.GetReflection()->ListFields(msg, &msg_fields);
-            for (auto* msg_field : msg_fields) {
+            for (auto * msg_field : msg_fields) {
               if (msg_field->name() == field) {
                 return msg.GetReflection()->GetMessage(msg, msg_field);
               }
@@ -349,22 +360,24 @@ MATCHER_P2(IsApproximatelyPosed, proto_msg, tolerance, "matches pose update") {
 
             // This is fatal because we already searched the protos for these
             // message fields
-            LOG(FATAL) << "Can't find message at field '" << field << "'";
+            std::cerr << "Can't find message at field '" << field << "'" << std::endl;
+            std::exit(EXIT_FAILURE);
+            // This is unreachable...
             return msg;
           };
 
-          return check_poses(message_for_field(want, field_path),
+        return check_poses(message_for_field(want, field_path),
                              message_for_field(got, field_path),
                              remaining_path);
-        }
-      };
+      }
+    };
 
   // Do the actual comparisons.
   ::intrinsic::testing::ProtoComparison comp;
   comp.ignore_field_paths = pose_fields;
   bool match = ::intrinsic::testing::ProtoCompare(comp, arg, proto_msg);
 
-  for (auto& pose_field : pose_fields) {
+  for (auto & pose_field : pose_fields) {
     match = match && check_poses(arg, proto_msg, pose_field);
   }
 
@@ -379,17 +392,20 @@ MATCHER_P(IsApproximatelyPosed, proto_msg, "matches pose update") {
       arg, result_listener);
 }
 
-struct EigenMatcherTolerance {
+struct EigenMatcherTolerance
+{
   std::optional<float> abs_error = std::nullopt;
   std::optional<float> rel_error = std::nullopt;
 
-  template <typename LHS, typename RHS>
-  bool operator()(const LHS& lhs, const RHS& rhs) const {
+  template<typename LHS, typename RHS>
+  bool operator()(const LHS & lhs, const RHS & rhs) const
+  {
     if (abs_error.has_value() && ((lhs - rhs).norm() > abs_error.value())) {
       return false;
     }
     if (rel_error.has_value() &&
-        ((lhs - rhs).norm() > rel_error.value() * rhs.norm())) {
+      ((lhs - rhs).norm() > rel_error.value() * rhs.norm()))
+    {
       return false;
     }
     return true;
@@ -432,15 +448,16 @@ MATCHER_P2(EigenMatrixNear, matrix, error, "") {
 //     ElementsAreArray(ArrayEigenMatrixNear(std::vector<Vector3f>{
 //       Vector3f(1, 1, 1), Vector3f(1, 1, 1), ...
 //     })));
-template <typename T, int Rows, int Cols, int Options>
+template<typename T, int Rows, int Cols, int Options>
 std::vector<::testing::Matcher<Eigen::Matrix<T, Rows, Cols, Options>>>
 ArrayEigenMatrixNear(
-    const std::vector<Eigen::Matrix<T, Rows, Cols, Options>>& values,
-    float max_abs_error = 1e-5) {
+  const std::vector<Eigen::Matrix<T, Rows, Cols, Options>> & values,
+  float max_abs_error = 1e-5)
+{
   std::vector<::testing::Matcher<Eigen::Matrix<T, Rows, Cols, Options>>>
-      matchers;
+  matchers;
   matchers.reserve(values.size());
-  for (const auto& v : values) {
+  for (const auto & v : values) {
     matchers.emplace_back(EigenMatrixNear(v, max_abs_error));
   }
   return matchers;

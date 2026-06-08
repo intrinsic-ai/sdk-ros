@@ -116,7 +116,7 @@ TEST(GetHardwareInterface, GetRequiredInterfacesFromModuleInfo) {
 }
 
 TEST(SegmentHeaderIsValid, FailsOnWrongType) {
-  SegmentHeader my_header("wrong_type");
+  SegmentHeader my_header("wrong_type", nullptr);
   const Status s = SegmentHeaderIsValid<intrinsic_fbs::IconState>(my_header,
         "interface_name");
   EXPECT_EQ(s.code, StatusCode::kInvalidArgument);
@@ -124,7 +124,7 @@ TEST(SegmentHeaderIsValid, FailsOnWrongType) {
 }
 
 TEST(SegmentHeaderIsValid, FailsOnWrongVersion) {
-  SegmentHeader my_header("intrinsic_fbs.IconState");
+  SegmentHeader my_header("intrinsic_fbs.IconState", nullptr);
 
   SegmentHeaderTestPeer::SetVersion(SegmentHeader::ExpectedVersion() + 1,
                                     my_header);
@@ -135,7 +135,7 @@ TEST(SegmentHeaderIsValid, FailsOnWrongVersion) {
 }
 
 TEST(SegmentHeaderIsValid, Succeeds) {
-  SegmentHeader my_header("intrinsic_fbs.IconState");
+  SegmentHeader my_header("intrinsic_fbs.IconState", nullptr);
 
   EXPECT_EQ(SegmentHeaderIsValid<intrinsic_fbs::IconState>(my_header,
         "interface_name").code,

@@ -53,7 +53,8 @@ Status PathLengthIsValidForSockaddrUn(std::filesystem::path socket_path)
 Status ConnectToServer(
   int to_server_sock,
   std::filesystem::path absolute_socket_path,
-  Time deadline)
+  Time deadline,
+  const log::Logger * logger)
 {
   auto addr =
     domain_socket_internal::AddressFromAbsolutePath(absolute_socket_path);
@@ -64,27 +65,35 @@ Status ConnectToServer(
   bool logged_connection_retry = false;
   do {
     if (connect(to_server_sock, (sockaddr *)&(addr.value()), sizeof(sockaddr_un)) == 0) {
-      LOG(INFO) << "Connected to server.";
+      INTRINSIC_SHARED_MEMORY_LOG(INFO, logger, "Connected to server.");
       return OkStatus();
     }
 
     if (!logged_connection_retry) {
-      LOG(WARNING)
-            << "Failed to connect to socket '" << absolute_socket_path.native()
-            << "' with error: " << intrinsic::StrError(errno).data() << " Retrying until "
-            << deadline;
+      INTRINSIC_SHARED_MEMORY_LOG(
+          WARNING,
+          logger,
+          "Failed to connect to socket '%s' with error: '%s'. Retrying until %s",
+          absolute_socket_path.native(),
+          intrinsic::StrError(errno).data(),
+          FormatTime(deadline).data());
       logged_connection_retry = true;
     }
     std::this_thread::sleep_for(std::chrono::seconds(1));
   } while (Now() < deadline);
 
-  LOG(ERROR)
-        << "Failed to connect to socket before " << deadline
-        << ". Cleaning up.";
+  INTRINSIC_SHARED_MEMORY_LOG(
+      ERROR,
+      logger,
+      "Failed to connect to socket before %s. Cleaning up.",
+      FormatTime(deadline).data());
   if (close(to_server_sock) == -1) {
-    LOG(WARNING)
-          << "Failed to close socket fd for '" << absolute_socket_path.native()
-          << "' with error: " << intrinsic::StrError(errno).data() << ".";
+    INTRINSIC_SHARED_MEMORY_LOG(
+        WARNING,
+        logger,
+        "Failed to close socket fd for '%s' with error: %s.",
+        absolute_socket_path.native(),
+        intrinsic::StrError(errno).data());
   }
 
   return Status {
@@ -169,7 +178,8 @@ tl::expected<sockaddr_un, Status> AddressFromAbsolutePath(
           .code = StatusCode::kInternal,
           .message = (std::stringstream()
                       << "Failed to copy socket path '" << absolute_socket_path
-                      << "' to sockaddr_un struct with error: " << intrinsic::StrError(errno).data()).str(),
+                      << "' to sockaddr_un struct with error: " <<
+            intrinsic::StrError(errno).data()).str(),
       });
   }
   return addr;
@@ -184,7 +194,8 @@ tl::expected<sockaddr_un, Status> AddressFromAbsolutePath(
 // Returns FailedPreconditionError when the socket protocol version of the
 // message doesn't match domain_socket_internal::kDomainSocketProtocolVersion.
 tl::expected<domain_socket_internal::ShmDescriptors, Status> GetSingleMessage(
-  int to_server_sock)
+  int to_server_sock,
+  const log::Logger * logger)
 {
   domain_socket_internal::ShmDescriptors descriptors;
   descriptors.file_descriptors_in_order.reserve(
@@ -238,7 +249,8 @@ tl::expected<domain_socket_internal::ShmDescriptors, Status> GetSingleMessage(
       return tl::unexpected(Status {
           .code = StatusCode::kInternal,
           .message = (std::stringstream() <<
-            "Failed to receive data with error: " << intrinsic::StrError(errno).data() << ".").str(),
+            "Failed to receive data with error: " << intrinsic::StrError(errno).data() <<
+            ".").str(),
         });
     }
 
@@ -358,10 +370,13 @@ tl::expected<domain_socket_internal::ShmDescriptors, Status> GetSingleMessage(
 
     descriptors.file_descriptors_in_order[i] = fd;
   }
-  LOG(INFO)
-      << "Received " << kNumNames << " valid file descriptors in message "
-      << descriptors.transfer_data.message_index << " of "
-      << descriptors.transfer_data.num_messages << ".";
+  INTRINSIC_SHARED_MEMORY_LOG(
+      INFO,
+      logger,
+      "Received %d valid file descriptors in message %d of %d.",
+      kNumNames,
+      descriptors.transfer_data.message_index,
+      descriptors.transfer_data.num_messages);
 
   return descriptors;
 }
@@ -370,7 +385,8 @@ tl::expected<SegmentNameToFileDescriptorMap, Status>
 GetSegmentNameToFileDescriptorMap(
   std::filesystem::path socket_directory,
   std::string_view module_name,
-  std::chrono::seconds connection_timeout)
+  std::chrono::seconds connection_timeout,
+  const log::Logger * logger)
 {
   Time deadline = Now() + connection_timeout;
   int to_server_sock = socket(AF_UNIX, SOCK_STREAM, 0);
@@ -396,7 +412,7 @@ GetSegmentNameToFileDescriptorMap(
     return tl::unexpected(absolute_socket_path.error());
   }
 
-  if (auto status = ConnectToServer(to_server_sock, *absolute_socket_path, deadline);
+  if (auto status = ConnectToServer(to_server_sock, *absolute_socket_path, deadline, logger);
     !status.ok())
   {
     return tl::unexpected(status);
@@ -404,11 +420,13 @@ GetSegmentNameToFileDescriptorMap(
 
   // Closes the socket on exit
   Cleanup close_socket(
-    [to_server_sock]() {
+    [to_server_sock, logger]() {
       if (close(to_server_sock) == -1) {
-        LOG(ERROR)
-          << "Failed to close GetShmDescriptors client socket with error: "
-          << intrinsic::StrError(errno).data() << ".";
+        INTRINSIC_SHARED_MEMORY_LOG(
+            ERROR,
+            logger,
+            "Failed to close GetShmDescriptors client socket with error: %s.",
+            intrinsic::StrError(errno).data());
       }
     });
 
@@ -426,7 +444,8 @@ GetSegmentNameToFileDescriptorMap(
     return tl::unexpected(Status {
         .code = StatusCode::kInternal,
         .message = (std::stringstream()
-                      << "Failed to set socket timeout with error: " << intrinsic::StrError(errno).data() << "."
+                      << "Failed to set socket timeout with error: " <<
+          intrinsic::StrError(errno).data() << "."
         ).str(),
       });
   }
@@ -441,7 +460,7 @@ GetSegmentNameToFileDescriptorMap(
   size_t expected_message_index = 1;
   size_t expected_num_messages = 0;
   do {
-    const auto message = GetSingleMessage(to_server_sock);
+    const auto message = GetSingleMessage(to_server_sock, logger);
     if (!message) {
       return tl::unexpected(message.error());
     }

@@ -3,9 +3,11 @@
 #include <atomic>
 #include <chrono>
 #include "intrinsic/shared_memory_manager/binary_futex.hpp"
+#include "intrinsic/utils/log.hpp"
 #include "intrinsic/utils/status.hpp"
 
-namespace intrinsic {
+namespace intrinsic
+{
 
 // Lockstep is a synchronization primitive that can be used to force two threads
 // to operate in lock step.
@@ -44,14 +46,14 @@ namespace intrinsic {
 // The implementation is designed to be efficient (using low-level futexes) and
 // is intended for realtime use.
 class Lockstep {
- public:
+public:
   static constexpr std::chrono::nanoseconds kResetTimeout = std::chrono::seconds(1);
 
   Lockstep() = default;
-  Lockstep(Lockstep& other) = delete;
-  Lockstep& operator=(const Lockstep& other) = delete;
-  Lockstep(Lockstep&& other) = delete;
-  Lockstep& operator=(Lockstep&& other);
+  Lockstep(Lockstep & other) = delete;
+  Lockstep & operator=(const Lockstep & other) = delete;
+  Lockstep(Lockstep && other) = delete;
+  Lockstep & operator=(Lockstep && other);
 
   // Blocks the current thread until Operation A is ready to begin or timeout
   // has expired. Similar to StartOperationAWithDeadline except that this uses a
@@ -65,7 +67,7 @@ class Lockstep {
   // `Cancel()` has been called. Returns `kDeadlineExceeded` if the underlying
   // Futex wait timed out or `kInternal` in case of an internal futex error.
   RealtimeStatus StartOperationAWithTimeout(std::chrono::nanoseconds timeout);
-  
+
   // Blocks the current thread until Operation A is ready to begin or the
   // deadline has expired. Similar to StartOperationAWithTimeout except that
   // this uses a deadline instead of a timeout.
@@ -130,7 +132,7 @@ class Lockstep {
   // `StartOperationB...()` to wake up and return `kAborted`. All subsequent
   // calls to `StartOperationA...()` and `StartOperationB...()` will return
   // `kAborted` until `Reset()` is called.
-  void Cancel();
+  void Cancel(const log::Logger * logger);
 
   // Resets the lockstep to its initial state.
   // Must only be called after `Cancel`, and thus should not be called
@@ -138,8 +140,9 @@ class Lockstep {
   // if the lockstep is not cancelled.
   RealtimeStatus Reset(std::chrono::nanoseconds timeout = kResetTimeout);
 
- private:
-  enum class State : char {
+private:
+  enum class State : char
+  {
     kBFinished,
     kARunning,
     kAFinished,

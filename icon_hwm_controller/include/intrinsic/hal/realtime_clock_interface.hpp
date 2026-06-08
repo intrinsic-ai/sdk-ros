@@ -3,12 +3,13 @@
 #include "intrinsic/utils/time.hpp"
 #include "intrinsic/utils/status.hpp"
 
-namespace intrinsic {
+namespace intrinsic
+{
 
 // RealtimeClockInterface is an abstract interface for advancing ICON's control
 // loop.
 class RealtimeClockInterface {
- public:
+public:
   // Steps ICON's real time update loop, blocking the current thread until it
   // has finished or the deadline has expired.
   //
@@ -27,11 +28,12 @@ class RealtimeClockInterface {
   // An error may indicate that one of the above steps failed, OR it may
   // indicate that communication with the control layer has failed.
   virtual RealtimeStatus TickBlockingWithDeadline(
-      Time current_timestamp, Time deadline) = 0;
+    Time current_timestamp, Time deadline) = 0;
 
   // Same as TickBlockingWithDeadline but with a timeout instead of a deadline.
-  RealtimeStatus TickBlockingWithTimeout(Time current_timestamp,
-                                         std::chrono::nanoseconds timeout);
+  RealtimeStatus TickBlockingWithTimeout(
+    Time current_timestamp,
+    std::chrono::nanoseconds timeout);
 
   // Resets the clock in order to recover after a failure during
   // `TickBlockingWithTimeout`. Leaves the clock in a state, ready to start

@@ -20,6 +20,7 @@
 #include "intrinsic/hal/realtime_clock.hpp"
 #include "intrinsic/shared_memory_manager/remote_trigger_server.hpp"
 #include "intrinsic/shared_memory_manager/shared_memory_lockstep.hpp"
+#include "intrinsic/utils/log.hpp"
 
 #include "controller_manager_msgs/srv/set_hardware_component_state.hpp"
 #include "controller_manager_msgs/srv/switch_controller.hpp"
@@ -30,25 +31,32 @@
 #include "realtime_tools/realtime_publisher.hpp"
 #include "icon_hwm_controller_msgs/msg/hardware_module_state.hpp"
 
-namespace icon_hwm_controller {
+namespace icon_hwm_controller
+{
 
 class IconHwmController final : public controller_interface::ControllerInterface,
-                                public intrinsic::hal::HardwareModuleInterface {
- public:
-  IconHwmController() = default;
+  public intrinsic::hal::HardwareModuleInterface {
+public:
+  IconHwmController();
 
   // controller_interface::ControllerInterface
   controller_interface::InterfaceConfiguration command_interface_configuration() const override;
   controller_interface::InterfaceConfiguration state_interface_configuration() const override;
   controller_interface::CallbackReturn on_init() override;
-  controller_interface::CallbackReturn on_configure(const rclcpp_lifecycle::State & previous_state) override;
-  controller_interface::CallbackReturn on_activate(const rclcpp_lifecycle::State & previous_state) override;
-  controller_interface::CallbackReturn on_deactivate(const rclcpp_lifecycle::State & previous_state) override;
-  controller_interface::CallbackReturn on_cleanup(const rclcpp_lifecycle::State & previous_state) override;
-  controller_interface::return_type update(const rclcpp::Time & time, const rclcpp::Duration & period) override;
+  controller_interface::CallbackReturn on_configure(
+    const rclcpp_lifecycle::State & previous_state) override;
+  controller_interface::CallbackReturn on_activate(
+    const rclcpp_lifecycle::State & previous_state) override;
+  controller_interface::CallbackReturn on_deactivate(
+    const rclcpp_lifecycle::State & previous_state) override;
+  controller_interface::CallbackReturn on_cleanup(
+    const rclcpp_lifecycle::State & previous_state) override;
+  controller_interface::return_type update(
+    const rclcpp::Time & time,
+    const rclcpp::Duration & period) override;
 
   // intrinsic::hal::HardwareModuleInterface
-  intrinsic::Status Init() override { return intrinsic::OkStatus(); }
+  intrinsic::Status Init() override {return intrinsic::OkStatus();}
   intrinsic::Status Prepare() override;
   intrinsic::RealtimeStatus Activate() override;
   intrinsic::RealtimeStatus Deactivate() override;
@@ -59,7 +67,7 @@ class IconHwmController final : public controller_interface::ControllerInterface
   intrinsic::RealtimeStatus ReadStatus() override;
   intrinsic::RealtimeStatus ApplyCommand() override;
 
- private:
+private:
   // Parameters
   std::unique_ptr<ParamListener> param_listener_;
   Params params_;
@@ -68,10 +76,14 @@ class IconHwmController final : public controller_interface::ControllerInterface
   std::unique_ptr<intrinsic::hal::SharedMemoryManager> shm_manager_;
   std::unique_ptr<intrinsic::hal::DomainSocketServer> domain_socket_server_;
   intrinsic::hal::HardwareInterfaceHandle<intrinsic_fbs::IconState> icon_state_;
-  intrinsic::hal::MutableStrictHardwareInterfaceHandle<intrinsic_fbs::JointPositionState> joint_position_state_;
-  intrinsic::hal::MutableStrictHardwareInterfaceHandle<intrinsic_fbs::JointVelocityState> joint_velocity_state_;
-  intrinsic::hal::StrictHardwareInterfaceHandle<intrinsic_fbs::JointPositionCommand> joint_position_command_;
-  intrinsic::hal::MutableHardwareInterfaceHandle<intrinsic_fbs::HardwareModuleState> hardware_module_state_;
+  intrinsic::hal::MutableStrictHardwareInterfaceHandle<intrinsic_fbs::JointPositionState>
+  joint_position_state_;
+  intrinsic::hal::MutableStrictHardwareInterfaceHandle<intrinsic_fbs::JointVelocityState>
+  joint_velocity_state_;
+  intrinsic::hal::StrictHardwareInterfaceHandle<intrinsic_fbs::JointPositionCommand>
+  joint_position_command_;
+  intrinsic::hal::MutableHardwareInterfaceHandle<intrinsic_fbs::HardwareModuleState>
+  hardware_module_state_;
 
   // Remote Trigger Servers
   std::unique_ptr<intrinsic::hal::RemoteTriggerServer> prepare_server_;
@@ -90,8 +102,10 @@ class IconHwmController final : public controller_interface::ControllerInterface
   std::unique_ptr<intrinsic::RealtimeClock> clock_;
 
   // Service Clients
-  rclcpp::Client<controller_manager_msgs::srv::SwitchController>::SharedPtr switch_controller_client_;
-  rclcpp::Client<controller_manager_msgs::srv::SetHardwareComponentState>::SharedPtr set_hw_state_client_;
+  rclcpp::Client<controller_manager_msgs::srv::SwitchController>::SharedPtr
+    switch_controller_client_;
+  rclcpp::Client<controller_manager_msgs::srv::SetHardwareComponentState>::SharedPtr
+    set_hw_state_client_;
 
   // Internal state
   uint64_t cycle_counter_ = 0;
@@ -102,12 +116,18 @@ class IconHwmController final : public controller_interface::ControllerInterface
   bool want_to_publish_state_ = false;
   std::shared_ptr<realtime_tools::RealtimePublisher<icon_hwm_controller_msgs::msg::HardwareModuleState>> state_publisher_;
 
+  intrinsic::log::Logger logger_;
+
   // Helper methods
   void DetectFaults();
   void UpdateHwmState();
-  bool SetStateDirectly(intrinsic_fbs::StateCode state, std::string_view fault_reason = "", bool force = false, bool silent = false);
-  intrinsic::Status CallSwitchController(const std::vector<std::string>& activate, const std::vector<std::string>& deactivate);
-  intrinsic::Status CallSetHwState(const std::string& name, uint8_t state);
+  bool SetStateDirectly(
+    intrinsic_fbs::StateCode state, std::string_view fault_reason = "",
+    bool force = false, bool silent = false);
+  intrinsic::Status CallSwitchController(
+    const std::vector<std::string> & activate,
+    const std::vector<std::string> & deactivate);
+  intrinsic::Status CallSetHwState(const std::string & name, uint8_t state);
 };
 
 }

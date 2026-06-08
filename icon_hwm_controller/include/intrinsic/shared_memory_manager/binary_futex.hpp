@@ -8,7 +8,8 @@
 #include "intrinsic/utils/status.hpp"
 #include "intrinsic/utils/time.hpp"
 
-namespace intrinsic {
+namespace intrinsic
+{
 
 // A BinaryFutex class implements logic to signal between two high-performance
 // processes. The futex implementation has similar semantics to a binary
@@ -83,7 +84,7 @@ namespace intrinsic {
 // https://man7.org/linux/man-pages/man2/futex.2.html
 //
 class BinaryFutex {
- public:
+public:
   // These constants aren't enum values, because `static_cast`ing them to
   // uint32_t everywhere would only make the implementation of BinaryFutex
   // unnecessarily verbose and harder to read.
@@ -106,10 +107,10 @@ class BinaryFutex {
   // it does not live in a shared memory segment. This can give some performance
   // benefits.
   explicit BinaryFutex(bool posted = false, bool private_futex = false);
-  BinaryFutex(BinaryFutex& other) = delete;
-  BinaryFutex& operator=(const BinaryFutex& other) = delete;
-  BinaryFutex(BinaryFutex&& other);
-  BinaryFutex& operator=(BinaryFutex&& other);
+  BinaryFutex(BinaryFutex & other) = delete;
+  BinaryFutex & operator=(const BinaryFutex & other) = delete;
+  BinaryFutex(BinaryFutex && other);
+  BinaryFutex & operator=(BinaryFutex && other);
   ~BinaryFutex();
 
   // Posts on the futex and increases its value to one.
@@ -121,7 +122,7 @@ class BinaryFutex {
   // Real-time safe.
   // Thread-safe.
   RealtimeStatus Post();
-  
+
   // Waits until the futex becomes `kPosted`, `kClosed` or the deadline expires.
   // As soon as the futex takes either of the two values above, or if the futex
   // already *has* that value when this function starts, this function
@@ -161,7 +162,7 @@ class BinaryFutex {
   // Real-time safe when `timeout` is close enough.
   // Thread-safe.
   RealtimeStatus WaitFor(std::chrono::nanoseconds timeout) const;
-  
+
   // Checks (without blocking) whether the current value of the futex indicates
   // that it has been `Post()`ed.
   // If it does, this function (atomically!) resets the futex value to `kReady`.
@@ -194,7 +195,7 @@ class BinaryFutex {
   // AbortedError (or, in `TryWait()`'s case, `false`).
   void Close();
 
- private:
+private:
   // The atomic value is marked as mutable to create a const correct public
   // interface to the futex class. A call to wait has read-only semantics while
   // a call to post has write semantics.

@@ -1,4 +1,6 @@
 #include "intrinsic/shared_memory_manager/segment_header.hpp"
+#include "intrinsic/utils/log.hpp"
+#include "intrinsic/utils/mock_log_sink.hpp"
 
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
@@ -41,7 +43,27 @@ public:
 namespace
 {
 
-TEST(SegmentHeaderTest, ModifyReferenceCounters) {
+class SegmentHeaderTest : public ::testing::Test {
+public:
+  SegmentHeaderTest()
+  : logger_(log::Logger::kInfo, log::MockSink(log_entries_)) {}
+
+  log::Logger * logger()
+  {
+    return &logger_;
+  }
+
+  std::span<const log::LogEntryWithStorage> log_entries()
+  {
+    return log_entries_;
+  }
+
+private:
+  std::vector<log::LogEntryWithStorage> log_entries_;
+  log::Logger logger_;
+};
+
+TEST_F(SegmentHeaderTest, ModifyReferenceCounters) {
   SegmentHeader header;
   EXPECT_THAT(header.ReaderRefCount(), Eq(0));
   EXPECT_THAT(header.WriterRefCount(), Eq(0));
@@ -61,7 +83,7 @@ TEST(SegmentHeaderTest, ModifyReferenceCounters) {
   EXPECT_THAT(header.WriterRefCount(), Eq(0));
 }
 
-TEST(SegmentHeaderTest, ReferenceCounterCantBeNegative) {
+TEST_F(SegmentHeaderTest, ReferenceCounterCantBeNegative) {
   SegmentHeader header;
   EXPECT_THAT(header.ReaderRefCount(), Eq(0));
   EXPECT_THAT(header.WriterRefCount(), Eq(0));
@@ -74,57 +96,57 @@ TEST(SegmentHeaderTest, ReferenceCounterCantBeNegative) {
   EXPECT_THAT(header.WriterRefCount(), Eq(0));
 }
 
-TEST(SegmentHeaderTest, TypeInfoReturnsCorrectType) {
-  SegmentHeader header("my_type");
+TEST_F(SegmentHeaderTest, TypeInfoReturnsCorrectType) {
+  SegmentHeader header("my_type", logger());
   EXPECT_THAT(header.Type().TypeID(), StrEq("my_type"));
 }
 
-TEST(SegmentHeaderTest, TypeInfoTruncatesTypeId) {
+TEST_F(SegmentHeaderTest, TypeInfoTruncatesTypeId) {
   const std::string kTooLongTypeId(SegmentHeader::TypeInfo::kMaxSize + 2, 'a');
-  SegmentHeader header(kTooLongTypeId);
+  SegmentHeader header(kTooLongTypeId, logger());
   EXPECT_THAT(header.Type().TypeID(),
               SizeIs(SegmentHeader::TypeInfo::kMaxSize));
 }
 
-TEST(SegmentHeaderTest, TypeInfoComparesCorrectly) {
-  SegmentHeader header1("my_type");
-  SegmentHeader header2("my_type");
+TEST_F(SegmentHeaderTest, TypeInfoComparesCorrectly) {
+  SegmentHeader header1("my_type", logger());
+  SegmentHeader header2("my_type", logger());
 
   EXPECT_THAT(header1.Type(), Eq(header2.Type()));
 
-  SegmentHeader header3("my_other_type");
+  SegmentHeader header3("my_other_type", logger());
   EXPECT_THAT(header1.Type(), Ne(header3.Type()));
 }
 
-TEST(SegmentHeaderTest, TruncatedTypeInfoComparesCorrectly) {
+TEST_F(SegmentHeaderTest, TruncatedTypeInfoComparesCorrectly) {
   const std::string kMaxSizeTypeId(SegmentHeader::TypeInfo::kMaxSize, 'a');
-  SegmentHeader header1(kMaxSizeTypeId + "_first");
-  SegmentHeader header2(kMaxSizeTypeId + "_second");
+  SegmentHeader header1(kMaxSizeTypeId + "_first", logger());
+  SegmentHeader header2(kMaxSizeTypeId + "_second", logger());
 
   EXPECT_THAT(header1.Type(), Eq(header2.Type()));
 
   // Same length as the other two, different content
   const std::string kOtherMaxSizeTypeId(SegmentHeader::TypeInfo::kMaxSize, 'b');
-  SegmentHeader header3(kOtherMaxSizeTypeId);
+  SegmentHeader header3(kOtherMaxSizeTypeId, logger());
   EXPECT_THAT(header1.Type(), Ne(header3.Type()));
 }
 
-TEST(SegmentHeaderTest, QueryReturnsCorrectlySetFlags) {
-  SegmentHeader no_flags("my_type1");
+TEST_F(SegmentHeaderTest, QueryReturnsCorrectlySetFlags) {
+  SegmentHeader no_flags("my_type1", logger());
   EXPECT_FALSE(no_flags.FlagIsSet(SegmentHeader::Flags::kExclusiveOwnership));
 
-  SegmentHeader no_flags2("my_type1", {});
+  SegmentHeader no_flags2("my_type1", {}, logger());
   EXPECT_FALSE(no_flags2.FlagIsSet(SegmentHeader::Flags::kExclusiveOwnership));
 
   SegmentHeader exclusive_flag(
     "my_type",
-    {SegmentHeader::Flags::kExclusiveOwnership});
+    {SegmentHeader::Flags::kExclusiveOwnership}, logger());
   EXPECT_TRUE(
       exclusive_flag.FlagIsSet(SegmentHeader::Flags::kExclusiveOwnership));
 }
 
-TEST(SegmentHeaderTest, UpdatedAt) {
-  SegmentHeader my_header("my_type1");
+TEST_F(SegmentHeaderTest, UpdatedAt) {
+  SegmentHeader my_header("my_type1", logger());
   ASSERT_EQ(my_header.LastUpdatedTime(), ::intrinsic::Time());
   ASSERT_EQ(my_header.NumUpdates(), 0);
   ASSERT_EQ(my_header.LastUpdatedCycle(), 0);
@@ -136,8 +158,8 @@ TEST(SegmentHeaderTest, UpdatedAt) {
   EXPECT_EQ(my_header.LastUpdatedCycle(), 42);
 }
 
-TEST(SegmentHeaderTest, UpdatedAtOverrunWorks) {
-  SegmentHeader my_header("my_type");
+TEST_F(SegmentHeaderTest, UpdatedAtOverrunWorks) {
+  SegmentHeader my_header("my_type", logger());
 
   int64_t initial_counter = std::numeric_limits<int64_t>::max();
   SegmentHeaderTestPeer::SetUpdateCounter(initial_counter, my_header);
@@ -149,8 +171,8 @@ TEST(SegmentHeaderTest, UpdatedAtOverrunWorks) {
   EXPECT_EQ(my_header.NumUpdates(), std::numeric_limits<int64_t>::min());
 }
 
-TEST(SegmentHeaderTest, VersionWorks) {
-  SegmentHeader my_header("my_type");
+TEST_F(SegmentHeaderTest, VersionWorks) {
+  SegmentHeader my_header("my_type", logger());
 
   EXPECT_EQ(my_header.Version(), SegmentHeader::ExpectedVersion());
 

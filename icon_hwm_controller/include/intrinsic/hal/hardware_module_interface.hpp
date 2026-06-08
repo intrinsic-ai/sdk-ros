@@ -24,7 +24,7 @@ public:
   // This function is intended to be called as part of the connection phase
   // when the hardware module connects to the ICON IPC services.
   // All failures of `Prepare()` are considered fatal faults.
-  virtual Status Prepare() { return OkStatus(); }
+  virtual Status Prepare() {return OkStatus();}
 
   // Activates the hardware module.
   // A call to `Activate()` signals the hardware module that ICON has
@@ -45,11 +45,11 @@ public:
 
   // Signals that the hardware module will now receive commands from ICON via
   // `ApplyCommand()`. Must return without blocking.
-  virtual RealtimeStatus Enabled() { return RtOkStatus(); }
+  virtual RealtimeStatus Enabled() {return RtOkStatus();}
 
   // Signals that the hardware module will not receive commands anymore. Must
   // return without blocking.
-  virtual RealtimeStatus Disabled() { return RtOkStatus(); }
+  virtual RealtimeStatus Disabled() {return RtOkStatus();}
 
   // Disables motion commands for the hardware modules.
   virtual Status DisableMotion() = 0;

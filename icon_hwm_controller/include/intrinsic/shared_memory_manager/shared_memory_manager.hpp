@@ -9,6 +9,8 @@
 #include <unordered_map>
 #include <tl/expected.hpp>
 
+#include "intrinsic/utils/attributes.hpp"
+#include "intrinsic/utils/log.hpp"
 #include "intrinsic/utils/status.hpp"
 #include "intrinsic/shared_memory_manager/domain_socket_utils.hpp"
 #include "intrinsic/shared_memory_manager/memory_segment.hpp"
@@ -68,7 +70,8 @@ public:
   // Returns unique_ptr because that allows taking stable references e.g. for
   // intrinsic/icon/hal/hardware_interface_registry.h.
   static tl::expected<std::unique_ptr<SharedMemoryManager>, Status> Create(
-    std::string_view shared_memory_namespace, std::string_view module_name);
+    std::string_view shared_memory_namespace, std::string_view module_name,
+    const log::Logger * logger INTR_ATTRIBUTE_LIFETIME_BOUND);
 
   SharedMemoryManager() = delete;
 
@@ -79,12 +82,13 @@ public:
   // use-after-move bugs when accessing memory_segments_ in
   // ~SharedMemoryManager.
   SharedMemoryManager(SharedMemoryManager && other) noexcept
-  : memory_segments_(std::move(other.memory_segments_))
+  : logger_(other.logger_), memory_segments_(std::move(other.memory_segments_))
   {
     other.memory_segments_.clear();
   }
   SharedMemoryManager & operator=(SharedMemoryManager && other) noexcept
   {
+    logger_ = other.logger_;
     memory_segments_ = std::move(other.memory_segments_);
     other.memory_segments_.clear();
     return *this;
@@ -96,14 +100,16 @@ public:
   // Returns NotFoundError if no such segment has been added.
   // Forwards mapping errors.
   template<class MemorySegmentT>
-  tl::expected<MemorySegmentT, Status> Get(std::string_view segment_name) const
+  tl::expected<MemorySegmentT, Status> Get(
+    std::string_view segment_name,
+    const log::Logger * logger INTR_ATTRIBUTE_LIFETIME_BOUND) const
   {
     static_assert(
         std::is_base_of_v<MemorySegment, MemorySegmentT>,
         "Template parameter for SharedMemoryManager::Get() must inherit from "
         "::intrinsic::hal::MemorySegment");
     return MemorySegmentT::Get(segment_name_to_file_descriptor_map_,
-                               segment_name);
+                               segment_name, logger);
   }
 
   // Reference to the internal map of segment names to file descriptors.
@@ -299,7 +305,8 @@ public:
 private:
   explicit SharedMemoryManager(
     std::string_view module_name,
-    std::string_view shared_memory_namespace);
+    std::string_view shared_memory_namespace,
+    const log::Logger * logger INTR_ATTRIBUTE_LIFETIME_BOUND);
 
   // Creates an anonymous shared memory segment with the given name and the size
   // of SegmentHeader + `payload_size`.
@@ -309,6 +316,8 @@ private:
   Status InitSegment(
     std::string_view name, bool must_be_used,
     size_t payload_size, const std::string & type_id);
+
+  const log::Logger * logger_ = nullptr;
 
   // Returns a pointer to the start of the memory segment.
   // The SegmentHeader of this segment lives at the address this pointer

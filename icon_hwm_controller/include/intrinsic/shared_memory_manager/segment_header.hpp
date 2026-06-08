@@ -11,6 +11,8 @@
 #include <string_view>
 
 #include "intrinsic/utils/time.hpp"
+#include "intrinsic/utils/attributes.hpp"
+#include "intrinsic/utils/log.hpp"
 
 namespace intrinsic::hal
 {
@@ -82,10 +84,13 @@ private:
 
   // The SegmentHeader class is move-only.
   SegmentHeader() noexcept;
-  explicit SegmentHeader(const std::string & type_id) noexcept;
+  explicit SegmentHeader(
+    const std::string & type_id,
+    const log::Logger * logger INTR_ATTRIBUTE_LIFETIME_BOUND) noexcept;
   SegmentHeader(
     const std::string & type_id,
-    const std::initializer_list<Flags> & flags) noexcept;
+    const std::initializer_list<Flags> & flags,
+    const log::Logger * logger INTR_ATTRIBUTE_LIFETIME_BOUND) noexcept;
   SegmentHeader(const SegmentHeader & other) noexcept = delete;
   SegmentHeader & operator=(const SegmentHeader & other) noexcept = delete;
   SegmentHeader(SegmentHeader && other) noexcept = default;
@@ -157,6 +162,9 @@ private:
   // LINT.IfChange()
   // Unnamed process-shared semaphore to protect header modifications.
   mutable sem_t mutex_;
+
+
+  const log::Logger * logger_ = nullptr;
 
   // A reference counter on read-only access handles.
   int ref_count_reader_ = 0;

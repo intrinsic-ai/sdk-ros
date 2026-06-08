@@ -14,6 +14,8 @@
 
 #include "intrinsic/utils/status.hpp"
 #include "intrinsic/thread/thread.hpp"
+#include "intrinsic/utils/attributes.hpp"
+#include "intrinsic/utils/log.hpp"
 #include "intrinsic/utils/time.hpp"
 #include "intrinsic/shared_memory_manager/domain_socket_utils.hpp"
 #include "intrinsic/shared_memory_manager/shared_memory_manager.hpp"
@@ -89,6 +91,7 @@ public:
   static tl::expected<std::unique_ptr<DomainSocketServer>, Status> Create(
     std::filesystem::path socket_directory, std::string_view module_name,
     std::chrono::seconds lock_acquire_timeout,
+    const log::Logger * logger INTR_ATTRIBUTE_LIFETIME_BOUND,
     size_t protocol_version =
     domain_socket_internal::kDomainSocketProtocolVersion);
 
@@ -137,11 +140,15 @@ private:
     std::vector<char> cmsg_buf;
   };
 
+  const log::Logger * logger_;
+
   DomainSocketServer(
     std::filesystem::path absolute_socket_path,
     std::filesystem::path absolute_lock_path, int socket_fd,
-    int flock_fd, size_t protocol_version)
-  : protocol_version_(protocol_version),
+    int flock_fd, size_t protocol_version,
+    const log::Logger * logger INTR_ATTRIBUTE_LIFETIME_BOUND)
+  : logger_(logger),
+    protocol_version_(protocol_version),
     socket_fd_(socket_fd),
     flock_fd_(flock_fd),
     absolute_socket_path_(absolute_socket_path),

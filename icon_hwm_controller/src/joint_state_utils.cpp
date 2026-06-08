@@ -7,9 +7,11 @@
 #include "flatbuffers/flatbuffer_builder.h"
 #include "hwm_fbs/joint_state.fbs.h"
 
-namespace intrinsic_fbs {
+namespace intrinsic_fbs
+{
 
-flatbuffers::DetachedBuffer BuildJointPositionState(uint32_t num_dof) {
+flatbuffers::DetachedBuffer BuildJointPositionState(uint32_t num_dof)
+{
   flatbuffers::FlatBufferBuilder builder;
   builder.ForceDefaults(true);
 
@@ -20,7 +22,8 @@ flatbuffers::DetachedBuffer BuildJointPositionState(uint32_t num_dof) {
   return builder.Release();
 }
 
-flatbuffers::DetachedBuffer BuildJointVelocityState(uint32_t num_dof) {
+flatbuffers::DetachedBuffer BuildJointVelocityState(uint32_t num_dof)
+{
   flatbuffers::FlatBufferBuilder builder;
   builder.ForceDefaults(true);
 
@@ -31,7 +34,8 @@ flatbuffers::DetachedBuffer BuildJointVelocityState(uint32_t num_dof) {
   return builder.Release();
 }
 
-flatbuffers::DetachedBuffer BuildJointAccelerationState(uint32_t num_dof) {
+flatbuffers::DetachedBuffer BuildJointAccelerationState(uint32_t num_dof)
+{
   flatbuffers::FlatBufferBuilder builder;
   builder.ForceDefaults(true);
 
@@ -42,7 +46,8 @@ flatbuffers::DetachedBuffer BuildJointAccelerationState(uint32_t num_dof) {
   return builder.Release();
 }
 
-flatbuffers::DetachedBuffer BuildJointTorqueState(uint32_t num_dof) {
+flatbuffers::DetachedBuffer BuildJointTorqueState(uint32_t num_dof)
+{
   flatbuffers::FlatBufferBuilder builder;
   builder.ForceDefaults(true);
 
@@ -53,7 +58,8 @@ flatbuffers::DetachedBuffer BuildJointTorqueState(uint32_t num_dof) {
   return builder.Release();
 }
 
-flatbuffers::DetachedBuffer BuildJointCommandedPosition(uint32_t num_dof) {
+flatbuffers::DetachedBuffer BuildJointCommandedPosition(uint32_t num_dof)
+{
   flatbuffers::FlatBufferBuilder builder;
   builder.ForceDefaults(true);
 

@@ -9,8 +9,10 @@
 
 #include <tl/expected.hpp>
 
-#include "intrinsic/utils/time.hpp"
+#include "intrinsic/utils/attributes.hpp"
+#include "intrinsic/utils/log.hpp"
 #include "intrinsic/utils/status.hpp"
+#include "intrinsic/utils/time.hpp"
 #include "intrinsic/shared_memory_manager/domain_socket_utils.hpp"
 #include "intrinsic/shared_memory_manager/segment_header.hpp"
 
@@ -92,13 +94,15 @@ protected:
 
   MemorySegment(
     std::string_view name, SegmentDescriptor segment,
-    ReadWriteKind kind);
+    ReadWriteKind kind,
+    const log::Logger * logger INTR_ATTRIBUTE_LIFETIME_BOUND);
   MemorySegment(const MemorySegment & other) = delete;
   MemorySegment & operator=(const MemorySegment & other) = delete;
   MemorySegment(MemorySegment && other) noexcept;
   MemorySegment & operator=(MemorySegment && other) noexcept;
 
 private:
+  const log::Logger * logger_ = nullptr;
   // TODO(karstenknese) Put into header.
   std::string name_ = "";
 
@@ -153,7 +157,8 @@ public:
   // segment is too small to hold a SegmentHeader and at least sizeof(T) bytes.
   static tl::expected<ReadOnlyMemorySegment, Status> Get(
     const SegmentNameToFileDescriptorMap & segment_name_to_file_descriptor_map,
-    std::string_view segment_name)
+    std::string_view segment_name,
+    const log::Logger * logger INTR_ATTRIBUTE_LIFETIME_BOUND)
   {
     auto segment_info =
       MemorySegment::Get(segment_name_to_file_descriptor_map, segment_name);
@@ -167,7 +172,7 @@ public:
       return tl::unexpected(status);
     }
 
-    return ReadOnlyMemorySegment<T>(segment_name, *segment_info);
+    return ReadOnlyMemorySegment<T>(segment_name, *segment_info, logger);
   }
 
   ReadOnlyMemorySegment() = default;
@@ -183,8 +188,10 @@ public:
   const uint8_t * GetRawValue() const {return Value();}
 
 private:
-  ReadOnlyMemorySegment(std::string_view name, SegmentDescriptor segment)
-  : MemorySegment(name, segment, MemorySegment::ReadWriteKind::kReadOnly) {}
+  ReadOnlyMemorySegment(
+    std::string_view name, SegmentDescriptor segment,
+    const log::Logger * logger INTR_ATTRIBUTE_LIFETIME_BOUND)
+  : MemorySegment(name, segment, MemorySegment::ReadWriteKind::kReadOnly, logger) {}
 };
 
 // Read-Write access to a shared memory segment of type `T`.
@@ -207,7 +214,7 @@ public:
   // segment is too small to hold a SegmentHeader and at least sizeof(T) bytes.
   static tl::expected<ReadWriteMemorySegment, Status> Get(
     const SegmentNameToFileDescriptorMap & segment_name_to_file_descriptor_map,
-    std::string_view segment_name)
+    std::string_view segment_name, const log::Logger * logger INTR_ATTRIBUTE_LIFETIME_BOUND)
   {
     auto segment_info =
       MemorySegment::Get(segment_name_to_file_descriptor_map, segment_name);
@@ -222,7 +229,7 @@ public:
       return tl::unexpected(status);
     }
 
-    return ReadWriteMemorySegment<T>(segment_name, *segment_info);
+    return ReadWriteMemorySegment<T>(segment_name, *segment_info, logger);
   }
 
   ReadWriteMemorySegment() = default;
@@ -245,8 +252,10 @@ public:
   void SetValue(const T & value) {*reinterpret_cast<T *>(Value()) = value;}
 
 private:
-  ReadWriteMemorySegment(std::string_view name, SegmentDescriptor segment)
-  : MemorySegment(name, segment, MemorySegment::ReadWriteKind::kReadWrite)
+  ReadWriteMemorySegment(
+    std::string_view name, SegmentDescriptor segment,
+    const log::Logger * logger INTR_ATTRIBUTE_LIFETIME_BOUND)
+  : MemorySegment(name, segment, MemorySegment::ReadWriteKind::kReadWrite, logger)
   {
   }
 };

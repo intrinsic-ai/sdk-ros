@@ -93,15 +93,17 @@ intrinsic_fbs::SegmentInfo SegmentInfoFromHashMap(
 }   // namespace
 
 SharedMemoryManager::SharedMemoryManager(
-  std::string_view module_name, std::string_view shared_memory_namespace)
-: module_name_(std::string(module_name)),
+  std::string_view module_name, std::string_view shared_memory_namespace,
+  const log::Logger * logger)
+: logger_(logger),
+  module_name_(std::string(module_name)),
   shared_memory_namespace_(std::string(shared_memory_namespace)) {}
 
   // static
 tl::expected<std::unique_ptr<SharedMemoryManager>, Status>
 SharedMemoryManager::Create(
   std::string_view shared_memory_namespace,
-  std::string_view module_name)
+  std::string_view module_name, const log::Logger * logger)
 {
   if (module_name.empty()) {
     return tl::unexpected(Status {
@@ -112,7 +114,8 @@ SharedMemoryManager::Create(
 
   return std::unique_ptr<SharedMemoryManager>(new SharedMemoryManager(
       /*module_name=*/module_name,
-      /*shared_memory_namespace=*/shared_memory_namespace));
+      /*shared_memory_namespace=*/shared_memory_namespace,
+      /*logger=*/logger));
 }
 
 SharedMemoryManager::~SharedMemoryManager()
@@ -128,27 +131,19 @@ SharedMemoryManager::~SharedMemoryManager()
     header->~SegmentHeader();
 
     if (close(fd) == -1) {
-        // TODO(nilsb): Proper logging
-      std::cerr   << "Failed to close shm_fd for '" << segment_name
-                  << "'. with error: " << intrinsic::StrError(errno).data()
-                  << ". Continuing anyways." << std::endl;
-        /*
-          LOG(WARNING) << "Failed to close shm_fd for '" << segment_name
-          << "'. with error: " << intrinsic::StrError(errno).data()
-          << ". Continuing anyways.";
-        */
+      INTRINSIC_SHARED_MEMORY_LOG(
+          WARNING,
+          logger_,
+          "Failed to close shm_fd for '%s' with error: %s. Continuing anyways.",
+          segment_name, intrinsic::StrError(errno).data());
     }
     if (segment.second.data != nullptr) {
       if (munmap(segment.second.data, segment.second.length) == -1) {
-          // TODO(nilsb): Proper logging
-        std::cerr   << "Failed to unmap memory for '" << segment_name
-                    << "'. with error: " << intrinsic::StrError(errno).data()
-                    << ". Continuing anyways.";
-          /*
-            LOG(WARNING) << "Failed to unmap memory for '" << segment_name
-            << "'. with error: " << intrinsic::StrError(errno).data()
-            << ". Continuing anyways.";
-          */
+        INTRINSIC_SHARED_MEMORY_LOG(
+            WARNING,
+            logger_,
+            "Failed to unmap memory for '%s' with error: %s. Continuing anyways.",
+            segment_name, intrinsic::StrError(errno).data());
       }
     }
   }
@@ -282,7 +277,7 @@ Status SharedMemoryManager::InitSegment(
   segment_name_to_file_descriptor_map_.insert({name_str, shm_fd});
     // We use a placement new operator here to initialize the "raw" segment
     // data correctly.
-  new (data) SegmentHeader(type_id);
+  new (data) SegmentHeader(type_id, logger_);
   memory_segments_.insert({
       name_str,
       {

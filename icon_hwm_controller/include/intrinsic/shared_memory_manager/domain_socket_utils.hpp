@@ -14,6 +14,7 @@
 
 #include <tl/expected.hpp>
 
+#include "intrinsic/utils/log.hpp"
 #include "intrinsic/utils/status.hpp"
 #include "intrinsic/flatbuffers/flatbuffer_utils.hpp"
 #include "hwm_fbs/segment_info.fbs.h"
@@ -111,6 +112,7 @@ tl::expected<SegmentNameToFileDescriptorMap, Status>
 GetSegmentNameToFileDescriptorMap(
   std::filesystem::path socket_directory,
   std::string_view module_name,
-  std::chrono::seconds connection_timeout);
+  std::chrono::seconds connection_timeout,
+  const log::Logger * logger);
 
 }  // namespace intrinsic::icon

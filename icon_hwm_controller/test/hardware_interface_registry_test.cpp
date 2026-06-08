@@ -52,7 +52,7 @@ public:
   {
     memory_namespace_ = UniqueMemoryNamespace();
     {
-      auto shm_manager = SharedMemoryManager::Create(memory_namespace_, kHwmName);
+      auto shm_manager = SharedMemoryManager::Create(memory_namespace_, kHwmName, nullptr);
       ASSERT_TRUE(shm_manager.has_value()) << shm_manager.error();
       shm_manager_ = std::move(*shm_manager);
     }
@@ -61,7 +61,7 @@ public:
 
     auto expected_interface =
       registry_->AdvertiseMutableInterface<intrinsic_fbs::IconState>(
-            kIconStateInterfaceName);
+          kIconStateInterfaceName, /*logger=*/nullptr);
     ASSERT_TRUE(expected_interface.has_value()) << expected_interface.error();
     icon_state_interface_ = std::move(*expected_interface);
   }
@@ -84,7 +84,7 @@ protected:
 TEST_F(RegistryTestFixture, StrictInterfaceVerifiesCycle) {
   auto interface =
     registry_->AdvertiseStrictInterface<intrinsic_fbs::JointLimits>(
-          "joint_limits", kNumDof);
+          "joint_limits", /*logger=*/nullptr, kNumDof);
   ASSERT_TRUE(interface.has_value()) << interface.error();
   {      // Access is not OK because ICON was never ticked.
     auto value = interface->Value();
@@ -104,7 +104,7 @@ TEST_F(RegistryTestFixture, StrictInterfaceVerifiesCycle) {
   }
   auto mutable_interface =
     GetMutableStrictInterfaceHandle<intrinsic_fbs::JointLimits>(
-          *shm_manager_, "joint_limits");
+        *shm_manager_, "joint_limits", nullptr);
   ASSERT_TRUE(mutable_interface.has_value()) << mutable_interface.error();
 
   // Updates the interface so that access is valid.
@@ -118,7 +118,7 @@ TEST_F(RegistryTestFixture, StrictInterfaceVerifiesCycle) {
 TEST_F(RegistryTestFixture, MutableStrictInterfaceVerifiesCycle) {
   auto interface =
     registry_->AdvertiseMutableStrictInterface<intrinsic_fbs::JointLimits>(
-          "joint_limits", kNumDof);
+        "joint_limits", /*logger=*/nullptr, kNumDof);
   ASSERT_TRUE(interface.has_value()) << interface.error();
   {
   // Access is not OK because ICON was never ticked.
@@ -148,7 +148,7 @@ TEST_F(RegistryTestFixture, MutableStrictInterfaceVerifiesCycle) {
 TEST_F(RegistryTestFixture, MutableStrictInterfaceMutatesValues) {
   auto interface =
     registry_->AdvertiseMutableStrictInterface<intrinsic_fbs::JointLimits>(
-          "joint_limits", kNumDof);
+          "joint_limits", /*logger=*/nullptr, kNumDof);
   ASSERT_TRUE(interface.has_value()) << interface.error();
   {
     // Read access is not OK because ICON was never ticked.
@@ -170,12 +170,14 @@ TEST_F(RegistryTestFixture, MutableStrictInterfaceMutatesValues) {
 
 TEST_F(RegistryTestFixture, AdvertiseInterfaceNames) {
   auto expected_interface = registry_->AdvertiseInterface<intrinsic_fbs::JointLimits>(
-      "joint_limits", kNumDof);
+      "joint_limits", /*logger=*/nullptr, kNumDof);
   EXPECT_TRUE(expected_interface.has_value()) << expected_interface.error();
 
   // Checks interface names need to be unique.
   {
     auto interface = registry_->AdvertiseInterface<intrinsic_fbs::JointLimits>("joint_limits",
+                                                                                               /*logger=*/
+          nullptr,
                                                                                kNumDof);
     ASSERT_FALSE(interface.has_value());
     EXPECT_THAT(
@@ -184,6 +186,8 @@ TEST_F(RegistryTestFixture, AdvertiseInterfaceNames) {
   }
   {
     auto interface = registry_->AdvertiseStrictInterface<intrinsic_fbs::JointLimits>("joint_limits",
+                                                                                                     /*logger=*/
+          nullptr,
                                                                                      kNumDof);
     ASSERT_FALSE(interface.has_value());
     EXPECT_THAT(
@@ -193,6 +197,8 @@ TEST_F(RegistryTestFixture, AdvertiseInterfaceNames) {
   {
     auto interface =
       registry_->AdvertiseMutableInterface<intrinsic_fbs::JointLimits>("joint_limits",
+                                                                                         /*logger=*/
+          nullptr,
                                                                                       kNumDof);
     ASSERT_FALSE(interface.has_value());
     EXPECT_THAT(
@@ -202,6 +208,8 @@ TEST_F(RegistryTestFixture, AdvertiseInterfaceNames) {
   {
     auto interface =
       registry_->AdvertiseMutableStrictInterface<intrinsic_fbs::JointLimits>("joint_limits",
+                                                                                             /*logger=*/
+          nullptr,
                                                                                             kNumDof);
     ASSERT_FALSE(interface.has_value());
     EXPECT_THAT(
@@ -212,13 +220,13 @@ TEST_F(RegistryTestFixture, AdvertiseInterfaceNames) {
 
 TEST_F(RegistryTestFixture, AdvertiseInterface) {
   auto expected_interface = registry_->AdvertiseInterface<intrinsic_fbs::JointLimits>(
-      "joint_limits", kNumDof);
+      "joint_limits", /*logger=*/nullptr, kNumDof);
   EXPECT_TRUE(expected_interface.has_value()) << expected_interface.error();
 }
 
 TEST_F(RegistryTestFixture, RegistersCorrectSizeForNonTrivialType) {
   auto expected_interface = registry_->AdvertiseInterface<intrinsic_fbs::JointLimits>(
-      "joint_limits", kNumDof);
+      "joint_limits", /*logger=*/nullptr, kNumDof);
   EXPECT_TRUE(expected_interface.has_value()) << expected_interface.error();
   flatbuffers::DetachedBuffer buffer = intrinsic_fbs::BuildJointLimits(kNumDof);
   const size_t expected_size = sizeof(SegmentHeader) + buffer.size();
@@ -232,7 +240,7 @@ TEST_F(RegistryTestFixture, RegistersCorrectSizeForNonTrivialType) {
 TEST_F(RegistryTestFixture, AdvertiseMutableInterface) {
   auto interface =
     registry_->AdvertiseMutableInterface<intrinsic_fbs::JointLimits>(
-          "joint_limits", kNumDof);
+          "joint_limits", /*logger=*/nullptr, kNumDof);
   ASSERT_TRUE(interface.has_value()) << interface.error();
   EXPECT_NE(interface.value()->max_position()->Get(0), 0.5);
   interface.value()->mutable_max_position()->Mutate(0, 5);
@@ -250,15 +258,15 @@ TEST_F(RegistryTestFixture, GetModuleName) {
 TEST_F(RegistryTestFixture, GetInterfaceHandleWorks) {
   auto interface =
     registry_->AdvertiseStrictInterface<intrinsic_fbs::JointLimits>(
-          "joint_limits", kNumDof);
+          "joint_limits", /*logger=*/nullptr, kNumDof);
   ASSERT_TRUE(interface.has_value()) << interface.error();
 
   auto handle = registry_->GetInterfaceHandle<intrinsic_fbs::JointLimits>(
-      "joint_limits");
+      "joint_limits", /*logger=*/nullptr);
   EXPECT_TRUE(handle.has_value()) << handle.error();
 
   auto invalid_handle = registry_->GetInterfaceHandle<intrinsic_fbs::JointLimits>(
-      "doesn't_exist");
+      "doesn't_exist", /*logger=*/nullptr);
   ASSERT_FALSE(invalid_handle.has_value());
   EXPECT_EQ(invalid_handle.error().code,
             StatusCode::kNotFound);
@@ -267,12 +275,12 @@ TEST_F(RegistryTestFixture, GetInterfaceHandleWorks) {
 TEST_F(RegistryTestFixture, GetMutableInterfaceHandleWorks) {
       auto interface =
     registry_->AdvertiseMutableStrictInterface<intrinsic_fbs::JointLimits>(
-          "joint_limits", kNumDof);
+          "joint_limits", /*logger=*/nullptr, kNumDof);
       ASSERT_TRUE(interface.has_value()) << interface.error();
 
       auto limits =
     registry_->GetMutableInterfaceHandle<intrinsic_fbs::JointLimits>(
-          "joint_limits");
+          "joint_limits", /*logger=*/nullptr);
       ASSERT_TRUE(limits.has_value()) << limits.error();
 
   // Mutates.
@@ -281,7 +289,7 @@ TEST_F(RegistryTestFixture, GetMutableInterfaceHandleWorks) {
       EXPECT_EQ(limits.value()->max_position()->Get(0), 42);
 
   auto wrong_name_handle = registry_->GetMutableInterfaceHandle<intrinsic_fbs::JointLimits>(
-      "doesn't_exist");
+      "doesn't_exist", /*logger=*/nullptr);
   ASSERT_FALSE(wrong_name_handle.has_value());
   EXPECT_EQ(wrong_name_handle.error().code, StatusCode::kNotFound) << wrong_name_handle.error();
 }
@@ -290,7 +298,7 @@ TEST_F(RegistryTestFixture,
        GetInterfaceHandleValidatesDynamicSizedFlatbuffers) {
   auto interface =
     registry_->AdvertiseStrictInterface<intrinsic_fbs::JointLimits>(
-          "joint_limits", kNumDof);
+          "joint_limits", /*logger=*/nullptr, kNumDof);
   ASSERT_TRUE(interface.has_value()) << interface.error();
 
   // Shrinks the segment to an invalid size, that passes the basic size checks
@@ -301,7 +309,9 @@ TEST_F(RegistryTestFixture,
           sizeof(SegmentHeader) + sizeof(intrinsic_fbs::JointLimits)),
       0);
 
-  auto invalid_handle = registry_->GetInterfaceHandle<intrinsic_fbs::JointLimits>("joint_limits");
+  auto invalid_handle = registry_->GetInterfaceHandle<intrinsic_fbs::JointLimits>("joint_limits",
+                                                                                                  /*logger=*/
+        nullptr);
   ASSERT_FALSE(invalid_handle.has_value());
   EXPECT_THAT(
       invalid_handle.error(),
@@ -313,7 +323,7 @@ TEST_F(RegistryTestFixture,
        GetMutableInterfaceHandleValidatesDynamicSizedFlatbuffers) {
       auto interface =
     registry_->AdvertiseStrictInterface<intrinsic_fbs::JointLimits>(
-          "joint_limits", kNumDof);
+          "joint_limits", /*logger=*/nullptr, kNumDof);
       ASSERT_TRUE(interface.has_value()) << interface.error();
 
   // Shrinks the segment to an invalid size, that passes the basic size checks
@@ -325,7 +335,7 @@ TEST_F(RegistryTestFixture,
       0);
 
   auto invalid_handle = registry_->GetMutableInterfaceHandle<intrinsic_fbs::JointLimits>(
-      "joint_limits");
+      "joint_limits", /*logger=*/nullptr);
   ASSERT_FALSE(invalid_handle.has_value());
   EXPECT_THAT(
       invalid_handle.error(),

@@ -7,9 +7,11 @@
 #include "flatbuffers/flatbuffer_builder.h"
 #include "hwm_fbs/hardware_module_state.fbs.h"
 
-namespace intrinsic_fbs {
+namespace intrinsic_fbs
+{
 
-flatbuffers::DetachedBuffer BuildHardwareModuleState() {
+flatbuffers::DetachedBuffer BuildHardwareModuleState()
+{
   flatbuffers::FlatBufferBuilder builder;
   builder.ForceDefaults(true);
 
@@ -17,8 +19,10 @@ flatbuffers::DetachedBuffer BuildHardwareModuleState() {
   return builder.Release();
 }
 
-void SetState(HardwareModuleState* hardware_module_state, StateCode code,
-              std::string_view message) {
+void SetState(
+  HardwareModuleState * hardware_module_state, StateCode code,
+  std::string_view message)
+{
   size_t max_length = hardware_module_state->message()->size();
   max_length = message.size() < max_length ? message.size() : max_length;
   hardware_module_state->mutate_code(code);
@@ -27,20 +31,24 @@ void SetState(HardwareModuleState* hardware_module_state, StateCode code,
   hardware_module_state->mutable_message()->Data()[max_length] = '\0';
 }
 
-std::string_view GetMessage(const HardwareModuleState* hardware_module_state) {
+std::string_view GetMessage(const HardwareModuleState * hardware_module_state)
+{
   if (hardware_module_state == nullptr ||
-      hardware_module_state->message() == nullptr) {
+    hardware_module_state->message() == nullptr)
+  {
     return "";
   }
-  return reinterpret_cast<const char*>(
-      hardware_module_state->message()->Data());
+  return reinterpret_cast<const char *>(
+    hardware_module_state->message()->Data());
 }
 }  // namespace intrinsic_fbs
 
-namespace intrinsic::hal {
+namespace intrinsic::hal
+{
 
 TransitionGuardResult HardwareModuleTransitionGuard(
-    intrinsic_fbs::StateCode from, intrinsic_fbs::StateCode to) {
+  intrinsic_fbs::StateCode from, intrinsic_fbs::StateCode to)
+{
   using intrinsic_fbs::StateCode;
   if (to == StateCode::kFatallyFaulted) {
     return TransitionGuardResult::kAllowed;

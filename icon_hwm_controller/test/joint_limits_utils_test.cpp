@@ -83,7 +83,7 @@ public:
   void SetUp() override
   {
     auto shm_manager =
-      SharedMemoryManager::Create(UniqueMemoryNamespace(), "module_name");
+      SharedMemoryManager::Create(UniqueMemoryNamespace(), "module_name", nullptr);
     ASSERT_TRUE(shm_manager.has_value()) << shm_manager.error();
     shm_manager_ = std::move(*shm_manager);
     registry_ = HardwareInterfaceRegistry(*shm_manager_);
@@ -105,7 +105,8 @@ protected:
     }
     return registry_
            ->AdvertiseMutableInterface<intrinsic_fbs::JointLimits>("joint_limits",
-                                                                num_dofs)
+                                                                   /*logger=*/nullptr,
+                                                                   num_dofs)
            .value();
   }
 };

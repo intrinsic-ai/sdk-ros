@@ -12,9 +12,11 @@
 #include "hwm_fbs/joint_command.fbs.h"
 #include "intrinsic/utils/status.hpp"
 
-namespace intrinsic_fbs {
+namespace intrinsic_fbs
+{
 
-flatbuffers::DetachedBuffer BuildJointPositionCommand(uint32_t num_dof) {
+flatbuffers::DetachedBuffer BuildJointPositionCommand(uint32_t num_dof)
+{
   flatbuffers::FlatBufferBuilder builder;
   builder.ForceDefaults(true);
 
@@ -28,7 +30,8 @@ flatbuffers::DetachedBuffer BuildJointPositionCommand(uint32_t num_dof) {
   return builder.Release();
 }
 
-flatbuffers::DetachedBuffer BuildJointVelocityCommand(uint32_t num_dof) {
+flatbuffers::DetachedBuffer BuildJointVelocityCommand(uint32_t num_dof)
+{
   flatbuffers::FlatBufferBuilder builder;
   builder.ForceDefaults(true);
 
@@ -36,12 +39,13 @@ flatbuffers::DetachedBuffer BuildJointVelocityCommand(uint32_t num_dof) {
   auto default_vel = builder.CreateVector(zeros);
   auto default_ff_acc = builder.CreateVector(zeros);
   auto velocity_command =
-      CreateJointVelocityCommand(builder, default_vel, default_ff_acc);
+    CreateJointVelocityCommand(builder, default_vel, default_ff_acc);
   builder.Finish(velocity_command);
   return builder.Release();
 }
 
-flatbuffers::DetachedBuffer BuildJointTorqueCommand(uint32_t num_dof) {
+flatbuffers::DetachedBuffer BuildJointTorqueCommand(uint32_t num_dof)
+{
   flatbuffers::FlatBufferBuilder builder;
   builder.ForceDefaults(true);
 
@@ -53,7 +57,8 @@ flatbuffers::DetachedBuffer BuildJointTorqueCommand(uint32_t num_dof) {
 }
 
 flatbuffers::DetachedBuffer BuildJointAccelerationAndTorqueCommand(
-    uint32_t num_dof) {
+  uint32_t num_dof)
+{
   flatbuffers::FlatBufferBuilder builder;
   builder.ForceDefaults(true);
 
@@ -66,7 +71,8 @@ flatbuffers::DetachedBuffer BuildJointAccelerationAndTorqueCommand(
   return builder.Release();
 }
 
-flatbuffers::DetachedBuffer BuildHandGuidingCommand() {
+flatbuffers::DetachedBuffer BuildHandGuidingCommand()
+{
   flatbuffers::FlatBufferBuilder builder;
   builder.ForceDefaults(true);
 
@@ -74,13 +80,16 @@ flatbuffers::DetachedBuffer BuildHandGuidingCommand() {
   return builder.Release();
 }
 
-intrinsic::RealtimeStatus CopyTo(const JointPositionCommand& src,
-                                 JointPositionCommand& dest) {
+intrinsic::RealtimeStatus CopyTo(
+  const JointPositionCommand & src,
+  JointPositionCommand & dest)
+{
   if (auto status = CopyFbsVector(*src.position(), *dest.mutable_position()); !status.ok()) {
     return status;
   }
   if (auto status = CopyFbsVector(
-      *src.velocity_feedforward(), *dest.mutable_velocity_feedforward()); !status.ok()) {
+      *src.velocity_feedforward(), *dest.mutable_velocity_feedforward()); !status.ok())
+  {
     return status;
   }
   return CopyFbsVector(*src.acceleration_feedforward(),

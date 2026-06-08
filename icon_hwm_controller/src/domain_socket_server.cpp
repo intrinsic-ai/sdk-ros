@@ -1,4 +1,3 @@
-#include "intrinsic/utils/strerror.hpp"
 #include "intrinsic/shared_memory_manager/domain_socket_server.hpp"
 
 #include <sys/file.h>
@@ -23,6 +22,8 @@
 
 #include "intrinsic/utils/log.hpp"
 #include "intrinsic/utils/status.hpp"
+#include "intrinsic/utils/strerror.hpp"
+#include "intrinsic/utils/time.hpp"
 #include "intrinsic/utils/cleanup.hpp"
 #include "intrinsic/shared_memory_manager/domain_socket_utils.hpp"
 #include "intrinsic/hal/get_hardware_interface.hpp"
@@ -56,7 +57,8 @@ std::filesystem::path LockName(
 // Tries once when `timeout` is zero or negative.
 tl::expected<int, Status> TryLockPath(
   std::filesystem::path absolute_lock_path,
-  std::chrono::seconds timeout)
+  std::chrono::seconds timeout,
+  const log::Logger * logger)
 {
   Time deadline = Now() + timeout;
   if (absolute_lock_path.empty()) {
@@ -100,10 +102,14 @@ tl::expected<int, Status> TryLockPath(
   }
 
   Cleanup close_lock_fd(
-    [&lock_fd, absolute_lock_path]() {
+    [&lock_fd, absolute_lock_path, logger]() {
       if (close(lock_fd) == -1) {
-        LOG(WARNING)   << "Failed to close lock fd for '" << absolute_lock_path.native()
-                       << "' with error: " << intrinsic::StrError(errno).data() << ".";
+        INTRINSIC_SHARED_MEMORY_LOG(
+            WARNING,
+            logger,
+            "Failed to close lock fd for '%s' with error: %s",
+            absolute_lock_path.c_str(),
+            intrinsic::StrError(errno).data());
       }
     });
   // Try once even if the deadline has passed.
@@ -111,19 +117,22 @@ tl::expected<int, Status> TryLockPath(
   do {
     // Uses LOCK_NB to make flock nonblocking and avoid blocking the process.
     if (int err = flock(lock_fd, LOCK_EX | LOCK_NB); err == 0) {
-      // TODO(nilsb): proper logging
-      std::cerr << "INFO: Acquired exclusive lock '" << absolute_lock_path.native() << "'." <<
-        std::endl;
+      INTRINSIC_SHARED_MEMORY_LOG(
+          INFO,
+          logger,
+          "Acquired exclusive lock '%s'.",
+          absolute_lock_path.c_str());
       std::move(close_lock_fd).Cancel();
       return lock_fd;
     } else {
       if (errno == EWOULDBLOCK) {
         if (!logged_error) {
-          std::cerr
-                << "WARN: File '" << absolute_lock_path.native()
-                << "' is locked by another process, will retry until " << deadline
-                << "."
-                << std::endl;
+          INTRINSIC_SHARED_MEMORY_LOG(
+              WARNING,
+              logger,
+              "File '%s' is lcoked by another process, will retry until %s",
+              absolute_lock_path.c_str(),
+              FormatTime(deadline).data());
           logged_error = true;
         }
         std::this_thread::sleep_for(std::chrono::seconds(1));
@@ -168,9 +177,11 @@ Status UnlockPathCloseLockfile(int lockfile_fd)
   }
 
   if (close(lockfile_fd) == -1) {
-    // TODO(nilsb): proper logging
-    std::cerr     << "WARN: Failed to close lockfile fd with error: "
-                  << intrinsic::StrError(errno).data() << "." << std::endl;
+    return Status{
+      .code = StatusCode::kInternal,
+      .message = (std::stringstream() << "Failed to close lockfile fd with error: " <<
+        intrinsic::StrError(errno).data()).str(),
+    };
   }
   return OkStatus();
 }
@@ -212,12 +223,11 @@ DomainSocketServer::PrepareMessage(
   if (protocol_version_ !=
     domain_socket_internal::kDomainSocketProtocolVersion)
   {
-    // TODO(nilsb): proper logging
-    std::cerr   << "WARN:" << "Overriding protocol version from "
-                << domain_socket_internal::kDomainSocketProtocolVersion
-                << " to " << protocol_version_
-                << ". This should only happen in tests." << std::endl;
-
+    INTRINSIC_SHARED_MEMORY_LOG(
+          WARNING,
+          *logger_,
+          "Overriding protocol version from %d to %d. This should only happen in tests.",
+          domain_socket_internal::kDomainSocketProtocolVersion, protocol_version_);
     message->descriptors.transfer_data.domain_socket_protocol_version =
       protocol_version_;
   }
@@ -292,9 +302,11 @@ DomainSocketServer::PrepareMessages(
   for (size_t message_index = 1; message_index <= kNumMessages;
     ++message_index)
   {
-    // TODO(nilsb): proper logging
-    std::cerr   << "INFO: " << "Preparing message " << message_index << " of "
-                << kNumMessages << std::endl;
+    INTRINSIC_SHARED_MEMORY_LOG(
+          INFO,
+          *logger_,
+          "Preparing message %d of %d",
+          message_index, kNumMessages);
     // Fill descriptors for this message.
     domain_socket_internal::ShmDescriptors descriptors;
     auto & fd_names = descriptors.transfer_data.file_descriptor_names;
@@ -422,10 +434,12 @@ Status DomainSocketServer::ServeShmDescriptors(
       ).str(),
     };
   }
-  // TODO(nilsb): proper logging
-  std::cerr   << "INFO: " << "Socket '" << absolute_socket_path_.native() << "' is serving  "
-              << kNumDescriptors << " descriptors." << std::endl;
-
+  INTRINSIC_SHARED_MEMORY_LOG(
+        INFO,
+        *logger_,
+        "Socket '%s' is serving %d descriptors.",
+        absolute_socket_path_.c_str(),
+        kNumDescriptors);
   {
     std::lock_guard l(handler_started_mtx_);
     handler_started_ = false;
@@ -439,22 +453,28 @@ Status DomainSocketServer::ServeShmDescriptors(
       }
       handler_started_cv_.notify_one();
       while (!stop_token.stop_requested()) {
-          // TODO(nilsb): proper logging
-        std::cerr << "INFO: " << "Waiting for new connection." << std::endl;
+        INTRINSIC_SHARED_MEMORY_LOG(
+              INFO,
+              *logger_,
+              "Waiting for new connection");
 
           // Accept all new connections.
           // A blocking socket is fine, because closing the socket unblocks.
         int to_client_sock = accept(socket_fd_, nullptr, nullptr);
         if (to_client_sock == -1) {
-            // TODO(nilsb): proper logging
-          std::cerr   << "ERROR: " << "Error while calling accept on '"
-                      << absolute_socket_path_.native() << "': " << intrinsic::StrError(errno).data()
-                      << ". Exiting. This is expected during shutdown." << std::endl;
-          return;
+          INTRINSIC_SHARED_MEMORY_LOG(
+                ERROR,
+                *logger_,
+                "Error while calling accept on '%s': %s. Exiting. "
+                "This is expected during shutdown.",
+                absolute_socket_path_.c_str(),
+                intrinsic::StrError(errno).data());
         }
-          // TODO(nilsb): proper logging
-        std::cerr   << "INFO: " << "Accepted new connection on '"
-                    << absolute_socket_path_.native() << "'." << std::endl;
+        INTRINSIC_SHARED_MEMORY_LOG(
+              INFO,
+              *logger_,
+              "Accepted new connection on '%s'",
+              absolute_socket_path_.c_str());
           // Timeout stops rogue clients from blocking the server.
           // One second is more than enough time to send a message.
         struct timeval tv
@@ -465,18 +485,22 @@ Status DomainSocketServer::ServeShmDescriptors(
         if (setsockopt(to_client_sock, SOL_SOCKET, SO_SNDTIMEO,
         (const char *)&tv, sizeof tv) == -1)
         {
-            // TODO(nilsb): proper logging
-          std::cerr   << "ERROR: " << "Failed to set socket timeout with error: "
-                      << intrinsic::StrError(errno).data() << std::endl;
+          INTRINSIC_SHARED_MEMORY_LOG(
+                ERROR,
+                *logger_,
+                "Failed to set socket timeout with error: %",
+                intrinsic::StrError(errno).data());
         }
 
         for (const auto & message : messages_) {
             // Only sending a single message without an explicit protocol.
           ssize_t bytes_sent = sendmsg(to_client_sock, &message->msgh, 0);
           if (bytes_sent == -1) {
-              // TODO(nilsb): proper logging
-            std::cerr   << "ERROR: " << "sendmsg failed with error: " << intrinsic::StrError(errno).data()
-                        << "." << std::endl;
+            INTRINSIC_SHARED_MEMORY_LOG(
+                  ERROR,
+                  *logger_,
+                  "sendmsg failed with error: %s",
+                  intrinsic::StrError(errno).data());
             continue;
           }
 
@@ -484,33 +508,36 @@ Status DomainSocketServer::ServeShmDescriptors(
           sizeof(message->descriptors.transfer_data);
           bytes_sent != expected_bytes)
           {
-              // TODO(nilsb): proper logging
-            std::cerr   << "ERROR: "
-                        << "Expected to send " << expected_bytes
-                        << "bytes, but only sent " << bytes_sent << "bytes." << std::endl;
+            INTRINSIC_SHARED_MEMORY_LOG(
+                  ERROR,
+                  *logger_,
+                  "Expected to send %d bytes, but only sent %d bytes.",
+                  expected_bytes,
+                  bytes_sent);
           }
 
-            // TODO(nilsb): proper logging
-          std::cerr   << "INFO: "
-                      << "Sent "
-                      << message->descriptors.file_descriptors_in_order.size()
-                      << " file descriptors and " << bytes_sent
-                      << " bytes of TransferData in message "
-                      << message->descriptors.transfer_data.message_index
-                      << " of " << messages_.size() << "." << std::endl;
+          INTRINSIC_SHARED_MEMORY_LOG(
+                INFO,
+                *logger_,
+                "Sent %d file descriptors and %d bytes of TransferData in message %d of %d",
+                message->descriptors.file_descriptors_in_order.size(),
+                bytes_sent,
+                message->descriptors.transfer_data.message_index,
+                messages_.size());
         }
 
-          // TODO(nilsb): proper logging
-        std::cerr   << "INFO: "
-                    << "Finished sending " << messages_.size()
-                    << " messages." << std::endl;
-
+        INTRINSIC_SHARED_MEMORY_LOG(
+              INFO,
+              *logger_,
+              "Finished sending %d messages",
+              messages_.size());
           // Close the socket to the client.
         if (close(to_client_sock) == -1) {
-            // TODO(nilsb): proper logging
-          std::cerr   << "ERROR: "
-                      << "Failed to close socket to client with error: "
-                      << intrinsic::StrError(errno).data() << "." << std::endl;
+          INTRINSIC_SHARED_MEMORY_LOG(
+                ERROR,
+                *logger_,
+                "Failed to close socket to client with error: %s",
+                intrinsic::StrError(errno).data());
           continue;
         }
       }
@@ -539,32 +566,38 @@ Status DomainSocketServer::ServeShmDescriptors(
 
 DomainSocketServer::~DomainSocketServer()
 {
-  // TODO(nilsb): proper logging
-  std::cerr   << "INFO: "
-              << "Shutting down DomainSocketServer on " << absolute_socket_path_.native() <<
-    std::endl;
+  INTRINSIC_SHARED_MEMORY_LOG(
+        INFO,
+        *logger_,
+        "Shutting down DomainSocketServer on %s",
+        absolute_socket_path_.c_str());
   if (socket_fd_ != -1) {
     if (shutdown(socket_fd_, SHUT_RDWR) == -1) {
-      // TODO(nilsb): proper logging
-      std::cerr   << "ERROR: "
-                  << "Failed to shutdown socket with error: " << intrinsic::StrError(errno).data() << "." <<
-        std::endl;
+      INTRINSIC_SHARED_MEMORY_LOG(
+            ERROR,
+            *logger_,
+            "Failed to shutdown socket with error: %s.",
+            intrinsic::StrError(errno).data());
       std::exit(1);
     }
     // Closing the socket stops the server loop.
     if (close(socket_fd_) == -1) {
-      // TODO(nilsb): proper logging
-      std::cerr   << "WARN: "
-                  << "Failed to close socket fd for '" << absolute_socket_path_.native()
-                  << "'. with error: " << intrinsic::StrError(errno).data() << "." << std::endl;
+      INTRINSIC_SHARED_MEMORY_LOG(
+            WARNING,
+            *logger_,
+            "Failed to close socket fd for '%s' with error: %s",
+            absolute_socket_path_.c_str(),
+            intrinsic::StrError(errno).data());
     }
   }
   if (!absolute_socket_path_.empty()) {
     if (unlink(absolute_socket_path_.c_str()) == -1) {
-      // TODO(nilsb): proper logging
-      std::cerr   << "WARN: "
-                  << "Failed to unlink socket file '" << absolute_socket_path_.native()
-                  << "'. with error: " << intrinsic::StrError(errno).data() << "." << std::endl;
+      INTRINSIC_SHARED_MEMORY_LOG(
+            WARNING,
+            *logger_,
+            "Failed to unlink socket file '%s' with error: %s",
+            absolute_socket_path_.c_str(),
+            intrinsic::StrError(errno).data());
     }
   }
 
@@ -573,39 +606,42 @@ DomainSocketServer::~DomainSocketServer()
   request_handler_.reset();
 
   if (const auto & status = UnlockPathCloseLockfile(flock_fd_); !status.ok()) {
-    // TODO(nilsb): proper logging
-    std::cerr   << "ERROR: "
-                << "Failed to unlock lock '" << absolute_lock_path_.native()
-                << "' for socket' " << absolute_socket_path_.native()
-                << "': " << status << std::endl;
+    INTRINSIC_SHARED_MEMORY_LOG(
+          ERROR,
+          *logger_,
+          "Failed to clean up lock '%s' for socket '%s': %s",
+          absolute_lock_path_.c_str(),
+          absolute_socket_path_.c_str(),
+          ToString(status).c_str());
   }
 }
 
 // static
 tl::expected<std::unique_ptr<DomainSocketServer>, Status> DomainSocketServer::Create(
   std::filesystem::path socket_directory, std::string_view module_name,
-  std::chrono::seconds lock_acquire_timeout, size_t protocol_version)
+  std::chrono::seconds lock_acquire_timeout, const log::Logger * logger, size_t protocol_version)
 {
-  std::cerr << "Creating socket directory";
   if (auto status =
     domain_socket_internal::CreateSocketDirectory(socket_directory); !status.ok())
-    {
-      return tl::unexpected(status);
-    }
-    std::cerr << "Successfully created socket directory";
+  {
+    return tl::unexpected(status);
+  }
 
   std::filesystem::path absolute_lock_path = LockName(socket_directory, module_name);
-  auto flock_fd = TryLockPath(absolute_lock_path, lock_acquire_timeout);
+  auto flock_fd = TryLockPath(absolute_lock_path, lock_acquire_timeout, logger);
   if (!flock_fd) {
     return tl::unexpected(flock_fd.error());
   }
 
   Cleanup clear_flock(
-    [flock_fd = *flock_fd]() {
+    [flock_fd = *flock_fd, logger]() {
       if (const auto & status = UnlockPathCloseLockfile(flock_fd); !status.ok()) {
-      // TODO(nilsb): proper logging
-        std::cerr << "ERROR: "
-                  << "Failed to unlock flock with error: " << status << std::endl;
+        INTRINSIC_SHARED_MEMORY_LOG(
+            ERROR,
+            logger,
+            "Failed to remove flock on fd %d with error: %s",
+            flock_fd,
+            ToString(status).c_str());
       }
     });
 
@@ -621,10 +657,11 @@ tl::expected<std::unique_ptr<DomainSocketServer>, Status> DomainSocketServer::Cr
   // https://gavv.net/articles/unix-socket-reuse/
   // Since we hold the lock, we know that nobody else is using this socket.
   if (std::filesystem::exists(*absolute_socket_path)) {
-    // TODO(nilsb): proper logging
-    std::cerr   << "INFO: "
-                << "Socket file '" << absolute_socket_path->native()
-                << "' already exists. Unlinking." << std::endl;
+    INTRINSIC_SHARED_MEMORY_LOG(
+        INFO,
+        logger,
+        "Socket file '%s' already exists. Unlinking.",
+        absolute_socket_path->c_str());
     if (unlink(absolute_socket_path->c_str()) == -1) {
       return tl::unexpected(Status {
           .code = StatusCode::kInternal,
@@ -647,16 +684,18 @@ tl::expected<std::unique_ptr<DomainSocketServer>, Status> DomainSocketServer::Cr
 
   if (bind(socket_fd, (sockaddr *)&(addr.value()), sizeof(sockaddr_un)) == -1) {
     int savedErrno = errno;
-    // TODO(nilsb): proper logging
-    std::cerr   << "ERROR: "
-                << "Failed to bind to socket with error: "
-                << intrinsic::StrError(savedErrno).data()
-                << ". Cleaning up, then returning error." << std::endl;
+    INTRINSIC_SHARED_MEMORY_LOG(
+        ERROR,
+        logger,
+        "Failed to bind to socket with error: %s. Cleaning up, then returning error.",
+        intrinsic::StrError(savedErrno).data());
     if (close(socket_fd) == -1) {
-    // TODO(nilsb): proper logging
-      std::cerr   << "WARN: "
-                  << "Failed to close socket fd for '" << absolute_socket_path->native()
-                  << "'. with error: " << intrinsic::StrError(errno).data() << "." << std::endl;
+      INTRINSIC_SHARED_MEMORY_LOG(
+          WARNING,
+          logger,
+          "Failed to close socket fd for '%s' with error: %s",
+          absolute_socket_path->c_str(),
+          intrinsic::StrError(errno).data());
     }
     return tl::unexpected(Status {
         .code = StatusCode::kInternal,
@@ -671,7 +710,8 @@ tl::expected<std::unique_ptr<DomainSocketServer>, Status> DomainSocketServer::Cr
       *absolute_socket_path, absolute_lock_path,
       /*socket_fd=*/socket_fd,
       /*flock_fd=*/*flock_fd,
-      /*protocol_version=*/protocol_version));
+      /*protocol_version=*/protocol_version,
+      /*logger=*/logger));
 }
 
 }  // namespace intrinsic::hal

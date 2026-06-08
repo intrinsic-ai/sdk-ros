@@ -4,7 +4,8 @@
 
 #include "flatbuffers/detached_buffer.h"
 
-namespace intrinsic_fbs {
+namespace intrinsic_fbs
+{
 
 flatbuffers::DetachedBuffer BuildJointPositionState(uint32_t num_dof);
 

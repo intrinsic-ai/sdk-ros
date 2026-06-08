@@ -1,13 +1,16 @@
 #include "intrinsic/shared_memory_manager/remote_trigger_server.hpp"
 #include "intrinsic/shared_memory_manager/remote_trigger_constants.hpp"
 
-namespace intrinsic::hal {
+namespace intrinsic::hal
+{
 
 tl::expected<RemoteTriggerServer, Status> RemoteTriggerServer::Create(
-      intrinsic::hal::SharedMemoryManager& shm_manager,
-      std::string_view server_memory_name,
-      Callback&& callback) {
-  
+  intrinsic::hal::SharedMemoryManager & shm_manager,
+  std::string_view server_memory_name,
+  const log::Logger * logger,
+  Callback && callback)
+{
+
   std::string request_name = std::string(server_memory_name) + kSemRequestSuffix;
   std::string response_name = std::string(server_memory_name) + kSemResponseSuffix;
 
@@ -15,23 +18,25 @@ tl::expected<RemoteTriggerServer, Status> RemoteTriggerServer::Create(
           request_name,
           /*must_be_used=*/false,
           BinaryFutex());
-      !status.ok()) {
+    !status.ok())
+  {
     return tl::make_unexpected(status);
   }
-  
+
   if (auto status = shm_manager.AddSegment<BinaryFutex>(
           response_name,
           /*must_be_used=*/false,
           BinaryFutex());
-      !status.ok()) {
+    !status.ok())
+  {
     return tl::make_unexpected(status);
   }
-  
-  auto request_futex = shm_manager.Get<ReadOnlyMemorySegment<BinaryFutex>>(request_name);
-  if (!request_futex.has_value()) return tl::make_unexpected(request_futex.error());
-  
-  auto response_futex = shm_manager.Get<ReadWriteMemorySegment<BinaryFutex>>(response_name);
-  if (!response_futex.has_value()) return tl::make_unexpected(response_futex.error());
+
+  auto request_futex = shm_manager.Get<ReadOnlyMemorySegment<BinaryFutex>>(request_name, logger);
+  if (!request_futex.has_value()) {return tl::make_unexpected(request_futex.error());}
+
+  auto response_futex = shm_manager.Get<ReadWriteMemorySegment<BinaryFutex>>(response_name, logger);
+  if (!response_futex.has_value()) {return tl::make_unexpected(response_futex.error());}
   return RemoteTriggerServer(
     server_memory_name,
       std::move(request_futex.value()),
@@ -40,17 +45,18 @@ tl::expected<RemoteTriggerServer, Status> RemoteTriggerServer::Create(
 }
 
 RemoteTriggerServer::RemoteTriggerServer(
-    std::string_view server_memory_name,
-    ReadOnlyMemorySegment<BinaryFutex>&& request_futex,
-    ReadWriteMemorySegment<BinaryFutex>&& response_futex,
-    Callback&& callback)
-    : server_memory_name_(std::string(server_memory_name)),
-      callback_(std::forward<Callback>(callback)),
-      request_futex_(std::forward<decltype(request_futex)>(request_futex)),
-      response_futex_(std::forward<decltype(response_futex)>(response_futex)) {}
+  std::string_view server_memory_name,
+  ReadOnlyMemorySegment<BinaryFutex> && request_futex,
+  ReadWriteMemorySegment<BinaryFutex> && response_futex,
+  Callback && callback)
+: server_memory_name_(std::string(server_memory_name)),
+  callback_(std::forward<Callback>(callback)),
+  request_futex_(std::forward<decltype(request_futex)>(request_futex)),
+  response_futex_(std::forward<decltype(response_futex)>(response_futex)) {}
 
-RemoteTriggerServer::RemoteTriggerServer(RemoteTriggerServer&& other) noexcept
-    : server_memory_name_("") {
+RemoteTriggerServer::RemoteTriggerServer(RemoteTriggerServer && other) noexcept
+: server_memory_name_("")
+{
   // Make sure that moved server is no longer running.
   other.RequestStop();
   other.JoinAsyncThread();
@@ -58,13 +64,14 @@ RemoteTriggerServer::RemoteTriggerServer(RemoteTriggerServer&& other) noexcept
   callback_ = std::exchange(other.callback_, nullptr);
   is_running_.store(false);
   request_futex_ =
-      std::exchange(other.request_futex_, ReadOnlyMemorySegment<BinaryFutex>());
+    std::exchange(other.request_futex_, ReadOnlyMemorySegment<BinaryFutex>());
   response_futex_ = std::exchange(other.response_futex_,
                                   ReadWriteMemorySegment<BinaryFutex>());
 }
 
-RemoteTriggerServer& RemoteTriggerServer::operator=(
-    RemoteTriggerServer&& other) noexcept {
+RemoteTriggerServer & RemoteTriggerServer::operator=(
+  RemoteTriggerServer && other) noexcept
+{
   if (this != &other) {
     // Make sure that moved server is no longer running.
     other.RequestStop();
@@ -82,73 +89,83 @@ RemoteTriggerServer& RemoteTriggerServer::operator=(
   return *this;
 }
 
-RemoteTriggerServer::~RemoteTriggerServer() {
+RemoteTriggerServer::~RemoteTriggerServer()
+{
   RequestStop();
   JoinAsyncThread();
 
   // Close `response_futex_`, but only if it's still there (if we're currently
   // destroying a moved-out-of RemoteTriggerServer, `response_futex_` is
   // nullptr)
-  if (auto* response_futex_ptr = reinterpret_cast<BinaryFutex*>(response_futex_.GetRawValue());
-      response_futex_ptr != nullptr) {
+  if (auto * response_futex_ptr = reinterpret_cast<BinaryFutex *>(response_futex_.GetRawValue());
+    response_futex_ptr != nullptr)
+  {
     response_futex_ptr->Close();
   }
 }
 
-void RemoteTriggerServer::Start() {
+void RemoteTriggerServer::Start(const log::Logger * logger)
+{
   // System is already running.
   if (is_running_.load()) {
     return;
   }
   is_running_.store(true);
 
-  Run();
+  Run(logger);
 }
 
-Status RemoteTriggerServer::StartAsync(RemoteTriggerServer::Prelude prelude) {
+Status RemoteTriggerServer::StartAsync(
+  const log::Logger * logger,
+  RemoteTriggerServer::Prelude prelude)
+{
   // Report incomplete shutdown
   if (!is_running_ && async_thread_.joinable()) {
     return Status{
-      .code=StatusCode::kFailedPrecondition,
-      .message=  "RemoteTriggerServer is not running, but its async thread is active. "
+      .code = StatusCode::kFailedPrecondition,
+      .message = "RemoteTriggerServer is not running, but its async thread is active. "
         "Did you call `RequestStop()` and *not* call `JoinAsyncThread()` "
         "afterwards?",
-      };
+    };
   }
   // System is already running.
   if (bool expected = false;
-      !is_running_.compare_exchange_strong(expected, true)) {
+    !is_running_.compare_exchange_strong(expected, true))
+  {
     return OkStatus();
   }
 
-  async_thread_ = Thread(&RemoteTriggerServer::Run, this, std::move(prelude));
+  async_thread_ = Thread(&RemoteTriggerServer::Run, this, logger, std::move(prelude));
   if (async_thread_.joinable()) {
     return OkStatus();
   } else {
     RequestStop();
     JoinAsyncThread();
     return Status{
-      .code=StatusCode::kInternal,
-      .message=  "RemoteTriggerServer failed to start async thread.",
+      .code = StatusCode::kInternal,
+      .message = "RemoteTriggerServer failed to start async thread.",
     };
   }
 }
 
-bool RemoteTriggerServer::IsStarted() const { return is_running_.load(); }
+bool RemoteTriggerServer::IsStarted() const {return is_running_.load();}
 
-bool RemoteTriggerServer::IsReadyToStart() const {
+bool RemoteTriggerServer::IsReadyToStart() const
+{
   return !IsStarted() && !async_thread_.joinable();
 }
 
-void RemoteTriggerServer::RequestStop() { is_running_.store(false); }
+void RemoteTriggerServer::RequestStop() {is_running_.store(false);}
 
-void RemoteTriggerServer::JoinAsyncThread() {
+void RemoteTriggerServer::JoinAsyncThread()
+{
   if (async_thread_.joinable()) {
     async_thread_.join();
   }
 }
 
-bool RemoteTriggerServer::Query() {
+bool RemoteTriggerServer::Query(const log::Logger * logger)
+{
   // The server was started, we don't allow single queries concurrently.
   if (is_running_.load()) {
     return false;
@@ -161,11 +178,11 @@ bool RemoteTriggerServer::Query() {
   }
   // Some error occurred, we stop the server.
   if (!wait_status.ok()) {
-    // TODO(nilsb): Add realtime logging.
-    #if 0
-    INTRINSIC_RT_LOG(ERROR)
-        << "unable to receive client request: " << wait_status.message();
-    #endif
+    INTRINSIC_SHARED_MEMORY_LOG(
+        ERROR,
+        logger,
+        "unable to recieive client request: %s",
+        wait_status.message);
     return false;
   }
 
@@ -185,20 +202,24 @@ bool RemoteTriggerServer::Query() {
   // in a timeout on client side, which has potentially better means to react
   // to wrong behavior.
   if (!post_status.ok()) {
-    // TODO(nilsb): Add realtime logging.
-    #if 0
-    INTRINSIC_RT_LOG(ERROR)
-        << "unable to send response to client: " << post_status.message();
-    #endif
+    INTRINSIC_SHARED_MEMORY_LOG(
+        ERROR,
+        logger,
+        "unable to send response to client: %s",
+        post_status.message);
   }
   return true;
 }
 
-void RemoteTriggerServer::Run(RemoteTriggerServer::Prelude prelude) {
+void RemoteTriggerServer::Run(const log::Logger * logger, RemoteTriggerServer::Prelude prelude)
+{
   if (prelude) {
     if (auto status = prelude(); !status.ok()) {
-      // TODO(nilsb): Proper logging
-      std::cerr << "RemoteTriggerServer Prelude failed: " << status << std::endl;
+      INTRINSIC_SHARED_MEMORY_LOG(
+          ERROR,
+          logger,
+          "RemoteTriggerServer Prelude failed: %s",
+          status);
       is_running_.store(false);
       return;
     }
@@ -208,18 +229,18 @@ void RemoteTriggerServer::Run(RemoteTriggerServer::Prelude prelude) {
   // object may have been moved and destroyed.
   while (is_running_.load()) {
     auto wait_status =
-        request_futex_.GetValue().WaitFor(std::chrono::milliseconds(100));
+      request_futex_.GetValue().WaitFor(std::chrono::milliseconds(100));
     // If we woke up because of timeout, don't execute the callback.
     if (wait_status.code == StatusCode::kDeadlineExceeded) {
       continue;
     }
     // Some error occurred, we stop the server.
     if (!wait_status.ok()) {
-      // TODO(nilsb): Add realtime logging.
-      #if 0
-      INTRINSIC_RT_LOG(ERROR)
-          << "unable to receive client request: " << wait_status.message();
-      #endif
+      INTRINSIC_SHARED_MEMORY_LOG(
+          ERROR,
+          logger,
+          "unable to receive client request: %s",
+          wait_status.message);
       RequestStop();
       JoinAsyncThread();
       return;
@@ -247,11 +268,11 @@ void RemoteTriggerServer::Run(RemoteTriggerServer::Prelude prelude) {
     // in a timeout on client side, which has potentially better means to react
     // to wrong behavior.
     if (!post_status.ok()) {
-      // TODO(nilsb): Add realtime logging.
-      #if 0
-      INTRINSIC_RT_LOG(ERROR)
-          << "unable to send response to client: " << post_status.message();
-      #endif
+      INTRINSIC_SHARED_MEMORY_LOG(
+          ERROR,
+          logger,
+          "unable to send response to client: %s",
+          post_status.message);
       RequestStop();
       JoinAsyncThread();
       return;

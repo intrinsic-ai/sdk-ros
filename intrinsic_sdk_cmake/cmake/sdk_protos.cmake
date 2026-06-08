@@ -131,7 +131,9 @@ target_include_directories(intrinsic_sdk_services
   "$<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/protos_gen>"
   "$<INSTALL_INTERFACE:include/${PROJECT_NAME}>"
 )
-target_link_libraries(intrinsic_sdk_services PUBLIC intrinsic_sdk_protos)
+target_link_libraries(intrinsic_sdk_services PUBLIC
+  gRPC::grpc++
+  intrinsic_sdk_protos)
 set_property(TARGET intrinsic_sdk_services PROPERTY POSITION_INDEPENDENT_CODE ON)
 
 # Generate Python code from the protos.

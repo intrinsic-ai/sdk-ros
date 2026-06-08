@@ -3,10 +3,12 @@
 #include "intrinsic/utils/time.hpp"
 #include "intrinsic/utils/status.hpp"
 
-namespace intrinsic {
+namespace intrinsic
+{
 
 RealtimeStatus RealtimeClockInterface::TickBlockingWithTimeout(
-    Time current_timestamp, std::chrono::nanoseconds timeout) {
+  Time current_timestamp, std::chrono::nanoseconds timeout)
+{
   return TickBlockingWithDeadline(current_timestamp, Now() + timeout);
 }
 

@@ -130,8 +130,10 @@ MemorySegment::~MemorySegment() {CleanUpSharedMemory();}
 
 MemorySegment::MemorySegment(
   std::string_view name, SegmentDescriptor segment,
-  MemorySegment::ReadWriteKind kind)
-: name_(name),
+  MemorySegment::ReadWriteKind kind,
+  const log::Logger * logger)
+: logger_(logger),
+  name_(name),
   header_(reinterpret_cast<SegmentHeader *>(segment.segment_start)),
   value_(segment.segment_start + sizeof(SegmentHeader)),
   size_(segment.size),
@@ -204,10 +206,12 @@ void MemorySegment::CleanUpSharedMemory() noexcept
     // should be using this particular pointer.
     //
     // This automatically releases the mlock on that memory too.
-    if (munmap(header_, size_) == -1) {
-      LOG(WARNING)   << "Failed to unmap memory for '" << name_
-                     << "'. with error: " << intrinsic::StrError(errno).data()
-                     << ". Continuing anyways.";
+    if (munmap(header_, size_) == -1 && logger_ != nullptr) {
+      INTRINSIC_SHARED_MEMORY_LOG(
+          WARNING,
+          *logger_,
+          "Failed to unmap memory for '%s'. with error: %s. Continuing anyways.",
+          name_, intrinsic::StrError(errno).data());
     }
   }
 }

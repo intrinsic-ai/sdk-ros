@@ -44,6 +44,7 @@ add_library(shared_memory_manager
   src/segment_info_utils.cpp
   src/icon_state_utils.cpp
   src/thread.cpp
+  src/time.cpp
   src/joint_limits.cpp
   src/joint_limits_utils.cpp
   src/hardware_interface_registry.cpp
@@ -182,6 +183,12 @@ if(BUILD_TESTING)
     $<INSTALL_INTERFACE:include>
   )
   target_link_libraries(hardware_interface_registry_test shared_memory_manager)
+
+  ament_add_gmock(log_test test/log_test.cpp)
+  target_include_directories(log_test PUBLIC
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+    $<INSTALL_INTERFACE:include>
+  )
 
 endif()
 

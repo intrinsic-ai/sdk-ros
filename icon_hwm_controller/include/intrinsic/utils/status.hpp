@@ -2,6 +2,7 @@
 
 #include <iostream>
 #include <array>
+#include <sstream>
 #include <string>
 #include <algorithm>
 
@@ -80,6 +81,16 @@ struct Status
 
   bool ok() const {return code == StatusCode::kOk;}
 };
+
+inline std::string ToString(const Status & s)
+{
+  std::stringstream sstr;
+  sstr << StatusCodeName(s.code);
+  if (!s.message.empty()) {
+    sstr << ": " << s.message;
+  }
+  return sstr.str();
+}
 
 template<class Ostream>
 inline Ostream && operator<<(Ostream && str, const Status & status)

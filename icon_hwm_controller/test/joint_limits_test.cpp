@@ -8,15 +8,19 @@
 #include "intrinsic/utils/status.hpp"
 #include "intrinsic/eigenmath/types.hpp"
 
-namespace intrinsic {
-namespace {
+namespace intrinsic
+{
+namespace
+{
 
 using eigenmath::VectorNd;
 // using eigenmath::testing::IsApprox;
 // using icon::RepeatedDoubleToVectorXd;
 using ::testing::ElementsAre;
 
-TEST(JointLimits, DefaultIsValid) { EXPECT_TRUE(JointLimits().IsValid()); }
+TEST(JointLimits, DefaultIsValid) {
+                                    EXPECT_TRUE(JointLimits().IsValid());
+}
 
 TEST(JointLimits, UnlimitedIsValid) {
   auto limits = JointLimits::Unlimited(3);

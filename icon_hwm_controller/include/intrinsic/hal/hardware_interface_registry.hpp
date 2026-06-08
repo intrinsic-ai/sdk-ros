@@ -7,6 +7,7 @@
 #include "flatbuffers/detached_buffer.h"
 
 #include "intrinsic/utils/attributes.hpp"
+#include "intrinsic/utils/log.hpp"
 #include "intrinsic/utils/status.hpp"
 #include "intrinsic/utils/realtime_guard.hpp"
 #include "intrinsic/shared_memory_manager/shared_memory_manager.hpp"
@@ -50,7 +51,7 @@ public:
   // Prefer AdvertiseStrictInterface.
   template<class HardwareInterfaceT, typename ... ArgsT>
   tl::expected<HardwareInterfaceHandle<HardwareInterfaceT>, Status>
-  AdvertiseInterface(std::string_view interface_name, ArgsT... args)
+  AdvertiseInterface(std::string_view interface_name, const log::Logger * logger, ArgsT... args)
   {
     if (auto status = AdvertiseInterfaceT<HardwareInterfaceT>(
             interface_name, /*must_be_used=*/false, args ...); !status.ok())
@@ -58,7 +59,8 @@ public:
       return tl::unexpected(status);
     }
     return ::intrinsic::hal::GetInterfaceHandle<HardwareInterfaceT>(*shm_manager_,
-                                                        interface_name);
+                                                                    interface_name,
+                                                                    logger);
   }
 
   // Advertises a new mutable hardware interface.
@@ -67,7 +69,9 @@ public:
   // Prefer AdvertiseStrictInterface.
   template<class HardwareInterfaceT, typename ... ArgsT>
   tl::expected<MutableHardwareInterfaceHandle<HardwareInterfaceT>, Status>
-  AdvertiseMutableInterface(std::string_view interface_name, ArgsT... args)
+  AdvertiseMutableInterface(
+    std::string_view interface_name, const log::Logger * logger,
+    ArgsT... args)
   {
     if(auto status = AdvertiseInterfaceT<HardwareInterfaceT>(
            interface_name, /*must_be_used=*/false, args ...); !status.ok())
@@ -75,7 +79,8 @@ public:
       return tl::unexpected(status);
     }
     return ::intrinsic::hal::GetMutableInterfaceHandle<HardwareInterfaceT>(*shm_manager_,
-                                                               interface_name);
+                                                                           interface_name,
+                                                                           logger);
   }
 
   // Prefer AdvertiseMutableStrictInterface.
@@ -112,7 +117,9 @@ public:
   // Returns a non-mutable handle to the newly allocated hardware interface.
   template<class HardwareInterfaceT, typename ... ArgsT>
   tl::expected<StrictHardwareInterfaceHandle<HardwareInterfaceT>, Status>
-  AdvertiseStrictInterface(std::string_view interface_name, ArgsT... args)
+  AdvertiseStrictInterface(
+    std::string_view interface_name, const log::Logger * logger,
+    ArgsT... args)
   {
     if (auto s = AdvertiseInterfaceT<HardwareInterfaceT>(
             interface_name, /*must_be_used=*/true, args ...); !s.ok())
@@ -121,7 +128,8 @@ public:
     }
 
     return ::intrinsic::hal::GetStrictInterfaceHandle<HardwareInterfaceT>(*shm_manager_,
-                                                              interface_name);
+                                                                          interface_name,
+                                                                          logger);
   }
 
   // Advertises a new mutable strict hardware interface using the interface type
@@ -142,6 +150,7 @@ public:
   tl::expected<MutableStrictHardwareInterfaceHandle<HardwareInterfaceT>, Status>
   AdvertiseMutableStrictInterface(
     std::string_view interface_name,
+    const log::Logger * logger,
     ArgsT... args)
   {
     if(auto s = AdvertiseInterfaceT<HardwareInterfaceT>(
@@ -150,13 +159,14 @@ public:
       return tl::unexpected(s);
     }
     return ::intrinsic::hal::GetMutableStrictInterfaceHandle<HardwareInterfaceT>(
-        *shm_manager_, interface_name);
+        *shm_manager_, interface_name, logger);
   }
 
   template<class HardwareInterfaceT>
   tl::expected<MutableStrictHardwareInterfaceHandle<HardwareInterfaceT>, Status>
   AdvertiseMutableStrictInterface(
     std::string_view interface_name,
+    const log::Logger * logger,
     flatbuffers::DetachedBuffer && message_buffer)
   {
     auto type_id =
@@ -167,26 +177,30 @@ public:
       return tl::unexpected(s);
     }
     return ::intrinsic::hal::GetMutableStrictInterfaceHandle<HardwareInterfaceT>(
-        *shm_manager_, interface_name);
+        *shm_manager_, interface_name, logger);
   }
 
   // Convenience function that returns a handle to a registered interface.
   template<class HardwareInterfaceT>
   tl::expected<HardwareInterfaceHandle<HardwareInterfaceT>, Status>
-  GetInterfaceHandle(std::string_view interface_name) const
+  GetInterfaceHandle(
+    std::string_view interface_name,
+    const log::Logger * logger) const
   {
     return ::intrinsic::hal::GetInterfaceHandle<HardwareInterfaceT>(*shm_manager_,
-                                                        interface_name);
+                                                                    interface_name,
+                                                                    logger);
   }
 
   // Convenience function that returns a mutable handle to a registered
   // interface.
   template<class HardwareInterfaceT>
   tl::expected<MutableHardwareInterfaceHandle<HardwareInterfaceT>, Status>
-  GetMutableInterfaceHandle(std::string_view interface_name) const
+  GetMutableInterfaceHandle(std::string_view interface_name, const log::Logger * logger) const
   {
     return ::intrinsic::hal::GetMutableInterfaceHandle<HardwareInterfaceT>(*shm_manager_,
-                                                               interface_name);
+                                                                           interface_name,
+                                                                           logger);
   }
 
   // Returns the number of registered interfaces.

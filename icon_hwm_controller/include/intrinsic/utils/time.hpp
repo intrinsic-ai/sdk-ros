@@ -17,6 +17,17 @@ inline Time Now()
   return std::chrono::steady_clock::now();
 }
 
+constexpr char kTimeFormat[] = "yyyy-mm-ddThh:mm:ssZ";
+
+// Writes a string representation of `t` into a fixed-size buffer and returns that buffer.
+//
+// * The return value is zero-terminated
+// * The string representation is in UTC
+// * If `gmtime_r()` is available, this function is thread safe.
+//
+// Returns an all-zero std::array in case of a string formatting error.
+std::array<char, std::size(kTimeFormat)> FormatTime(const Time & t);
+
 // Prints a Time to `str` as "seconds.milliseconds"
 //
 // (since steady_clock is not related to the "wall clock", we can't format a

@@ -11,6 +11,8 @@
 #include <string_view>
 #include <string>
 
+#include "intrinsic/utils/log.hpp"
+#include "intrinsic/utils/mock_log_sink.hpp"
 #include "intrinsic/utils/status.hpp"
 #include "intrinsic/utils/time.hpp"
 
@@ -94,18 +96,39 @@ TEST(SocketDirectoryFromNamespace, Works) {
             "/tmp/intrinsic_icon/some_namespace");
 }
 
-TEST(GetSegmentNameToFileDescriptorMap, CreatesPath) {
+
+class GetSegmentNameToFileDescriptorMapTest : public ::testing::Test {
+public:
+  GetSegmentNameToFileDescriptorMapTest()
+  : logger_(log::Logger::kInfo, log::MockSink(log_entries_)) {}
+
+  log::Logger * logger()
+  {
+    return &logger_;
+  }
+
+  std::span<const log::LogEntryWithStorage> log_entries()
+  {
+    return log_entries_;
+  }
+
+private:
+  std::vector<log::LogEntryWithStorage> log_entries_;
+  log::Logger logger_;
+};
+
+TEST_F(GetSegmentNameToFileDescriptorMapTest, CreatesPath) {
   auto socket_dir = std::filesystem::path(TempDir()) / "some_dir";
   (void)GetSegmentNameToFileDescriptorMap(socket_dir, "some_module",
-                                          std::chrono::seconds(0));
+                                          std::chrono::seconds(0), logger());
   std::error_code ec;
   EXPECT_TRUE(std::filesystem::exists(socket_dir, ec)) << ec;
   EXPECT_TRUE(std::filesystem::is_directory(socket_dir, ec)) << ec;
 }
 
-TEST(GetSegmentNameToFileDescriptorMap, TimesOut) {
+TEST_F(GetSegmentNameToFileDescriptorMapTest, TimesOut) {
   auto result = GetSegmentNameToFileDescriptorMap(TempDir(), "some_module",
-                                                  std::chrono::seconds(0));
+                                                  std::chrono::seconds(0), logger());
   ASSERT_FALSE(result.has_value());
   EXPECT_EQ(result.error().code, StatusCode::kDeadlineExceeded);
 }

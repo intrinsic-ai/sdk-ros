@@ -13,7 +13,10 @@
 #include <utility>
 #include <vector>
 #include <chrono>
+#include <span>
 
+#include "intrinsic/utils/log.hpp"
+#include "intrinsic/utils/mock_log_sink.hpp"
 #include "intrinsic/utils/status.hpp"
 #include "intrinsic/utils/time.hpp"
 #include "intrinsic/flatbuffers/flatbuffer_utils.hpp"
@@ -80,9 +83,9 @@ void TestInOut(
   auto header = shm_manager.GetSegmentHeader(shm_name);
   ASSERT_THAT(val_out, NotNull());
   EXPECT_THAT(*val_out, Eq(T()));
-  EXPECT_THAT(header->Type(), Eq(SegmentHeader(type_id.c_str()).Type()))
+  EXPECT_THAT(header->Type(), Eq(SegmentHeader(type_id.c_str(), nullptr).Type()))
       << header->Type().TypeID() << " vs "
-      << SegmentHeader(type_id.c_str()).Type().TypeID();
+      << SegmentHeader(type_id.c_str(), nullptr).Type().TypeID();
 }
 
 // Convenience function to get a pointer to the segment data.
@@ -106,9 +109,30 @@ T * SegmentFromFdMap(
   return reinterpret_cast<T *>(data + sizeof(SegmentHeader));
 }
 
-TEST(SharedMemorymanagerTest, AddPrimitives) {
+
+class SharedMemoryManagerTest : public ::testing::Test {
+public:
+  SharedMemoryManagerTest()
+  : logger_(log::Logger::kInfo, log::MockSink(log_entries_)) {}
+
+  log::Logger * logger()
+  {
+    return &logger_;
+  }
+
+  std::span<const log::LogEntryWithStorage> log_entries()
+  {
+    return log_entries_;
+  }
+
+private:
+  std::vector<log::LogEntryWithStorage> log_entries_;
+  log::Logger logger_;
+};
+
+TEST_F(SharedMemoryManagerTest, AddPrimitives) {
   auto expected_shm_manager =
-    SharedMemoryManager::Create(UniqueMemoryNamespace(), "module_name");
+    SharedMemoryManager::Create(UniqueMemoryNamespace(), "module_name", logger());
   ASSERT_TRUE(expected_shm_manager.has_value()) << expected_shm_manager.error();
   auto & shm_manager = *expected_shm_manager;
 
@@ -137,9 +161,9 @@ TEST(SharedMemorymanagerTest, AddPrimitives) {
                   HasSubstr("some_array")));
 }
 
-TEST(SharedMemorymanagerTest, AddDefaultValues) {
+TEST_F(SharedMemoryManagerTest, AddDefaultValues) {
   auto expected_shm_manager =
-    SharedMemoryManager::Create(UniqueMemoryNamespace(), "module_name");
+    SharedMemoryManager::Create(UniqueMemoryNamespace(), "module_name", logger());
   ASSERT_TRUE(expected_shm_manager.has_value()) << expected_shm_manager.error();
   auto & shm_manager = *expected_shm_manager;
   TestInOut<int>(*shm_manager, "some_int");
@@ -154,9 +178,9 @@ TEST(SharedMemorymanagerTest, AddDefaultValues) {
   // TestInOut<int*>(shm_manager, "/some_pointer");
 }
 
-TEST(SharedMemorymanagerTest, AddDefaultValuesWithTypeInfo) {
+TEST_F(SharedMemoryManagerTest, AddDefaultValuesWithTypeInfo) {
   auto expected_shm_manager =
-    SharedMemoryManager::Create(UniqueMemoryNamespace(), "module_name");
+    SharedMemoryManager::Create(UniqueMemoryNamespace(), "module_name", logger());
   ASSERT_TRUE(expected_shm_manager.has_value()) << expected_shm_manager.error();
   auto & shm_manager = *expected_shm_manager;
   TestInOut<int>(*shm_manager, "some_int", "int_id");
@@ -172,7 +196,7 @@ TEST(SharedMemorymanagerTest, AddDefaultValuesWithTypeInfo) {
   //  TestInOut<int*>(shm_manager, "/some_pointer");
 }
 
-TEST(SharedMemorymanagerTest, AddMoveOnlyTypes) {
+TEST_F(SharedMemoryManagerTest, AddMoveOnlyTypes) {
   struct MoveOnly
   {
     explicit MoveOnly(int val)
@@ -186,7 +210,7 @@ TEST(SharedMemorymanagerTest, AddMoveOnlyTypes) {
 
 
   auto expected_shm_manager =
-    SharedMemoryManager::Create(UniqueMemoryNamespace(), "some_module");
+    SharedMemoryManager::Create(UniqueMemoryNamespace(), "some_module", logger());
   ASSERT_TRUE(expected_shm_manager.has_value()) << expected_shm_manager.error();
   auto & shm_manager = *expected_shm_manager;
   const std::string move_only_shm_name = "some_move_only";
@@ -207,9 +231,9 @@ TEST(SharedMemorymanagerTest, AddMoveOnlyTypes) {
   EXPECT_THAT(move_only_instance2_out->value, Eq(26));
 }
 
-TEST(SharedMemorymanagerTest, GetHeader) {
+TEST_F(SharedMemoryManagerTest, GetHeader) {
   auto expected_shm_manager =
-    SharedMemoryManager::Create(UniqueMemoryNamespace(), "some_module");
+    SharedMemoryManager::Create(UniqueMemoryNamespace(), "some_module", logger());
   ASSERT_TRUE(expected_shm_manager.has_value()) << expected_shm_manager.error();
   auto & shm_manager = *expected_shm_manager;
   EXPECT_EQ(shm_manager->AddSegmentWithDefaultValue<int>(
@@ -222,11 +246,11 @@ TEST(SharedMemorymanagerTest, GetHeader) {
   EXPECT_THAT(header->WriterRefCount(), Eq(0));
 }
 
-TEST(SharedMemorymanagerTest, ModifyRawValue) {
+TEST_F(SharedMemoryManagerTest, ModifyRawValue) {
   constexpr int kBufferSize = 5;
   std::string_view kBufferName = "some_buffer_id";
   auto expected_shm_manager =
-    SharedMemoryManager::Create(UniqueMemoryNamespace(), "some_module");
+    SharedMemoryManager::Create(UniqueMemoryNamespace(), "some_module", logger());
   ASSERT_TRUE(expected_shm_manager.has_value()) << expected_shm_manager.error();
   auto & shm_manager = *expected_shm_manager;
   EXPECT_EQ(shm_manager->AddSegment(kBufferName, /*must_be_used=*/false,
@@ -246,14 +270,14 @@ TEST(SharedMemorymanagerTest, ModifyRawValue) {
   EXPECT_THAT(shm_manager->GetRawValue(kBufferName)[4], Eq('e'));
 }
 
-TEST(SharedMemorymanagerTest, HeaderCleanupOnManagerExit) {
+TEST_F(SharedMemoryManagerTest, HeaderCleanupOnManagerExit) {
   std::string memory_namespace = UniqueMemoryNamespace();
   std::string module_name = "some_module";
 
   SegmentNameToFileDescriptorMap segment_name_to_file_descriptor_map;
   {
     auto expected_shm_manager =
-      SharedMemoryManager::Create(UniqueMemoryNamespace(), module_name);
+      SharedMemoryManager::Create(UniqueMemoryNamespace(), module_name, logger());
     ASSERT_TRUE(expected_shm_manager.has_value()) << expected_shm_manager.error();
     auto & shm_manager = *expected_shm_manager;
     EXPECT_EQ(shm_manager->AddSegmentWithDefaultValue<int>(
@@ -275,9 +299,9 @@ TEST(SharedMemorymanagerTest, HeaderCleanupOnManagerExit) {
   }
 }
 
-TEST(SharedMemoryManager, InsertMultipleT) {
+TEST_F(SharedMemoryManagerTest, InsertMultipleT) {
   auto expected_shm_manager =
-    SharedMemoryManager::Create(UniqueMemoryNamespace(), "some_module");
+    SharedMemoryManager::Create(UniqueMemoryNamespace(), "some_module", logger());
   ASSERT_TRUE(expected_shm_manager.has_value()) << expected_shm_manager.error();
   auto & shm_manager = *expected_shm_manager;
 
@@ -289,9 +313,9 @@ TEST(SharedMemoryManager, InsertMultipleT) {
             StatusCode::kOk);
 }
 
-TEST(SharedMemoryManager, FailOnDoubleInsertion) {
+TEST_F(SharedMemoryManagerTest, FailOnDoubleInsertion) {
   auto expected_shm_manager =
-    SharedMemoryManager::Create(UniqueMemoryNamespace(), "some_module");
+    SharedMemoryManager::Create(UniqueMemoryNamespace(), "some_module", logger());
   ASSERT_TRUE(expected_shm_manager.has_value()) << expected_shm_manager.error();
   auto & shm_manager = *expected_shm_manager;
 
@@ -303,9 +327,9 @@ TEST(SharedMemoryManager, FailOnDoubleInsertion) {
               StatusCode::kAlreadyExists);
 }
 
-TEST(SharedMemoryManager, FailOnWrongSegmentName) {
+TEST_F(SharedMemoryManagerTest, FailOnWrongSegmentName) {
   auto expected_shm_manager =
-    SharedMemoryManager::Create(UniqueMemoryNamespace(), "some_module");
+    SharedMemoryManager::Create(UniqueMemoryNamespace(), "some_module", logger());
   ASSERT_TRUE(expected_shm_manager.has_value()) << expected_shm_manager.error();
   auto & shm_manager = *expected_shm_manager;
 
@@ -337,9 +361,9 @@ TEST(SharedMemoryManager, FailOnWrongSegmentName) {
   }
 }
 
-TEST(SharedMemoryManager, FailOnSegmentNotFound) {
+TEST_F(SharedMemoryManagerTest, FailOnSegmentNotFound) {
   auto expected_shm_manager =
-    SharedMemoryManager::Create(UniqueMemoryNamespace(), "some_module");
+    SharedMemoryManager::Create(UniqueMemoryNamespace(), "some_module", logger());
   ASSERT_TRUE(expected_shm_manager.has_value()) << expected_shm_manager.error();
   auto & shm_manager = *expected_shm_manager;
 
@@ -348,9 +372,9 @@ TEST(SharedMemoryManager, FailOnSegmentNotFound) {
   EXPECT_THAT(shm_manager->GetSegmentValue<int>(kDefaultMemoryName), IsNull());
 }
 
-TEST(SharedMemoryManager, TestMultipleInstances) {
+TEST_F(SharedMemoryManagerTest, TestMultipleInstances) {
   auto expected_shm_manager =
-    SharedMemoryManager::Create(UniqueMemoryNamespace(), "some_module");
+    SharedMemoryManager::Create(UniqueMemoryNamespace(), "some_module", logger());
   ASSERT_TRUE(expected_shm_manager.has_value()) << expected_shm_manager.error();
   auto & shm_manager = *expected_shm_manager;
   EXPECT_EQ(shm_manager->AddSegmentWithDefaultValue<int>(
@@ -370,12 +394,12 @@ TEST(SharedMemoryManager, TestMultipleInstances) {
   EXPECT_THAT(*val1, Eq(*val2));
 }
 
-TEST(SharedMemoryManager, SegmentNameToFileDescriptorMapWorks) {
+TEST_F(SharedMemoryManagerTest, SegmentNameToFileDescriptorMapWorks) {
   std::string memory_namespace = UniqueMemoryNamespace();
   std::string module_name = "some_module";
 
   auto expected_shm_manager =
-    SharedMemoryManager::Create(UniqueMemoryNamespace(), module_name);
+    SharedMemoryManager::Create(UniqueMemoryNamespace(), module_name, logger());
   ASSERT_TRUE(expected_shm_manager.has_value()) << expected_shm_manager.error();
   auto & shm_manager = *expected_shm_manager;
   EXPECT_EQ(shm_manager->AddSegment<int>(kDefaultMemoryName,
@@ -386,12 +410,12 @@ TEST(SharedMemoryManager, SegmentNameToFileDescriptorMapWorks) {
               Contains(Key(kDefaultMemoryName)));
 }
 
-TEST(SharedMemoryManager, TestExternalAccess) {
+TEST_F(SharedMemoryManagerTest, TestExternalAccess) {
   std::string memory_namespace = UniqueMemoryNamespace();
   std::string module_name = "some_module";
 
   auto expected_shm_manager =
-    SharedMemoryManager::Create(UniqueMemoryNamespace(), module_name);
+    SharedMemoryManager::Create(UniqueMemoryNamespace(), module_name, logger());
   ASSERT_TRUE(expected_shm_manager.has_value()) << expected_shm_manager.error();
   auto & shm_manager = *expected_shm_manager;
   EXPECT_EQ(shm_manager->AddSegment<int>(kDefaultMemoryName,
@@ -406,7 +430,8 @@ TEST(SharedMemoryManager, TestExternalAccess) {
     DomainSocketServer::Create(
           /*socket_directory=*/SocketDirectoryFromNamespace(memory_namespace),
           /*module_name=*/module_name,
-          DomainSocketServer::kDefaultLockAcquireTimeout);
+          DomainSocketServer::kDefaultLockAcquireTimeout,
+          logger());
   ASSERT_TRUE(expected_domain_socket_server.has_value())
       << expected_domain_socket_server.error();
   auto & domain_socket_server = *expected_domain_socket_server;
@@ -418,7 +443,7 @@ TEST(SharedMemoryManager, TestExternalAccess) {
   auto expected_segment_name_to_file_descriptor_map =
     ::intrinsic::hal::GetSegmentNameToFileDescriptorMap(
            SocketDirectoryFromNamespace(memory_namespace),
-           module_name, std::chrono::seconds(0));
+           module_name, std::chrono::seconds(0), logger());
   ASSERT_TRUE(expected_segment_name_to_file_descriptor_map.has_value())
       << expected_segment_name_to_file_descriptor_map.error();
   const auto & segment_name_to_file_descriptor_map = *expected_segment_name_to_file_descriptor_map;
@@ -438,17 +463,17 @@ TEST(SharedMemoryManager, TestExternalAccess) {
   EXPECT_THAT(*val1, Eq(1338));
 }
 
-TEST(SharedMemoryManager, GetWorksAndChecksName) {
+TEST_F(SharedMemoryManagerTest, GetWorksAndChecksName) {
   std::string memory_namespace = UniqueMemoryNamespace();
   std::string module_name = "some_module";
 
   auto expected_shm_manager =
-    SharedMemoryManager::Create(UniqueMemoryNamespace(), module_name);
+    SharedMemoryManager::Create(UniqueMemoryNamespace(), module_name, logger());
   ASSERT_TRUE(expected_shm_manager.has_value()) << expected_shm_manager.error();
   auto & shm_manager = *expected_shm_manager;
 
   {
-    auto result = shm_manager->Get<ReadWriteMemorySegment<int>>("invalid_name");
+    auto result = shm_manager->Get<ReadWriteMemorySegment<int>>("invalid_name", logger());
     ASSERT_FALSE(result.has_value());
     EXPECT_EQ(result.error().code,
               StatusCode::kNotFound);
@@ -458,38 +483,39 @@ TEST(SharedMemoryManager, GetWorksAndChecksName) {
             StatusCode::kOk);
   {
     auto result =
-      shm_manager->Get<ReadWriteMemorySegment<int>>(kDefaultMemoryName);
+      shm_manager->Get<ReadWriteMemorySegment<int>>(kDefaultMemoryName, logger());
     ASSERT_TRUE(result.has_value()) << result.error();
   }
 }
 
-TEST(SharedMemoryManager, ModuleNameWorks) {
+TEST_F(SharedMemoryManagerTest, ModuleNameWorks) {
   std::string memory_namespace = UniqueMemoryNamespace();
   std::string module_name = "some_module";
 
   auto expected_shm_manager =
-    SharedMemoryManager::Create(UniqueMemoryNamespace(), module_name);
+    SharedMemoryManager::Create(UniqueMemoryNamespace(), module_name, logger());
   ASSERT_TRUE(expected_shm_manager.has_value()) << expected_shm_manager.error();
   auto & shm_manager = *expected_shm_manager;
   EXPECT_EQ(shm_manager->ModuleName(), module_name);
 }
 
-TEST(SharedMemoryManager, SharedMemoryNamespaceWorks) {
+TEST_F(SharedMemoryManagerTest, SharedMemoryNamespaceWorks) {
   std::string memory_namespace = UniqueMemoryNamespace();
   std::string module_name = "some_module";
 
   auto expected_shm_manager =
-    SharedMemoryManager::Create(memory_namespace, module_name);
+    SharedMemoryManager::Create(memory_namespace, module_name, logger());
   ASSERT_TRUE(expected_shm_manager.has_value()) << expected_shm_manager.error();
   auto & shm_manager = *expected_shm_manager;
   EXPECT_EQ(shm_manager->SharedMemoryNamespace(), memory_namespace);
 }
 
-TEST(SharedMemoryManager, CreateErrorsOnEmpyModuleName) {
+TEST_F(SharedMemoryManagerTest, CreateErrorsOnEmpyModuleName) {
   std::string memory_namespace = UniqueMemoryNamespace();
   std::string module_name = "some_module";
 
-  auto expected_shm_manager = SharedMemoryManager::Create(memory_namespace, /*module_name=*/"");
+  auto expected_shm_manager = SharedMemoryManager::Create(memory_namespace, /*module_name=*/"",
+        logger());
   ASSERT_FALSE(expected_shm_manager.has_value());
   EXPECT_EQ(expected_shm_manager.error().code,
             StatusCode::kInvalidArgument);

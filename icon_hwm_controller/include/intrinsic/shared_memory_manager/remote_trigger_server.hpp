@@ -10,10 +10,13 @@
 #include "intrinsic/shared_memory_manager/binary_futex.hpp"
 #include "intrinsic/shared_memory_manager/shared_memory_manager.hpp"
 #include "intrinsic/shared_memory_manager/memory_segment.hpp"
+#include "intrinsic/utils/attributes.hpp"
+#include "intrinsic/utils/log.hpp"
 #include "intrinsic/utils/status.hpp"
 #include "intrinsic/thread/thread.hpp"
 
-namespace intrinsic::hal {
+namespace intrinsic::hal
+{
 
 // A RemoteTriggerServer listens to incoming requests from a client and executes
 // its callback when a request is issued.
@@ -29,7 +32,7 @@ namespace intrinsic::hal {
 // at the time, we can't easily prevent multiple clients (each in their own
 // process) to trigger a request at the same time.
 class RemoteTriggerServer {
- public:
+public:
   using Callback = std::function<void()>;
   using Prelude = std::function<Status()>;
 
@@ -37,17 +40,18 @@ class RemoteTriggerServer {
   // When the server is signaled, it executes the callback and signals a
   // response back to the client when done.
   static tl::expected<RemoteTriggerServer, Status> Create(
-      intrinsic::hal::SharedMemoryManager& shm_manager,
-      std::string_view server_memory_name,
-      Callback&& callback);
+    intrinsic::hal::SharedMemoryManager & shm_manager,
+    std::string_view server_memory_name,
+    const log::Logger * logger INTR_ATTRIBUTE_LIFETIME_BOUND,
+    Callback && callback);
 
   // This class is move-only.
-  RemoteTriggerServer(const RemoteTriggerServer& other) = delete;
-  RemoteTriggerServer& operator=(const RemoteTriggerServer& other) = delete;
+  RemoteTriggerServer(const RemoteTriggerServer & other) = delete;
+  RemoteTriggerServer & operator=(const RemoteTriggerServer & other) = delete;
   // Moving an instance will stop the server. If the server was previously
   // running, it has to be explicitly restarted afterwards.
-  RemoteTriggerServer(RemoteTriggerServer&& other) noexcept;
-  RemoteTriggerServer& operator=(RemoteTriggerServer&& other) noexcept;
+  RemoteTriggerServer(RemoteTriggerServer && other) noexcept;
+  RemoteTriggerServer & operator=(RemoteTriggerServer && other) noexcept;
 
   ~RemoteTriggerServer();
 
@@ -58,9 +62,9 @@ class RemoteTriggerServer {
   // `Start()` returns immediately.
   // Given its blocking behavior, this function should be used with
   // external thread handling.
-  void Start();
+  void Start(const log::Logger * logger INTR_ATTRIBUTE_LIFETIME_BOUND);
 
-  // Starts the server loop within a new thread, executing `prelude` 
+  // Starts the server loop within a new thread, executing `prelude`
   // (if present) before the main thread body.
   //
   // Unlike `Start()`, the function returns immediately, running the server loop
@@ -73,7 +77,9 @@ class RemoteTriggerServer {
   //
   // Returns `OkStatus()` upon success, error status when thread could not
   // start correctly.
-  Status StartAsync(Prelude prelude=nullptr);
+  Status StartAsync(
+    const log::Logger * logger INTR_ATTRIBUTE_LIFETIME_BOUND,
+    Prelude prelude = nullptr);
 
   // Queries whether the server has started.
   bool IsStarted() const;
@@ -109,20 +115,21 @@ class RemoteTriggerServer {
   // Queries the server once and executes the callback if a request is ready.
   // Does not execute the callback if the server is started already.
   // Returns true if a callback was triggered, false if not.
-  bool Query();
+  bool Query(const log::Logger * logger);
 
- private:
+private:
   // Main loop function.
-  // Runs `prelude` (if present), then waits for an incoming trigger sent by 
+  // Runs `prelude` (if present), then waits for an incoming trigger sent by
   // a client and calls the provided callback upon arrival. Once the callback
   // returns, it sends a response notification to the client, indicating that
   // the callback has been completed.
-  void Run(Prelude prelude=nullptr);
+  void Run(const log::Logger * logger INTR_ATTRIBUTE_LIFETIME_BOUND, Prelude prelude = nullptr);
 
-  RemoteTriggerServer(std::string_view server_memory_name,
-                      ReadOnlyMemorySegment<BinaryFutex>&& request_futex,
-                      ReadWriteMemorySegment<BinaryFutex>&& response_futex,
-                      Callback&& callback);
+  RemoteTriggerServer(
+    std::string_view server_memory_name,
+    ReadOnlyMemorySegment<BinaryFutex> && request_futex,
+    ReadWriteMemorySegment<BinaryFutex> && response_futex,
+    Callback && callback);
 
   std::string server_memory_name_;
   Callback callback_;

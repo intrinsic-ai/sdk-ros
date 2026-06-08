@@ -10,6 +10,8 @@
 #include "flatbuffers/table.h"
 #include "flatbuffers/verifier.h"
 
+#include "intrinsic/utils/attributes.hpp"
+#include "intrinsic/utils/log.hpp"
 #include "intrinsic/utils/status.hpp"
 #include "intrinsic/shared_memory_manager/shared_memory_manager.hpp"
 #include "intrinsic/shared_memory_manager/segment_header.hpp"
@@ -173,11 +175,12 @@ template<class HardwareInterfaceT>
 inline tl::expected<HardwareInterfaceHandle<HardwareInterfaceT>, Status>
 GetInterfaceHandle(
   const SharedMemoryManager & shared_memory_manager,
-  std::string_view interface_name)
+  std::string_view interface_name,
+  const log::Logger * logger INTR_ATTRIBUTE_LIFETIME_BOUND)
 {
   auto ro_segment =
     shared_memory_manager.Get<ReadOnlyMemorySegment<HardwareInterfaceT>>(
-          interface_name);
+        interface_name, logger);
   if (!ro_segment) {
     return tl::unexpected(ro_segment.error());
   }
@@ -203,11 +206,12 @@ template<class HardwareInterfaceT>
 inline tl::expected<MutableHardwareInterfaceHandle<HardwareInterfaceT>, Status>
 GetMutableInterfaceHandle(
   const SharedMemoryManager & shared_memory_manager,
-  std::string_view interface_name)
+  std::string_view interface_name,
+  const log::Logger * logger INTR_ATTRIBUTE_LIFETIME_BOUND)
 {
   auto rw_segment =
     shared_memory_manager.Get<ReadWriteMemorySegment<HardwareInterfaceT>>(
-          interface_name);
+        interface_name, logger);
   if (!rw_segment) {
     return tl::unexpected(rw_segment.error());
   }
@@ -235,15 +239,16 @@ template<class HardwareInterfaceT>
 inline tl::expected<StrictHardwareInterfaceHandle<HardwareInterfaceT>, Status>
 GetStrictInterfaceHandle(
   const SharedMemoryManager & shared_memory_manager,
-  std::string_view interface_name)
+  std::string_view interface_name,
+  const log::Logger * logger INTR_ATTRIBUTE_LIFETIME_BOUND)
 {
   auto handle = GetInterfaceHandle<HardwareInterfaceT>(shared_memory_manager,
-                                                       interface_name);
+                                                       interface_name, logger);
   if (!handle) {
     return tl::unexpected(handle.error());
   }
   auto icon_state = GetInterfaceHandle<intrinsic_fbs::IconState>(
-      shared_memory_manager, kIconStateInterfaceName);
+      shared_memory_manager, kIconStateInterfaceName, logger);
   if (!icon_state) {
     return tl::unexpected(icon_state.error());
   }
@@ -260,16 +265,17 @@ template<class HardwareInterfaceT>
 inline tl::expected<MutableStrictHardwareInterfaceHandle<HardwareInterfaceT>, Status>
 GetMutableStrictInterfaceHandle(
   const SharedMemoryManager & shared_memory_manager,
-  std::string_view interface_name)
+  std::string_view interface_name,
+  const log::Logger * logger INTR_ATTRIBUTE_LIFETIME_BOUND)
 {
   auto handle = GetMutableInterfaceHandle<HardwareInterfaceT>(
-      shared_memory_manager, interface_name);
+      shared_memory_manager, interface_name, logger);
   if (!handle) {
     return tl::unexpected(handle.error());
   }
 
   auto icon_state = GetInterfaceHandle<intrinsic_fbs::IconState>(
-      shared_memory_manager, kIconStateInterfaceName);
+      shared_memory_manager, kIconStateInterfaceName, logger);
   if (!icon_state) {
     return tl::unexpected(icon_state.error());
   }
@@ -281,10 +287,11 @@ GetMutableStrictInterfaceHandle(
 // Returns information about the exported interfaces from a hardware module.
 inline tl::expected<ReadOnlyMemorySegment<intrinsic_fbs::SegmentInfo>, Status>
 GetHardwareModuleInfo(
-  const SegmentNameToFileDescriptorMap & segment_name_to_file_descriptor_map)
+  const SegmentNameToFileDescriptorMap & segment_name_to_file_descriptor_map,
+  const log::Logger * logger INTR_ATTRIBUTE_LIFETIME_BOUND)
 {
   return ReadOnlyMemorySegment<intrinsic_fbs::SegmentInfo>::Get(
-      segment_name_to_file_descriptor_map, hal::kModuleInfoName);
+      segment_name_to_file_descriptor_map, hal::kModuleInfoName, logger);
 }
 
 // Extracts the names of the shared memory segments.
