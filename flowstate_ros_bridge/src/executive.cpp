@@ -71,7 +71,8 @@ absl::Status Executive::connect() {
 
   std::lock_guard<std::recursive_mutex> lock(mutex_);
 
-  grpc::ChannelArguments channel_args = intrinsic::connect::DefaultGrpcChannelArgs();
+  grpc::ChannelArguments channel_args =
+      intrinsic::connect::DefaultGrpcChannelArgs();
   // The skill registry may need to call out to one or more skill information
   // services. Those services might not be ready at startup. We configure a
   // retry policy to mitigate b/283020857.
@@ -309,7 +310,7 @@ auto Executive::behavior_trees() const
     auto client_context = std::make_unique<grpc::ClientContext>();
     client_context->set_deadline(std::chrono::system_clock::now() +
                                  std::chrono::seconds(deadline_seconds_));
-    
+
     intrinsic_proto::solution::v1::ListBehaviorTreesResponse response;
     INTR_RETURN_IF_ERROR(
         intrinsic::ToAbslStatus(solution_stub_->ListBehaviorTrees(

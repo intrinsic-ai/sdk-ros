@@ -28,4 +28,5 @@
     throttle_robot_state_topic: false
     override_joint_names: []
   },
+  align_tf_timestamps: true
 }

@@ -66,8 +66,9 @@ FlowstateROSBridge::FlowstateROSBridge(const rclcpp::NodeOptions& options)
 
   this->declare_parameter(
       kWorldAddressParamName,
-      service_tunnel.empty() ? "istio-ingressgateway.app-ingress.svc.cluster.local:80"
-                             : service_tunnel);
+      service_tunnel.empty()
+          ? "istio-ingressgateway.app-ingress.svc.cluster.local:80"
+          : service_tunnel);
 
   this->declare_parameter(
       kGeometryAddressParamName,

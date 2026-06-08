@@ -92,11 +92,19 @@ int main(int argc, char* argv[]) {
                                        bridge_plugins_proto.end());
   rclcpp::Parameter bridge_plugins_param("bridge_plugins", plugin_list);
   params.push_back(std::move(bridge_plugins_param));
-  const auto& strip_flowstate_tf_prefix_proto = ros_config.strip_flowstate_tf_prefix();
+  const auto& strip_flowstate_tf_prefix_proto =
+      ros_config.strip_flowstate_tf_prefix();
   std::vector<std::string> strip_flowstate_tf_prefix_list(
       strip_flowstate_tf_prefix_proto.begin(),
       strip_flowstate_tf_prefix_proto.end());
-  params.push_back(std::move(rclcpp::Parameter("strip_flowstate_tf_prefix", std::move(strip_flowstate_tf_prefix_list))));
+  params.push_back(std::move(rclcpp::Parameter(
+      "strip_flowstate_tf_prefix", std::move(strip_flowstate_tf_prefix_list))));
+
+  bool align_tf_timestamps = true;
+  if (ros_config.has_align_tf_timestamps()) {
+    align_tf_timestamps = ros_config.align_tf_timestamps();
+  }
+  params.emplace_back("align_tf_timestamps", align_tf_timestamps);
 
   const auto& s = ros_config.sensors();
   params.emplace_back("enable_robot_joint_state_topic",

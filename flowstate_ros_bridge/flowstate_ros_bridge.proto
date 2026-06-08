@@ -30,4 +30,5 @@ message FlowstateRosBridgeConfig {
   int64 executive_update_rate_millis = 11;
   SensorPublisherConfig sensors = 12;
   repeated string strip_flowstate_tf_prefix = 13;
+  optional bool align_tf_timestamps = 14;
 }
