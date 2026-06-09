@@ -56,6 +56,27 @@ foreach(file_to_remove IN LISTS exclude_SRCS)
   list(REMOVE_ITEM intrinsic_proto_SRCS ${intrinsic_sdk_SOURCE_DIR}/${file_to_remove})
 endforeach()
 
+# Note [Copy-pasted health.proto dependency]:
+# The C++ libgrpc package (e.g. from conda-forge) packages C++ headers and libraries
+# but does not distribute the raw .proto files (like health.proto) or their generated C++
+# client stubs (health.pb.h, health.grpc.pb.h). However, the upstream Intrinsic SDK code
+# (in intrinsic/connect/cc/grpc/channel.cc) directly includes these stubs to perform client-side
+# health checks.
+#
+# Because the conda package is a pre-compiled binary distribution and does not include the gRPC
+# source code, we copy-pasted `health.proto` to `third_party/src/proto/grpc/health/v1/health.proto`
+# in order to generate the required C++ headers locally during the build.
+#
+# This mimics how upstream gRPC examples compile these stubs locally from the gRPC source tree.
+# See: https://github.com/grpc/grpc/blob/0a8376ecfc0aa1e56a8b77ab29852c3c14b81243/examples/cpp/health/CMakeLists.txt#L26-L60
+#
+# This copy-pasted dependency can be removed if:
+# 1. Upstream Intrinsic SDK transitions away from needing custom compiled health stubs (e.g., by
+#    dynamically calling gRPC or using reflection/generic stubs), or
+# 2. The gRPC packaging (e.g. conda-forge) starts distributing
+#    public health proto files or pre-compiled C++ health client stubs.
+#
+# Tracked in GitHub issue: https://github.com/grpc/grpc/issues/42619
 set(grpc_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/third_party")
 
 # Prepare additional proto dependencies.
