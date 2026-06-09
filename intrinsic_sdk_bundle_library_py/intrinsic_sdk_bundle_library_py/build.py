@@ -20,6 +20,8 @@ import subprocess
 import sys
 import urllib.request
 
+from ament_index_python.packages import get_package_share_directory
+
 
 def run_command(cmd, check=True):
     assert isinstance(cmd, list), "cmd must be a list"
@@ -28,8 +30,8 @@ def run_command(cmd, check=True):
 
 
 def get_sdk_version():
-    current_dir = os.path.dirname(os.path.abspath(__file__))
-    version_file = os.path.join(os.path.dirname(current_dir), 'resource', 'sdk_version.json')
+    share_dir = get_package_share_directory('intrinsic_sdk_bundle_library_py')
+    version_file = os.path.join(share_dir, 'resource', 'sdk_version.json')
 
     try:
         with open(version_file, 'r') as f:
@@ -88,15 +90,13 @@ def build_container(args):
     if args.service_name and args.service_package:
         name = args.service_name
         package = args.service_package
-        dockerfile = args.dockerfile or os.path.join(
-            os.path.dirname(__file__), '..', 'resource', 'service.Dockerfile'
-        )
+        share_dir = get_package_share_directory('intrinsic_sdk_bundle_library_py')
+        dockerfile = args.dockerfile or os.path.join(share_dir, 'resource', 'service.Dockerfile')
     elif args.skill_name and args.skill_package:
         name = args.skill_name
         package = args.skill_package
-        dockerfile = args.dockerfile or os.path.join(
-            os.path.dirname(__file__), '..', 'resource', 'skill.Dockerfile'
-        )
+        share_dir = get_package_share_directory('intrinsic_sdk_bundle_library_py')
+        dockerfile = args.dockerfile or os.path.join(share_dir, 'resource', 'skill.Dockerfile')
     else:
         print('Error: Must specify either service or skill name and package.')
         return
