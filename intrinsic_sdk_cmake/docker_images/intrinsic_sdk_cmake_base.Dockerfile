@@ -1,8 +1,11 @@
 # This Dockerfile provides only the source code for intrinsic_sdk_cmake.
 # It needs to be built from the root of the intrinsic_sdk_ros repository.
 
-# base stage: ghcr.io/sloretz/ros:jazzy-ros-core + configs + rmw_zenoh
-FROM ghcr.io/sloretz/ros:jazzy-ros-core-2025-06-08 AS base
+ARG ROS_DISTRO=jazzy
+ARG BASE_IMAGE=ghcr.io/sloretz/ros:${ROS_DISTRO}-ros-core-2025-06-08
+
+# base stage: BASE_IMAGE + configs + rmw_zenoh
+FROM ${BASE_IMAGE} AS base
 # TODO(wjwwood): this is based on the ROS image because we still use
 #   ament_cmake, we should move away from that and either vendor ament_cmake or
 #   avoid it entirely.
@@ -19,6 +22,7 @@ WORKDIR /opt/intrinsic
 ENV ROS_HOME=/tmp
 
 # Install rmw_zenoh_cpp and set it as the default RMW implementation.
+ARG ROS_DISTRO
 RUN \
     --mount=type=cache,target=/var/cache/apt,sharing=locked \
     --mount=type=cache,target=/var/lib/apt,sharing=locked \
@@ -27,7 +31,7 @@ RUN \
     && echo 'Binary::apt::APT::Keep-Downloaded-Packages "true";' >/etc/apt/apt.conf.d/keep-cache \
     && apt-get update \
     && apt-get dist-upgrade -y \
-    && apt-get install -y --no-install-recommends ros-jazzy-rmw-zenoh-cpp
+    && apt-get install -y --no-install-recommends ros-${ROS_DISTRO}-rmw-zenoh-cpp
 ENV RMW_IMPLEMENTATION=rmw_zenoh_cpp
 RUN set -x \
     && sed --in-place \
