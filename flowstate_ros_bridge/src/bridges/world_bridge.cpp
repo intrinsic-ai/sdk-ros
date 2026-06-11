@@ -21,6 +21,7 @@
 #include "absl/log/log.h"
 #include "absl/status/status.h"
 #include "absl/strings/str_format.h"
+#include "absl/strings/strip.h"
 #include "intrinsic/eigenmath/types.h"
 #include "intrinsic/math/proto_conversion.h"
 #include "intrinsic/util/eigen.h"
@@ -29,6 +30,8 @@
 namespace flowstate_ros_bridge {
 
 constexpr const char* kTfPrefixParamName = "world_tf_prefix";
+constexpr const char* kStripFlowstateTfPrefixParamName =
+    "strip_flowstate_tf_prefix";
 constexpr const char* kResourceServiceName = "flowstate_get_resource";
 constexpr const char* kMeshUrlPrefixParamName = "mesh_url_prefix";
 constexpr const char* kEnableRobotJointStateTopicParamName =
@@ -56,6 +59,9 @@ void WorldBridge::declare_ros_parameters(
 
   param_interface->declare_parameter(kTfPrefixParamName,
                                      rclcpp::ParameterValue{""});
+  param_interface->declare_parameter(
+      kStripFlowstateTfPrefixParamName,
+      rclcpp::ParameterValue(std::vector<std::string>{}));
   param_interface->declare_parameter(
       kMeshUrlPrefixParamName,
       rclcpp::ParameterValue{"http://localhost:8123/"});
@@ -118,6 +124,9 @@ bool WorldBridge::initialize(ROSNodeInterfaces ros_node_interfaces,
 
   data_->tf_prefix_ = param_interface->get_parameter(kTfPrefixParamName)
                           .get_value<std::string>();
+  data_->strip_flowstate_tf_prefixes_ =
+      param_interface->get_parameter(kStripFlowstateTfPrefixParamName)
+          .as_string_array();
 
   std::shared_ptr<rclcpp::node_interfaces::NodeTopicsInterface>
       topics_interface =
@@ -270,7 +279,8 @@ absl::Status WorldBridge::Data::SendObjectVisualizationMessages(
             continue;
           }
           const auto& geo_ref = geometry.geo_ref();
-          const std::string object_name = object.Name().value();
+          const std::string object_name =
+              StripTfPrefixes(object.Name().value(), strip_flowstate_tf_prefixes_);
           const std::vector<absl::string_view> parts =
               absl::StrSplit(object_name, '/');
           const absl::string_view short_name = parts.back();
@@ -377,6 +387,22 @@ absl::Status WorldBridge::Data::SendObjectVisualizationMessages(
 ///=============================================================================
 WorldBridge::Data::~Data() {}
 
+///=============================================================================
+std::string WorldBridge::StripTfPrefixes(
+    absl::string_view frame,
+    const std::vector<std::string>& prefixes) {
+  absl::string_view stripped = frame;
+  for (const auto& prefix : prefixes) {
+    // Add check to only strip the prefix once per frame
+    if (!prefix.empty() && absl::StartsWith(stripped, prefix)) {
+      stripped = absl::StripPrefix(stripped, prefix);
+      break;
+    }
+  }
+  return std::string(stripped);
+}
+
+///=============================================================================
 void WorldBridge::TfCallback(const intrinsic_proto::TFMessage& tf_proto) {
   rclcpp::Clock clock;
   const rclcpp::Time t_start = clock.now();
@@ -392,15 +418,23 @@ void WorldBridge::TfCallback(const intrinsic_proto::TFMessage& tf_proto) {
     geometry_msgs::msg::TransformStamped* ts_ros = &tf_ros.transforms[tf_idx++];
     ts_ros->header.stamp.sec = ts_proto.header().stamp().seconds();
     ts_ros->header.stamp.nanosec = ts_proto.header().stamp().nanos();
-    ts_ros->header.frame_id = data_->tf_prefix_ + ts_proto.header().frame_id();
-    ts_ros->child_frame_id = data_->tf_prefix_ + ts_proto.child_frame_id();
+
+    // Strip away Flowstate TF prefixes
+    const std::string frame_id =
+        StripTfPrefixes(ts_proto.header().frame_id(), data_->strip_flowstate_tf_prefixes_);
+
+    const std::string child_frame_id =
+        StripTfPrefixes(ts_proto.child_frame_id(), data_->strip_flowstate_tf_prefixes_);
+
+    ts_ros->header.frame_id = data_->tf_prefix_ + frame_id;
+    ts_ros->child_frame_id = data_->tf_prefix_ + child_frame_id;
 
     new_tf_frame_names.insert(ts_ros->child_frame_id);
     if (!data_->tf_frame_names_.contains(ts_ros->child_frame_id)) {
       // We parse the "OBJECT_NAME/ENTITY_NAME" string to get the OBJECT_NAME
       LOG(INFO) << "new child_frame_id: " << ts_ros->child_frame_id;
-      const std::size_t str_end = ts_proto.child_frame_id().find('/');
-      new_object_names.insert(ts_proto.child_frame_id().substr(0, str_end));
+      const std::size_t str_end = child_frame_id.find('/');
+      new_object_names.insert(child_frame_id.substr(0, str_end));
     }
     // The auto-generated CDR types do not currently have assignment operators
     // or helper conversion functions from the corresponding protos, so we need
