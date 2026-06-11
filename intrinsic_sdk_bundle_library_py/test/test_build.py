@@ -69,7 +69,7 @@ class TestBuild(unittest.TestCase):
         args.skill_name = 'test_skill'
         args.skill_package = 'test_package'
         args.dockerfile = None
-        args.images_dir = './images'
+        args.bundle_dir = './intrinsic_asset_bundles'
         args.builder_name = 'test-builder'
         args.no_cache = False
         args.ros_distro = 'jazzy'
@@ -89,6 +89,12 @@ class TestBuild(unittest.TestCase):
             args_list = call[0][0]
             if 'docker' in args_list and 'buildx' in args_list and 'build' in args_list:
                 found_build = True
+                output_idx = args_list.index('--output')
+                output_val = args_list[output_idx + 1]
+                self.assertIn(
+                    'dest=./intrinsic_asset_bundles/test_skill/test_skill.tar',
+                    output_val
+                )
                 break
         self.assertTrue(found_build)
 
@@ -106,7 +112,7 @@ class TestBuild(unittest.TestCase):
         args.skill_name = 'test_skill'
         args.skill_package = 'test_package'
         args.manifest_path = 'manifest.textproto'
-        args.images_dir = './images'
+        args.bundle_dir = './intrinsic_asset_bundles'
         args.default_config = None
 
         mock_run_command.return_value = MagicMock()
@@ -119,6 +125,11 @@ class TestBuild(unittest.TestCase):
             args_list = call[0][0]
             if './inbuild' in args_list and 'skill' in args_list and 'bundle' in args_list:
                 found_bundle = True
+                output_idx = args_list.index('--output')
+                self.assertEqual(
+                    args_list[output_idx + 1],
+                    './intrinsic_asset_bundles/test_skill/test_skill.bundle.tar'
+                )
                 break
         self.assertTrue(found_bundle)
 
@@ -130,7 +141,7 @@ class TestBuild(unittest.TestCase):
         args.skill_name = None
         args.skill_package = None
         args.dockerfile = None
-        args.images_dir = './images'
+        args.bundle_dir = './intrinsic_asset_bundles'
         args.builder_name = 'test-builder'
         args.no_cache = False
         args.ros_distro = 'jazzy'
@@ -147,6 +158,12 @@ class TestBuild(unittest.TestCase):
             args_list = call[0][0]
             if 'docker' in args_list and 'buildx' in args_list and 'build' in args_list:
                 found_build = True
+                output_idx = args_list.index('--output')
+                output_val = args_list[output_idx + 1]
+                self.assertIn(
+                    'dest=./intrinsic_asset_bundles/test_service/test_service.tar',
+                    output_val
+                )
                 break
         self.assertTrue(found_build)
 
@@ -164,7 +181,7 @@ class TestBuild(unittest.TestCase):
         args.skill_name = None
         args.skill_package = None
         args.manifest_path = 'manifest.textproto'
-        args.images_dir = './images'
+        args.bundle_dir = './intrinsic_asset_bundles'
         args.default_config = None
 
         mock_run_command.return_value = MagicMock()
@@ -177,6 +194,11 @@ class TestBuild(unittest.TestCase):
             args_list = call[0][0]
             if './inbuild' in args_list and 'service' in args_list and 'bundle' in args_list:
                 found_bundle = True
+                output_idx = args_list.index('--output')
+                self.assertEqual(
+                    args_list[output_idx + 1],
+                    './intrinsic_asset_bundles/test_service/test_service.bundle.tar'
+                )
                 break
         self.assertTrue(found_bundle)
 

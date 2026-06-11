@@ -28,7 +28,7 @@ colcon bundle --packages-select <your_package_name>
 ```
 
 ### Options
-* `--images-dir <path>`: Directory to save generated container images and bundles (default: `./images`).
+* `--bundle-dir <path>`: Directory to save generated container images and bundles (default: `./intrinsic_asset_bundles`).
 * `--ros-distro <distro>`: The target ROS distro (default: `jazzy`).
 * `--no-cache`: Do not use cache when building container images.
 * `--builder-name <name>`: Custom Docker buildx builder name.
@@ -47,7 +47,7 @@ intrinsic_sdk_build container \
   --skill_package <package_name> \
   --skill_type <cpp|python>
 ```
-*Outputs: `./images/<skill_name>/<skill_name>.tar`*
+*Outputs: `./intrinsic_asset_bundles/<skill_name>/<skill_name>.tar`*
 
 ### 2. Build the Bundle
 Bundles the container image along with its manifest using the `inbuild` compiler:
@@ -57,7 +57,7 @@ intrinsic_sdk_build bundle \
   --skill_package <package_name> \
   --manifest_path <path_to_manifest>
 ```
-*Outputs: `./images/<skill_name>/<skill_name>.bundle.tar`*
+*Outputs: `./intrinsic_asset_bundles/<skill_name>/<skill_name>.bundle.tar`*
 
 ---
 

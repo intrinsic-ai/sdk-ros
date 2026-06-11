@@ -32,11 +32,11 @@ COMMON_ARGUMENTS = {
             'help': 'ROS distro to use (default: jazzy)'
         }
     },
-    'images_dir': {
-        'flags': ('--images-dir', '--images_dir'),
+    'bundle_dir': {
+        'flags': ('--bundle-dir', '--bundle_dir', '--images-dir', '--images_dir'),
         'kwargs': {
-            'default': './images',
-            'help': 'Directory to store images and bundles (default: ./images)'
+            'default': './intrinsic_asset_bundles',
+            'help': 'Directory to store built bundles (default: ./intrinsic_asset_bundles)'
         }
     },
     'builder_name': {
@@ -165,7 +165,11 @@ def build_container(args):
         return
 
     tag = f'{package}:{name}'
-    images_dir = args.images_dir or './images'
+    bundle_dir = (
+        getattr(args, 'bundle_dir', None)
+        or getattr(args, 'images_dir', None)
+        or './intrinsic_asset_bundles'
+    )
     dockerfile = os.path.realpath(dockerfile)
 
     # Ensure .dockerignore exists to avoid sending large directories to build context
@@ -190,7 +194,7 @@ def build_container(args):
         ])
         run_command(['docker', 'buildx', 'use', builder_name])
 
-    tar_dir = os.path.join(images_dir, name)
+    tar_dir = os.path.join(bundle_dir, name)
     os.makedirs(tar_dir, exist_ok=True)
     tar_path = os.path.join(tar_dir, f'{name}.tar')
 
@@ -263,8 +267,12 @@ def build_bundle(args):
         print('Error: Must specify --manifest_path.')
         return
 
-    images_dir = args.images_dir or './images'
-    tar_path = os.path.join(images_dir, name, f'{name}.tar')
+    bundle_dir = (
+        getattr(args, 'bundle_dir', None)
+        or getattr(args, 'images_dir', None)
+        or './intrinsic_asset_bundles'
+    )
+    tar_path = os.path.join(bundle_dir, name, f'{name}.tar')
 
     if not os.path.exists(tar_path):
         print(f'Error: Image tar not found at {tar_path}. Run build-container first.')
@@ -277,7 +285,7 @@ def build_bundle(args):
     container_name = f'temp_container_{name}'
     run_command(['podman', 'create', '--replace', '--name', container_name, f'{package}:{name}'])
 
-    desc_path = os.path.join(images_dir, name, f'{name}_protos.desc')
+    desc_path = os.path.join(bundle_dir, name, f'{name}_protos.desc')
     if args.service_name:
         paths_to_try = [
             f'/opt/ros/overlay/install/share/{package}/{name}_protos.desc',
@@ -326,7 +334,7 @@ def build_bundle(args):
         '--file_descriptor_set', desc_path,
         '--manifest', args.manifest_path,
         '--oci_image', tar_path,
-        '--output', os.path.join(images_dir, name, f'{name}.bundle.tar')
+        '--output', os.path.join(bundle_dir, name, f'{name}.bundle.tar')
     ])
 
     if args.default_config:
@@ -341,7 +349,7 @@ def main():
 
     # Build container parser
     parser_container = subparsers.add_parser('container', help='Build container')
-    add_common_argument(parser_container, 'images_dir')
+    add_common_argument(parser_container, 'bundle_dir')
     add_common_argument(parser_container, 'builder_name')
     parser_container.add_argument('--service_name')
     parser_container.add_argument('--service_package')
@@ -367,7 +375,7 @@ def main():
 
     # Build bundle parser
     parser_bundle = subparsers.add_parser('bundle', help='Build bundle')
-    add_common_argument(parser_bundle, 'images_dir')
+    add_common_argument(parser_bundle, 'bundle_dir')
     add_common_argument(
         parser_bundle, 'builder_name',
         help='Ignored, for backward compatibility with scripts'

@@ -29,7 +29,7 @@ class TestArguments(unittest.TestCase):
     def test_common_arguments_keys(self):
         expected_keys = {
             'ros_distro',
-            'images_dir',
+            'bundle_dir',
             'builder_name',
             'no_cache',
             'keep_builder',
@@ -53,21 +53,29 @@ class TestArguments(unittest.TestCase):
         args = parser.parse_args(['--ros_distro', 'iron'])
         self.assertEqual(args.ros_distro, 'iron')
 
-    def test_add_common_argument_images_dir(self):
+    def test_add_common_argument_bundle_dir(self):
         parser = argparse.ArgumentParser()
-        add_common_argument(parser, 'images_dir')
+        add_common_argument(parser, 'bundle_dir')
 
         # Test default
         args = parser.parse_args([])
-        self.assertEqual(args.images_dir, './images')
+        self.assertEqual(args.bundle_dir, './intrinsic_asset_bundles')
 
-        # Test dash flag
-        args = parser.parse_args(['--images-dir', '/tmp/foo'])
-        self.assertEqual(args.images_dir, '/tmp/foo')
+        # Test bundle dash flag
+        args = parser.parse_args(['--bundle-dir', '/tmp/foo'])
+        self.assertEqual(args.bundle_dir, '/tmp/foo')
 
-        # Test underscore flag
-        args = parser.parse_args(['--images_dir', '/tmp/bar'])
-        self.assertEqual(args.images_dir, '/tmp/bar')
+        # Test bundle underscore flag
+        args = parser.parse_args(['--bundle_dir', '/tmp/bar'])
+        self.assertEqual(args.bundle_dir, '/tmp/bar')
+
+        # Test legacy images dash flag
+        args = parser.parse_args(['--images-dir', '/tmp/baz'])
+        self.assertEqual(args.bundle_dir, '/tmp/baz')
+
+        # Test legacy images underscore flag
+        args = parser.parse_args(['--images_dir', '/tmp/qux'])
+        self.assertEqual(args.bundle_dir, '/tmp/qux')
 
     def test_add_common_argument_builder_name(self):
         parser = argparse.ArgumentParser()

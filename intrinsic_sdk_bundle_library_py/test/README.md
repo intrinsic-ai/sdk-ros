@@ -125,7 +125,7 @@ Once you have built the bundle, you can install and verify it on the platform.
 ### Python Skill
 To install the Python skill bundle:
 ```bash
-inctl skill install images/test_python_skill/test_python_skill.bundle.tar \
+inctl skill install intrinsic_asset_bundles/test_python_skill/test_python_skill.bundle.tar \
   --org=<YOUR_ORGANIZATION> \
   --solution=<YOUR_SOLUTION_ID>
 ```
@@ -139,7 +139,7 @@ To verify that it works correctly, check the skill logs for:
 ### C++ Skill
 To install the C++ skill bundle:
 ```bash
-inctl skill install images/test_cpp_skill/test_cpp_skill.bundle.tar \
+inctl skill install intrinsic_asset_bundles/test_cpp_skill/test_cpp_skill.bundle.tar \
   --org=<YOUR_ORGANIZATION> \
   --solution=<YOUR_SOLUTION_ID>
 ```
@@ -150,7 +150,7 @@ To verify that it works correctly, check the skill logs for:
 ### Python Service
 To install the Python service bundle:
 ```bash
-inctl asset install images/test_python_service/test_python_service.bundle.tar \
+inctl asset install intrinsic_asset_bundles/test_python_service/test_python_service.bundle.tar \
   --org=<YOUR_ORGANIZATION> \
   --solution=<YOUR_SOLUTION_ID>
 ```
@@ -164,7 +164,7 @@ To verify that it works correctly:
 ### C++ Service
 To install the C++ service bundle:
 ```bash
-inctl asset install images/test_cpp_service/test_cpp_service.bundle.tar \
+inctl asset install intrinsic_asset_bundles/test_cpp_service/test_cpp_service.bundle.tar \
   --org=<YOUR_ORGANIZATION> \
   --solution=<YOUR_SOLUTION_ID>
 ```

@@ -113,7 +113,7 @@ class TestColconVerb(unittest.TestCase):
         mock_context = MagicMock()
         mock_context.args = argparse.Namespace(
             ros_distro='jazzy',
-            images_dir='./images',
+            bundle_dir='./intrinsic_asset_bundles',
             builder_name='container-builder',
             no_cache=False,
             keep_builder=False,

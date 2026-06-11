@@ -41,7 +41,7 @@ class BundleVerb(VerbExtensionPoint):
 
         # Verb-specific arguments
         add_common_argument(parser, 'ros_distro')
-        add_common_argument(parser, 'images_dir')
+        add_common_argument(parser, 'bundle_dir')
         add_common_argument(parser, 'builder_name')
         add_common_argument(parser, 'no_cache')
         add_common_argument(parser, 'keep_builder')
@@ -108,7 +108,7 @@ class BundleVerb(VerbExtensionPoint):
             # Construct arguments for build_container
             container_args = argparse.Namespace(
                 command='container',
-                images_dir=args.images_dir,
+                images_dir=args.bundle_dir,
                 builder_name=args.builder_name,
                 ros_distro=args.ros_distro,
                 no_cache=args.no_cache,
@@ -141,7 +141,7 @@ class BundleVerb(VerbExtensionPoint):
             # Construct arguments for build_bundle
             bundle_args = argparse.Namespace(
                 command='bundle',
-                images_dir=args.images_dir,
+                images_dir=args.bundle_dir,
                 builder_name=args.builder_name,  # Ignored
 
                 skill_name=None if pkg['is_service'] else pkg['name'],
