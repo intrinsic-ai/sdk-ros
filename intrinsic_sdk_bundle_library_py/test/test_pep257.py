@@ -19,5 +19,10 @@ import pytest
 @pytest.mark.linter
 @pytest.mark.pep257
 def test_pep257():
-    rc = main(argv=['intrinsic_sdk_bundle_library_py', 'test/test_build.py', 'test/test_colcon_verb.py'])
+    rc = main(argv=[
+        'intrinsic_sdk_bundle_library_py',
+        'test/test_arguments.py',
+        'test/test_build.py',
+        'test/test_colcon_verb.py',
+    ])
     assert rc == 0, 'Found code style errors / warnings'

@@ -21,7 +21,11 @@ from colcon_core.package_selection import get_packages
 from colcon_core.plugin_system import satisfies_version
 from colcon_core.verb import VerbExtensionPoint
 
-from intrinsic_sdk_bundle_library_py.build import build_bundle, build_container
+from intrinsic_sdk_bundle_library_py.build import (
+    add_common_argument,
+    build_bundle,
+    build_container,
+)
 
 
 class BundleVerb(VerbExtensionPoint):
@@ -36,27 +40,12 @@ class BundleVerb(VerbExtensionPoint):
         add_package_selection_arguments(parser)
 
         # Verb-specific arguments
-        parser.add_argument(
-            '--ros-distro', default='jazzy',
-            help='ROS distro to use (default: jazzy)'
-        )
-        parser.add_argument(
-            '--images-dir', default='./images',
-            help='Directory to store images and bundles (default: ./images)'
-        )
-        parser.add_argument(
-            '--builder-name', default='container-builder',
-            help='Name of the buildx builder to use'
-        )
-        parser.add_argument(
-            '--no-cache', action='store_true',
-            help='Do not use cache when building the image'
-        )
-        parser.add_argument(
-            '--keep-builder', action='store_true',
-            help='Do not stop the buildx builder after build'
-        )
-        parser.add_argument('--default-config', help='Default configuration file for the bundle')
+        add_common_argument(parser, 'ros_distro')
+        add_common_argument(parser, 'images_dir')
+        add_common_argument(parser, 'builder_name')
+        add_common_argument(parser, 'no_cache')
+        add_common_argument(parser, 'keep_builder')
+        add_common_argument(parser, 'default_config')
 
     def main(self, *, context):
         args = context.args

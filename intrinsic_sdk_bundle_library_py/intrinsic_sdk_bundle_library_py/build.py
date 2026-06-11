@@ -23,6 +23,59 @@ import urllib.request
 
 from ament_index_python.packages import get_package_share_directory
 
+# Shared argument definitions for command-line parser and colcon verb
+COMMON_ARGUMENTS = {
+    'ros_distro': {
+        'flags': ('--ros-distro', '--ros_distro'),
+        'kwargs': {
+            'default': 'jazzy',
+            'help': 'ROS distro to use (default: jazzy)'
+        }
+    },
+    'images_dir': {
+        'flags': ('--images-dir', '--images_dir'),
+        'kwargs': {
+            'default': './images',
+            'help': 'Directory to store images and bundles (default: ./images)'
+        }
+    },
+    'builder_name': {
+        'flags': ('--builder-name', '--builder_name'),
+        'kwargs': {
+            'default': 'container-builder',
+            'help': 'Name of the buildx builder to use'
+        }
+    },
+    'no_cache': {
+        'flags': ('--no-cache',),
+        'kwargs': {
+            'action': 'store_true',
+            'help': 'Do not use cache when building the image'
+        }
+    },
+    'keep_builder': {
+        'flags': ('--keep-builder',),
+        'kwargs': {
+            'action': 'store_true',
+            'help': 'Do not stop the buildx builder after build'
+        }
+    },
+    'default_config': {
+        'flags': ('--default-config', '--default_config'),
+        'kwargs': {
+            'help': 'Default configuration file for the bundle'
+        }
+    }
+}
+
+
+def add_common_argument(parser, name, **kwargs_overrides):
+    """Add a common argument to the parser, with optional overrides."""
+    spec = COMMON_ARGUMENTS[name]
+    kwargs = spec['kwargs'].copy()
+    kwargs.update(kwargs_overrides)
+    parser.add_argument(*spec['flags'], **kwargs)
+
 
 def run_command(cmd, check=True):
     assert isinstance(cmd, list), 'cmd must be a list'
@@ -288,27 +341,21 @@ def main():
 
     # Build container parser
     parser_container = subparsers.add_parser('container', help='Build container')
-    parser_container.add_argument('--images_dir', default='./images')
-    parser_container.add_argument('--builder_name', default='container-builder')
+    add_common_argument(parser_container, 'images_dir')
+    add_common_argument(parser_container, 'builder_name')
     parser_container.add_argument('--service_name')
     parser_container.add_argument('--service_package')
     parser_container.add_argument('--skill_name')
     parser_container.add_argument('--skill_package')
     parser_container.add_argument('--dockerfile')
     parser_container.add_argument('--dependencies')
-    parser_container.add_argument('--ros_distro', default='jazzy')
+    add_common_argument(parser_container, 'ros_distro')
     parser_container.add_argument('--skill_executable')
     parser_container.add_argument('--skill_config')
     parser_container.add_argument('--skill_asset_id_org')
     parser_container.add_argument('--skill_type', choices=['cpp', 'python'], default='cpp')
-    parser_container.add_argument(
-        '--no-cache', action='store_true',
-        help='Do not use cache when building the image'
-    )
-    parser_container.add_argument(
-        '--keep-builder', action='store_true',
-        help='Do not stop the buildx builder after build'
-    )
+    add_common_argument(parser_container, 'no_cache')
+    add_common_argument(parser_container, 'keep_builder')
     parser_container.add_argument(
         '--source-dir',
         help='Override SOURCE_DIR build arg in service.Dockerfile'
@@ -320,9 +367,9 @@ def main():
 
     # Build bundle parser
     parser_bundle = subparsers.add_parser('bundle', help='Build bundle')
-    parser_bundle.add_argument('--images_dir', default='./images')
-    parser_bundle.add_argument(
-        '--builder_name', default='container-builder',
+    add_common_argument(parser_bundle, 'images_dir')
+    add_common_argument(
+        parser_bundle, 'builder_name',
         help='Ignored, for backward compatibility with scripts'
     )
     parser_bundle.add_argument('--service_name')
@@ -330,7 +377,7 @@ def main():
     parser_bundle.add_argument('--skill_name')
     parser_bundle.add_argument('--skill_package')
     parser_bundle.add_argument('--manifest_path', required=True)
-    parser_bundle.add_argument('--default_config')
+    add_common_argument(parser_bundle, 'default_config')
 
     args = parser.parse_args()
 
