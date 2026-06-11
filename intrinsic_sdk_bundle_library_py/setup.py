@@ -49,7 +49,7 @@ setup(
             'intrinsic_sdk_build = intrinsic_sdk_bundle_library_py.build:main',
         ],
         'colcon_core.verb': [
-            'bundle = intrinsic_sdk_bundle_library_py.colcon_verb:BundleVerb',
+            'intrinsic_bundle = intrinsic_sdk_bundle_library_py.colcon_verb:BundleVerb',
         ],
     },
 )

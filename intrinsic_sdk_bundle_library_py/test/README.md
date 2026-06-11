@@ -31,7 +31,7 @@ To test building and bundling the Python skill:
 
 **Using the Colcon Extension (Recommended):**
 ```bash
-colcon bundle --packages-select test_python_skill
+colcon intrinsic_bundle --packages-select test_python_skill
 ```
 
 **Using the Standalone CLI (Manual):**
@@ -54,7 +54,7 @@ To test building and bundling the C++ skill:
 
 **Using the Colcon Extension (Recommended):**
 ```bash
-colcon bundle --packages-select test_cpp_skill
+colcon intrinsic_bundle --packages-select test_cpp_skill
 ```
 
 **Using the Standalone CLI (Manual):**
@@ -77,7 +77,7 @@ To test building and bundling the Python service:
 
 **Using the Colcon Extension (Recommended):**
 ```bash
-colcon bundle --packages-select test_python_service
+colcon intrinsic_bundle --packages-select test_python_service
 ```
 
 **Using the Standalone CLI (Manual):**
@@ -100,7 +100,7 @@ To test building and bundling the C++ service:
 
 **Using the Colcon Extension (Recommended):**
 ```bash
-colcon bundle --packages-select test_cpp_service
+colcon intrinsic_bundle --packages-select test_cpp_service
 ```
 
 **Using the Standalone CLI (Manual):**

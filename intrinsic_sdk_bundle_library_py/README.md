@@ -19,12 +19,12 @@ This package provides Python utilities, a CLI tool, and a `colcon` verb extensio
 
 ## Usage Case 1: Colcon Extension (Recommended)
 
-The `colcon bundle` command automatically scans your workspace, discovers packages containing manifests (`*.manifest.textproto`), determines package types, and handles both building and bundling in a single command.
+The `colcon intrinsic_bundle` command automatically scans your workspace, discovers packages containing manifests (`*.manifest.textproto`), determines package types, and handles both building and bundling in a single command.
 
 ### Run Bundling
 To build and bundle a specific package:
 ```bash
-colcon bundle --packages-select <your_package_name>
+colcon intrinsic_bundle --packages-select <your_package_name>
 ```
 
 ### Options
