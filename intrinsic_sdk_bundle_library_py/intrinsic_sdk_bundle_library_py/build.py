@@ -16,15 +16,69 @@ import argparse
 import json
 import os
 import platform
+import shutil
 import subprocess
 import sys
 import urllib.request
 
 from ament_index_python.packages import get_package_share_directory
 
+# Shared argument definitions for command-line parser and colcon verb
+COMMON_ARGUMENTS = {
+    'ros_distro': {
+        'flags': ('--ros-distro', '--ros_distro'),
+        'kwargs': {
+            'default': 'jazzy',
+            'help': 'ROS distro to use (default: jazzy)'
+        }
+    },
+    'bundle_dir': {
+        'flags': ('--bundle-dir', '--bundle_dir', '--images-dir', '--images_dir'),
+        'kwargs': {
+            'default': './intrinsic_asset_bundles',
+            'help': 'Directory to store built bundles (default: ./intrinsic_asset_bundles)'
+        }
+    },
+    'builder_name': {
+        'flags': ('--builder-name', '--builder_name'),
+        'kwargs': {
+            'default': 'container-builder',
+            'help': 'Name of the buildx builder to use'
+        }
+    },
+    'no_cache': {
+        'flags': ('--no-cache',),
+        'kwargs': {
+            'action': 'store_true',
+            'help': 'Do not use cache when building the image'
+        }
+    },
+    'keep_builder': {
+        'flags': ('--keep-builder',),
+        'kwargs': {
+            'action': 'store_true',
+            'help': 'Do not stop the buildx builder after build'
+        }
+    },
+    'default_config': {
+        'flags': ('--default-config', '--default_config'),
+        'kwargs': {
+            'help': 'Default configuration file for the bundle'
+        }
+    }
+}
+
+
+def add_common_argument(parser, name, **kwargs_overrides):
+    """Add a common argument to the parser, with optional overrides."""
+    spec = COMMON_ARGUMENTS[name]
+    kwargs = spec['kwargs'].copy()
+    kwargs.update(kwargs_overrides)
+    parser.add_argument(*spec['flags'], **kwargs)
+
 
 def run_command(cmd, check=True):
-    assert isinstance(cmd, list), "cmd must be a list"
+    assert isinstance(cmd, list), 'cmd must be a list'
     print(f"Running: {' '.join(cmd)}")
     return subprocess.run(cmd, check=check)
 
@@ -43,6 +97,12 @@ def get_sdk_version():
 
 
 def download_inbuild(sdk_version, dest_dir='.'):
+    # Map specific SDK versions to patch releases if binaries were not uploaded for the base tag
+    version_mapping = {
+        'v1.31.20260427': 'v1.31.20260427.1'
+    }
+    download_version = version_mapping.get(sdk_version, sdk_version)
+
     system = platform.system().lower()
     machine = platform.machine().lower()
 
@@ -63,7 +123,10 @@ def download_inbuild(sdk_version, dest_dir='.'):
     inbuild_path = os.path.join(dest_dir, 'inbuild' + ext)
 
     if not os.path.exists(inbuild_path):
-        url = f'https://github.com/intrinsic-ai/sdk/releases/download/{sdk_version}/{binary_name}'
+        url = (
+            f'https://github.com/intrinsic-ai/sdk/releases/download/'
+            f'{download_version}/{binary_name}'
+        )
         print(f'Downloading inbuild from {url} to {inbuild_path}...')
         try:
             urllib.request.urlretrieve(url, inbuild_path)
@@ -102,7 +165,12 @@ def build_container(args):
         return
 
     tag = f'{package}:{name}'
-    images_dir = args.images_dir or './images'
+    bundle_dir = (
+        getattr(args, 'bundle_dir', None)
+        or getattr(args, 'images_dir', None)
+        or './intrinsic_asset_bundles'
+    )
+    dockerfile = os.path.realpath(dockerfile)
 
     # Ensure .dockerignore exists to avoid sending large directories to build context
     dockerignore_path = '.dockerignore'
@@ -119,11 +187,14 @@ def build_container(args):
     try:
         run_command(['docker', 'buildx', 'inspect', '--builder', builder_name])
     except Exception:
-        print(f"Builder {builder_name} not found. Creating it...")
-        run_command(['docker', 'buildx', 'create', '--name', builder_name, '--driver', 'docker-container'])
+        print(f'Builder {builder_name} not found. Creating it...')
+        run_command([
+            'docker', 'buildx', 'create', '--name', builder_name,
+            '--driver', 'docker-container'
+        ])
         run_command(['docker', 'buildx', 'use', builder_name])
 
-    tar_dir = os.path.join(images_dir, name)
+    tar_dir = os.path.join(bundle_dir, name)
     os.makedirs(tar_dir, exist_ok=True)
     tar_path = os.path.join(tar_dir, f'{name}.tar')
 
@@ -135,11 +206,11 @@ def build_container(args):
 
         # Output flag
         output_arg = (
-            f"type=docker,"
-            f"dest={tar_path},"
-            f"compression=zstd,"
-            f"push=false,"
-            f"name={tag}"
+            f'type=docker,'
+            f'dest={tar_path},'
+            f'compression=zstd,'
+            f'push=false,'
+            f'name={tag}'
         )
         cmd.extend(['--output', output_arg])
 
@@ -196,8 +267,12 @@ def build_bundle(args):
         print('Error: Must specify --manifest_path.')
         return
 
-    images_dir = args.images_dir or './images'
-    tar_path = os.path.join(images_dir, name, f'{name}.tar')
+    bundle_dir = (
+        getattr(args, 'bundle_dir', None)
+        or getattr(args, 'images_dir', None)
+        or './intrinsic_asset_bundles'
+    )
+    tar_path = os.path.join(bundle_dir, name, f'{name}.tar')
 
     if not os.path.exists(tar_path):
         print(f'Error: Image tar not found at {tar_path}. Run build-container first.')
@@ -210,7 +285,7 @@ def build_bundle(args):
     container_name = f'temp_container_{name}'
     run_command(['podman', 'create', '--replace', '--name', container_name, f'{package}:{name}'])
 
-    desc_path = os.path.join(images_dir, name, f'{name}_protos.desc')
+    desc_path = os.path.join(bundle_dir, name, f'{name}_protos.desc')
     if args.service_name:
         paths_to_try = [
             f'/opt/ros/overlay/install/share/{package}/{name}_protos.desc',
@@ -223,10 +298,13 @@ def build_bundle(args):
                 success = True
                 break
             except subprocess.CalledProcessError:
-                print(f"Failed to copy from {src_path}, trying next path...")
+                print(f'Failed to copy from {src_path}, trying next path...')
                 continue
         if not success:
-            raise subprocess.CalledProcessError(1, f"Failed to copy descriptor file from any of the expected paths.")
+            raise subprocess.CalledProcessError(
+                1,
+                'Failed to copy descriptor file from any of the expected paths.'
+            )
 
     else:
         src_path = f'/opt/{name}_workspace/install/share/{package}/{name}_protos.desc'
@@ -234,13 +312,16 @@ def build_bundle(args):
 
     run_command(['podman', 'rm', '-f', container_name])
 
-    # Get SDK version and download inbuild
-    sdk_version = get_sdk_version()
-    if not sdk_version:
-        print('Error: Could not determine SDK version.')
-        return
+    # Check if inbuild is in PATH or current directory
+    inbuild_path = shutil.which('inbuild') or './inbuild'
 
-    inbuild_path = download_inbuild(sdk_version)
+    if inbuild_path == './inbuild' and not os.path.exists('./inbuild'):
+        sdk_version = get_sdk_version()
+        if not sdk_version:
+            print('Error: Could not determine SDK version.')
+            return
+
+        inbuild_path = download_inbuild(sdk_version)
 
     # Build bundle
     inbuild_cmd = [inbuild_path]
@@ -253,16 +334,13 @@ def build_bundle(args):
         '--file_descriptor_set', desc_path,
         '--manifest', args.manifest_path,
         '--oci_image', tar_path,
-        '--output', os.path.join(images_dir, name, f'{name}.bundle.tar')
+        '--output', os.path.join(bundle_dir, name, f'{name}.bundle.tar')
     ])
 
     if args.default_config:
         inbuild_cmd.extend(['--default_config', args.default_config])
 
     run_command(inbuild_cmd)
-
-    bundle_path = os.path.join(images_dir, name, f'{name}.bundle.tar')
-
 
 
 def main():
@@ -271,34 +349,43 @@ def main():
 
     # Build container parser
     parser_container = subparsers.add_parser('container', help='Build container')
-    parser_container.add_argument('--images_dir', default='./images')
-    parser_container.add_argument('--builder_name', default='container-builder')
+    add_common_argument(parser_container, 'bundle_dir')
+    add_common_argument(parser_container, 'builder_name')
     parser_container.add_argument('--service_name')
     parser_container.add_argument('--service_package')
     parser_container.add_argument('--skill_name')
     parser_container.add_argument('--skill_package')
     parser_container.add_argument('--dockerfile')
     parser_container.add_argument('--dependencies')
-    parser_container.add_argument('--ros_distro', default='jazzy')
+    add_common_argument(parser_container, 'ros_distro')
     parser_container.add_argument('--skill_executable')
     parser_container.add_argument('--skill_config')
     parser_container.add_argument('--skill_asset_id_org')
     parser_container.add_argument('--skill_type', choices=['cpp', 'python'], default='cpp')
-    parser_container.add_argument('--no-cache', action='store_true', help='Do not use cache when building the image')
-    parser_container.add_argument('--keep-builder', action='store_true', help='Do not stop the buildx builder after build')
-    parser_container.add_argument('--source-dir', help='Override SOURCE_DIR build arg in service.Dockerfile')
-    parser_container.add_argument('--overlay-source', help='Override OVERLAY_SOURCE build arg in service.Dockerfile')
+    add_common_argument(parser_container, 'no_cache')
+    add_common_argument(parser_container, 'keep_builder')
+    parser_container.add_argument(
+        '--source-dir',
+        help='Override SOURCE_DIR build arg in service.Dockerfile'
+    )
+    parser_container.add_argument(
+        '--overlay-source',
+        help='Override OVERLAY_SOURCE build arg in service.Dockerfile'
+    )
 
     # Build bundle parser
     parser_bundle = subparsers.add_parser('bundle', help='Build bundle')
-    parser_bundle.add_argument('--images_dir', default='./images')
-    parser_bundle.add_argument('--builder_name', default='container-builder', help='Ignored, for backward compatibility with scripts')
+    add_common_argument(parser_bundle, 'bundle_dir')
+    add_common_argument(
+        parser_bundle, 'builder_name',
+        help='Ignored, for backward compatibility with scripts'
+    )
     parser_bundle.add_argument('--service_name')
     parser_bundle.add_argument('--service_package')
     parser_bundle.add_argument('--skill_name')
     parser_bundle.add_argument('--skill_package')
     parser_bundle.add_argument('--manifest_path', required=True)
-    parser_bundle.add_argument('--default_config')
+    add_common_argument(parser_bundle, 'default_config')
 
     args = parser.parse_args()
 

@@ -24,8 +24,17 @@ pytest test/test_build.py
 ## 2. Functional Tests
 To verify that the build and bundle workflow works correctly for both C++ and Python, we use test skills and services located in the [functional_tests](./functional_tests) directory.
 
+Ensure you have sourced your workspace (`source install/setup.bash`) before running these tests.
+
 ### Python Skill Test
-To test building and bundling a Python skill:
+To test building and bundling the Python skill:
+
+**Using the Colcon Extension (Recommended):**
+```bash
+colcon intrinsic_bundle --packages-select test_python_skill
+```
+
+**Using the Standalone CLI (Manual):**
 ```bash
 # 1. Build container (OCI image)
 python3 src/sdk-ros/intrinsic_sdk_bundle_library_py/intrinsic_sdk_bundle_library_py/build.py container \
@@ -41,7 +50,14 @@ python3 src/sdk-ros/intrinsic_sdk_bundle_library_py/intrinsic_sdk_bundle_library
 ```
 
 ### C++ Skill Test
-To test building and bundling a C++ skill:
+To test building and bundling the C++ skill:
+
+**Using the Colcon Extension (Recommended):**
+```bash
+colcon intrinsic_bundle --packages-select test_cpp_skill
+```
+
+**Using the Standalone CLI (Manual):**
 ```bash
 # 1. Build container
 python3 src/sdk-ros/intrinsic_sdk_bundle_library_py/intrinsic_sdk_bundle_library_py/build.py container \
@@ -57,7 +73,14 @@ python3 src/sdk-ros/intrinsic_sdk_bundle_library_py/intrinsic_sdk_bundle_library
 ```
 
 ### Python Service Test
-To test building and bundling a Python service:
+To test building and bundling the Python service:
+
+**Using the Colcon Extension (Recommended):**
+```bash
+colcon intrinsic_bundle --packages-select test_python_service
+```
+
+**Using the Standalone CLI (Manual):**
 ```bash
 # 1. Build container
 python3 src/sdk-ros/intrinsic_sdk_bundle_library_py/intrinsic_sdk_bundle_library_py/build.py container \
@@ -72,9 +95,15 @@ python3 src/sdk-ros/intrinsic_sdk_bundle_library_py/intrinsic_sdk_bundle_library
   --default_config src/sdk-ros/intrinsic_sdk_bundle_library_py/test/functional_tests/test_python_service/test_python_service_default_config.pbtxt
 ```
 
-
 ### C++ Service Test
-To test building and bundling a C++ service:
+To test building and bundling the C++ service:
+
+**Using the Colcon Extension (Recommended):**
+```bash
+colcon intrinsic_bundle --packages-select test_cpp_service
+```
+
+**Using the Standalone CLI (Manual):**
 ```bash
 # 1. Build container
 python3 src/sdk-ros/intrinsic_sdk_bundle_library_py/intrinsic_sdk_bundle_library_py/build.py container \
@@ -96,7 +125,7 @@ Once you have built the bundle, you can install and verify it on the platform.
 ### Python Skill
 To install the Python skill bundle:
 ```bash
-inctl skill install images/test_python_skill/test_python_skill.bundle.tar \
+inctl skill install intrinsic_asset_bundles/test_python_skill/test_python_skill.bundle.tar \
   --org=<YOUR_ORGANIZATION> \
   --solution=<YOUR_SOLUTION_ID>
 ```
@@ -110,7 +139,7 @@ To verify that it works correctly, check the skill logs for:
 ### C++ Skill
 To install the C++ skill bundle:
 ```bash
-inctl skill install images/test_cpp_skill/test_cpp_skill.bundle.tar \
+inctl skill install intrinsic_asset_bundles/test_cpp_skill/test_cpp_skill.bundle.tar \
   --org=<YOUR_ORGANIZATION> \
   --solution=<YOUR_SOLUTION_ID>
 ```
@@ -121,7 +150,7 @@ To verify that it works correctly, check the skill logs for:
 ### Python Service
 To install the Python service bundle:
 ```bash
-inctl asset install images/test_python_service/test_python_service.bundle.tar \
+inctl asset install intrinsic_asset_bundles/test_python_service/test_python_service.bundle.tar \
   --org=<YOUR_ORGANIZATION> \
   --solution=<YOUR_SOLUTION_ID>
 ```
@@ -135,7 +164,7 @@ To verify that it works correctly:
 ### C++ Service
 To install the C++ service bundle:
 ```bash
-inctl asset install images/test_cpp_service/test_cpp_service.bundle.tar \
+inctl asset install intrinsic_asset_bundles/test_cpp_service/test_cpp_service.bundle.tar \
   --org=<YOUR_ORGANIZATION> \
   --solution=<YOUR_SOLUTION_ID>
 ```
