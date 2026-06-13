@@ -30,6 +30,7 @@ Source ROS and build the SDK.
 ```bash
 source /opt/ros/jazzy/setup.bash
 cd ~/intrinsic_ws/
+rosdep install -iry --from-paths src
 colcon build \
   --cmake-args -DCMAKE_BUILD_TYPE=Release \
   --event-handlers=console_direct+

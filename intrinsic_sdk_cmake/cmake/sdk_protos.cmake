@@ -56,7 +56,28 @@ foreach(file_to_remove IN LISTS exclude_SRCS)
   list(REMOVE_ITEM intrinsic_proto_SRCS ${intrinsic_sdk_SOURCE_DIR}/${file_to_remove})
 endforeach()
 
-set(grpc_SOURCE_DIR "${gRPC_DIR}/../../../share/grpc-proto")
+# Note [Copy-pasted health.proto dependency]:
+# The C++ libgrpc package (e.g. from conda-forge) packages C++ headers and libraries
+# but does not distribute the raw .proto files (like health.proto) or their generated C++
+# client stubs (health.pb.h, health.grpc.pb.h). However, the upstream Intrinsic SDK code
+# (in intrinsic/connect/cc/grpc/channel.cc) directly includes these stubs to perform client-side
+# health checks.
+#
+# Because the conda package is a pre-compiled binary distribution and does not include the gRPC
+# source code, we copy-pasted `health.proto` to `third_party/src/proto/grpc/health/v1/health.proto`
+# in order to generate the required C++ headers locally during the build.
+#
+# This mimics how upstream gRPC examples compile these stubs locally from the gRPC source tree.
+# See: https://github.com/grpc/grpc/blob/0a8376ecfc0aa1e56a8b77ab29852c3c14b81243/examples/cpp/health/CMakeLists.txt#L26-L60
+#
+# This copy-pasted dependency can be removed if:
+# 1. Upstream Intrinsic SDK transitions away from needing custom compiled health stubs (e.g., by
+#    dynamically calling gRPC or using reflection/generic stubs), or
+# 2. The gRPC packaging (e.g. conda-forge) starts distributing
+#    public health proto files or pre-compiled C++ health client stubs.
+#
+# Tracked in GitHub issue: https://github.com/grpc/grpc/issues/42619
+set(grpc_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/third_party")
 
 # Prepare additional proto dependencies.
 set(grpc_SRCS
@@ -142,27 +163,39 @@ set_property(TARGET intrinsic_sdk_services PROPERTY POSITION_INDEPENDENT_CODE ON
 # Generate Python code from the protos.
 # Use the protoc from the grpcio-tools Python package to generate _pb2.py and _pb2_grpc.py files.
 set(venv_dir "${CMAKE_CURRENT_BINARY_DIR}/grpc_venv")
-if(NOT EXISTS "${venv_dir}")
-  execute_process(
-    COMMAND "${Python3_EXECUTABLE}" -m venv "${venv_dir}"
-    WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}"
-    RESULT_VARIABLE VENV_CREATE_RESULT
-    OUTPUT_VARIABLE VENV_CREATE_OUTPUT
-    ERROR_VARIABLE VENV_CREATE_ERROR
-  )
-  if(NOT VENV_CREATE_RESULT EQUAL 0)
-    message(FATAL_ERROR "Failed to create virtual environment: ${VENV_CREATE_ERROR}")
-  endif()
+set(protoc_executable "${venv_dir}/bin/python3")
 
-  execute_process(
-    COMMAND "${venv_dir}/bin/pip" install -U grpcio-tools==1.74
-    WORKING_DIRECTORY "${venv_dir}"
-    RESULT_VARIABLE PIP_INSTALL_RESULT
-    OUTPUT_VARIABLE PIP_INSTALL_OUTPUT
-    ERROR_VARIABLE PIP_INSTALL_ERROR
-  )
-  if(NOT PIP_INSTALL_RESULT EQUAL 0)
-    message(FATAL_ERROR "Failed to install Python dependencies: ${PIP_INSTALL_ERROR}")
+execute_process(
+  COMMAND "${Python3_EXECUTABLE}" -c "import grpc_tools"
+  RESULT_VARIABLE GRPC_TOOLS_CHECK_RESULT
+)
+
+if(GRPC_TOOLS_CHECK_RESULT EQUAL 0)
+  message(STATUS "Found grpc_tools in environment, skipping venv creation.")
+  set(protoc_executable "${Python3_EXECUTABLE}")
+else()
+  if(NOT EXISTS "${venv_dir}")
+    execute_process(
+      COMMAND "${Python3_EXECUTABLE}" -m venv "${venv_dir}"
+      WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}"
+      RESULT_VARIABLE VENV_CREATE_RESULT
+      OUTPUT_VARIABLE VENV_CREATE_OUTPUT
+      ERROR_VARIABLE VENV_CREATE_ERROR
+    )
+    if(NOT VENV_CREATE_RESULT EQUAL 0)
+      message(FATAL_ERROR "Failed to create virtual environment: ${VENV_CREATE_ERROR}")
+    endif()
+
+    execute_process(
+      COMMAND "${venv_dir}/bin/pip" install -U grpcio-tools==1.74
+      WORKING_DIRECTORY "${venv_dir}"
+      RESULT_VARIABLE PIP_INSTALL_RESULT
+      OUTPUT_VARIABLE PIP_INSTALL_OUTPUT
+      ERROR_VARIABLE PIP_INSTALL_ERROR
+    )
+    if(NOT PIP_INSTALL_RESULT EQUAL 0)
+      message(FATAL_ERROR "Failed to install Python dependencies: ${PIP_INSTALL_ERROR}")
+    endif()
   endif()
 endif()
 set(protoc_include_flags)
@@ -207,7 +240,7 @@ foreach(sdk_proto ${sdk_protos})
     OUTPUT ${_proto_generated_files}
     DEPENDS "${sdk_proto}"
     COMMAND
-      "${venv_dir}/bin/python3"
+      "${protoc_executable}"
       -m grpc_tools.protoc
       ${protoc_include_flags}
       --python_out="${CMAKE_CURRENT_BINARY_DIR}/protos_gen_py"

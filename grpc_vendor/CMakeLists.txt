@@ -9,15 +9,30 @@ endif()
 
 find_package(ament_cmake REQUIRED)
 find_package(ament_cmake_vendor_package REQUIRED)
-find_package(abseil_cpp_vendor REQUIRED)
-find_package(Protobuf REQUIRED)
-find_package(re2_vendor REQUIRED)
-find_package(re2 REQUIRED)
+
+set(grpc_satisfied_by_system FALSE)
+find_package(gRPC QUIET)
+if(gRPC_FOUND)
+  message(STATUS "Found gRPC, skipping build.")
+  set(grpc_satisfied_by_system TRUE)
+else()
+  message(STATUS "gRPC not found, building.")
+  set(grpc_satisfied_by_system FALSE)
+endif()
+
+if(NOT grpc_satisfied_by_system)
+  find_package(abseil_cpp_vendor REQUIRED)
+  find_package(Protobuf REQUIRED)
+  find_package(re2_vendor REQUIRED)
+  find_package(re2 REQUIRED)
+endif()
 
 ament_vendor(grpc_vendor
   VCS_URL https://github.com/grpc/grpc
   VCS_VERSION v1.74.0
+  SATISFIED ${grpc_satisfied_by_system}
   CMAKE_ARGS
+
     -DCMAKE_CXX_STANDARD=${CMAKE_CXX_STANDARD}
     -DABSL_BUILD_TESTING:BOOL=OFF
     -DABSL_ENABLE_INSTALL:BOOL=ON

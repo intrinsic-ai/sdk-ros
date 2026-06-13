@@ -9,8 +9,21 @@ endif()
 
 find_package(ament_cmake REQUIRED)
 find_package(ament_cmake_vendor_package REQUIRED)
-find_package(abseil_cpp_vendor REQUIRED)
-find_package(prometheus_cpp_vendor REQUIRED)
+
+set(opencensus_satisfied_by_system FALSE)
+find_package(OpenCensus QUIET)
+if(OpenCensus_FOUND)
+  message(STATUS "Found OpenCensus, skipping build.")
+  set(opencensus_satisfied_by_system TRUE)
+else()
+  message(STATUS "OpenCensus not found, building.")
+  set(opencensus_satisfied_by_system FALSE)
+endif()
+
+if(NOT opencensus_satisfied_by_system)
+  find_package(abseil_cpp_vendor REQUIRED)
+  find_package(prometheus_cpp_vendor REQUIRED)
+endif()
 
 ament_vendor(opencensus_cpp_vendor
   VCS_URL https://github.com/census-instrumentation/opencensus-cpp
@@ -20,6 +33,7 @@ ament_vendor(opencensus_cpp_vendor
   CMAKE_ARGS
     -DCMAKE_CXX_STANDARD=${CMAKE_CXX_STANDARD}
     -DOpenCensus_BUILD_TESTING:BOOL=OFF
+  SATISFIED ${opencensus_satisfied_by_system}
 )
 
 ament_package()

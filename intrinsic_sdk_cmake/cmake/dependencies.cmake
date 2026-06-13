@@ -21,6 +21,7 @@ find_package(opencensus_cpp_vendor REQUIRED)
 find_package(Eigen3 REQUIRED)
 find_package(flatbuffers REQUIRED)
 find_package(Protobuf CONFIG REQUIRED)
+
 find_package(gRPC CONFIG REQUIRED)
 find_package(gz-msgs REQUIRED)
 find_package(gz-transport REQUIRED)
