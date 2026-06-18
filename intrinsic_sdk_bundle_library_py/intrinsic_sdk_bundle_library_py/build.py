@@ -97,11 +97,7 @@ def get_sdk_version():
 
 
 def download_inbuild(sdk_version, dest_dir='.'):
-    # Map specific SDK versions to patch releases if binaries were not uploaded for the base tag
-    version_mapping = {
-        'v1.31.20260427': 'v1.31.20260427.1'
-    }
-    download_version = version_mapping.get(sdk_version, sdk_version)
+    download_version = sdk_version
 
     system = platform.system().lower()
     machine = platform.machine().lower()
