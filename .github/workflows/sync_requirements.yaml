@@ -25,7 +25,7 @@ jobs:
         run: ./resources/pip_requirements/sync_requirements.py
 
       - name: Commit and push changes
-        uses: stefanzweifel/git-auto-commit-action@v5
+        uses: stefanzweifel/git-auto-commit-action@b863ae1933cb653a53c021fe36dbb774e1fb9403  # v5.2.0
         with:
           commit_message: "chore: sync embedded pip requirements in Dockerfiles"
           file_pattern: 'resources/Dockerfile.skill intrinsic_sdk_bundle_library_py/resource/skill.Dockerfile'
