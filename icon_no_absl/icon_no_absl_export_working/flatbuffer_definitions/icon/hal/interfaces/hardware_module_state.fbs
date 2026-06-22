@@ -1,0 +1,33 @@
+namespace intrinsic_fbs;
+
+enum TransitionRequest : uint8 {
+  kActivate = 0,
+  kDeactivate = 1,
+  kEnableMotion = 2,
+  kDisableMotion = 3,
+  kClearFaults = 4,
+  kPrepare = 5,
+}
+
+enum StateCode : uint8 {
+  kDeactivated = 0,
+  kDeactivating = 1,
+  kActivated =2,
+  kActivating = 3,
+  kMotionEnabled = 4,
+  kMotionEnabling = 5,
+  kMotionDisabling = 6,
+  kFaulted = 7,
+  kClearingFaults = 8,
+  kInitFailed = 9,
+  kFatallyFaulted = 10,
+  kPreparing = 11,
+  kPrepared = 12,
+}
+
+struct HardwareModuleState {
+  code:StateCode = kDeactivated;
+  // LINT.IfChange(MaxFaultReasonLength)
+  message:[uint8:256];
+  // LINT.ThenChange(//flatbuffer_definitions/icon/hal/hardware_module_util.h:MaxFaultReasonLength)
+}

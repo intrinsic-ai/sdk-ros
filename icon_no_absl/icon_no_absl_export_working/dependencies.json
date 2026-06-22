@@ -1,0 +1,50 @@
+{
+  "//flatbuffer_definitions/icon/flatbuffers:transform_types_fbs_cc": {
+    "package_name": "transform_types_fbs_cc",
+    "target_name": "transform_types_fbs_cc"
+  },
+  "//flatbuffer_definitions/icon/hal/interfaces:hardware_module_state_fbs_cc": {
+    "package_name": "hardware_module_state_fbs_cc",
+    "target_name": "hardware_module_state_fbs_cc"
+  },
+  "//flatbuffer_definitions/icon/hal/interfaces:icon_state_fbs_cc": {
+    "package_name": "icon_state_fbs_cc",
+    "target_name": "icon_state_fbs_cc"
+  },
+  "//flatbuffer_definitions/icon/hal/interfaces:joint_command_fbs_cc": {
+    "package_name": "joint_command_fbs_cc",
+    "target_name": "joint_command_fbs_cc"
+  },
+  "//flatbuffer_definitions/icon/hal/interfaces:joint_limits_fbs_cc": {
+    "package_name": "joint_limits_fbs_cc",
+    "target_name": "joint_limits_fbs_cc"
+  },
+  "//flatbuffer_definitions/icon/hal/interfaces:joint_state_fbs_cc": {
+    "package_name": "joint_state_fbs_cc",
+    "target_name": "joint_state_fbs_cc"
+  },
+  "//flatbuffer_definitions/icon/interprocess/shared_memory_manager:segment_info_fbs_cc": {
+    "package_name": "segment_info_fbs_cc",
+    "target_name": "segment_info_fbs_cc"
+  },
+  "@com_github_google_flatbuffers//:flatbuffers": {
+    "package_name": "flatbuffers",
+    "target_name": "flatbuffers::flatbuffers"
+  },
+  "@com_github_google_flatbuffers//:runtime_cc": {
+    "package_name": "flatbuffers",
+    "target_name": "flatbuffers::flatbuffers"
+  },
+  "@com_gitlab_libeigen_eigen//:eigen": {
+    "package_name": "Eigen3",
+    "target_name": "Eigen3::Eigen"
+  },
+  "@com_google_googletest//:gtest": {
+    "package_name": "GTest",
+    "target_name": "GTest::gtest"
+  },
+  "@tl-expected//:tl-expected": {
+    "package_name": "tl-expected",
+    "target_name": "tl::expected"
+  }
+}

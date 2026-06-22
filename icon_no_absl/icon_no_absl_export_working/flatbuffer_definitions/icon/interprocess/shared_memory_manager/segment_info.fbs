@@ -1,0 +1,31 @@
+namespace intrinsic_fbs;
+
+struct SegmentName {
+  // Fixed size string correspondig to the max size of a
+  // POSIX shm segment plus the null-terminator.
+  // Flatbuffers don't support `char` as a datatype, however
+  // a int8 is byte compatible with C++'s signed char used by std::string.
+  value:[int8:255];
+  // True means that the robot controller needs to use this interface.
+  must_be_used:bool;
+}
+
+struct SegmentInfo {
+  size:uint32;
+  // We allow a maximum number of segment names.
+  // We have to fix it in order to make the flatbuffer
+  // a true fixed size datatype.
+  names:[SegmentName:300];
+}
+
+// List of names of file descriptors that are shared in a single message via
+// a domain socket.
+// Size of the `names` array is limited by the kernel constant SCM_MAX_FD,
+// which is 253, or 255 in kernels before 2.6.38, the maximum number of
+// file descriptors that can be shared in one call to sendmsg.
+struct FileDescriptorNames {
+  // Current size of the `names` array.
+  size:uint32;
+  // Names of Shared Memory Segments.
+  names:[SegmentName:200];
+}

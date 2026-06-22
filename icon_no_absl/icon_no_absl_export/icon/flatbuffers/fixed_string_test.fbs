@@ -1,0 +1,16 @@
+namespace intrinsic_fbs;
+
+struct FixedStringsStruct {
+  signed_message:[int8:8];
+  unsigned_message:[uint8:8];
+}
+
+struct TestMessageWithSignedArray {
+  data:[int8:8];
+  size:uint32;
+}
+
+struct TestMessageWithUnsignedArray {
+  data:[uint8:8];
+  size:uint16;
+}

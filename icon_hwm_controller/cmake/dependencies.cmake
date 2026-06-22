@@ -1,9 +1,11 @@
 find_package(flatbuffers_vendor REQUIRED)
 find_package(tl_expected_vendor REQUIRED)
+find_package(icon_shared_memory_vendor REQUIRED)
 find_package(eigen_vendor REQUIRED)
 
 find_package(flatbuffers REQUIRED)
 find_package(tl-expected REQUIRED)
+find_package(icon_shared_memory REQUIRED)
 find_package(Eigen3 REQUIRED)
 
 find_package(controller_interface REQUIRED)

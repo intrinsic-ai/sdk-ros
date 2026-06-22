@@ -11,11 +11,11 @@ if(NOT CMAKE_CXX_STANDARD)
   set(CMAKE_CXX_STANDARD_REQUIRED ON)
 endif()
 
+set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 
 include(cmake/dependencies.cmake)
-# Build flatbuffers.
-include(cmake/hwm_flatbuffers.cmake)
+
 
 
 # find dependencies
@@ -26,52 +26,6 @@ include_directories(
   ${EIGEN3_INCLUDE_DIRS}
 )
 
-add_executable(testing testing.cpp)
-add_dependencies(testing icon_hwm_fbs)
-target_link_libraries(testing
-PUBLIC
-flatbuffers::flatbuffers)
-target_include_directories(testing PUBLIC
-  "$<BUILD_INTERFACE:${icon_hwm_gen_dir}>")
-
-add_library(shared_memory_manager
-  src/shared_memory_manager.cpp
-  src/domain_socket_server.cpp
-  src/domain_socket_utils.cpp
-  src/segment_header.cpp
-  src/memory_segment.cpp
-  src/unique_segment_name.cpp
-  src/segment_info_utils.cpp
-  src/icon_state_utils.cpp
-  src/thread.cpp
-  src/time.cpp
-  src/joint_limits.cpp
-  src/joint_limits_utils.cpp
-  src/hardware_interface_registry.cpp
-  src/binary_futex.cpp
-  src/lockstep.cpp
-  src/realtime_clock.cpp
-  src/remote_trigger_server.cpp
-  src/hardware_module_state_utils.cpp
-  src/joint_command_utils.cpp
-  src/joint_state_utils.cpp
-  src/realtime_clock_interface.cpp
-  src/shared_memory_lockstep.cpp
-)
-
-set_property(
-  TARGET shared_memory_manager
-  PROPERTY POSITION_INDEPENDENT_CODE ON
-)
-
-add_dependencies(shared_memory_manager icon_hwm_fbs)
-target_link_libraries(shared_memory_manager
-  PUBLIC
-  tl::expected
-  flatbuffers::flatbuffers)
-target_include_directories(shared_memory_manager PUBLIC
-    "$<BUILD_INTERFACE:${icon_hwm_gen_dir}>")
-
 generate_parameter_library(icon_hwm_controller_parameters
   src/icon_hwm_controller_parameters.yaml
 )
@@ -80,13 +34,29 @@ add_library( icon_hwm_controller SHARED
   src/icon_hwm_controller.cpp
 )
 
+set_property(
+  TARGET icon_hwm_controller
+  PROPERTY POSITION_INDEPENDENT_CODE ON
+)
 target_include_directories(icon_hwm_controller PUBLIC
   $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>
   $<INSTALL_INTERFACE:include/icon_hwm_controller>
 )
 target_link_libraries(icon_hwm_controller PUBLIC
+  tl::expected
   icon_hwm_controller_parameters
-  shared_memory_manager
+  icon_shared_memory_icon_interprocess_shared_memory_manager
+  icon_shared_memory_util_thread
+  icon_shared_memory_icon_utils_log
+  icon_shared_memory_icon_utils_time
+  icon_shared_memory_icon_hal_interfaces_joint_command_fbs_utils
+  icon_shared_memory_icon_hal_interfaces_joint_state_fbs_utils
+  icon_shared_memory_icon_hal_interfaces_joint_limits_fbs_utils
+  icon_shared_memory_icon_hal_interfaces_hardware_module_state_fbs_utils
+  icon_shared_memory_icon_hal_hardware_interface_traits
+  icon_shared_memory_icon_hal_hardware_interface_registry
+  icon_shared_memory_icon_hal_icon_state_register
+  icon_shared_memory_icon_interprocess_shared_memory_manager_domain_socket_server
   controller_interface::controller_interface
   hardware_interface::hardware_interface
   pluginlib::pluginlib
@@ -108,93 +78,10 @@ install(TARGETS
   LIBRARY DESTINATION lib
 )
 
-if(BUILD_TESTING)
-  find_package(ament_lint_auto REQUIRED)
-  # the following line skips the linter which checks for copyrights
-  # comment the line when a copyright and license is added to all source files
-  set(ament_cmake_copyright_FOUND TRUE)
-  # the following line skips cpplint (only works in a git repo)
-  # comment the line when this package is in a git repo and when
-  # a copyright and license is added to all source files
-  set(ament_cmake_cpplint_FOUND TRUE)
-  ament_lint_auto_find_test_dependencies()
-
-  find_package(ament_cmake_gtest REQUIRED)
-  find_package(ament_cmake_gmock REQUIRED)
-  ament_add_gmock(shared_memory_manager_test test/shared_memory_manager_test.cpp)
-  target_include_directories(shared_memory_manager_test PUBLIC
-    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-    $<INSTALL_INTERFACE:include>
-  )
-  target_link_libraries(shared_memory_manager_test shared_memory_manager)
-
-  ament_add_gmock(get_hardware_interface_test test/get_hardware_interface_test.cpp)
-  target_include_directories(get_hardware_interface_test PUBLIC
-    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-    $<INSTALL_INTERFACE:include>
-  )
-  target_link_libraries(get_hardware_interface_test shared_memory_manager)
-
-  ament_add_gmock(segment_header_test test/segment_header_test.cpp)
-  target_include_directories(segment_header_test PUBLIC
-    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-    $<INSTALL_INTERFACE:include>
-  )
-  target_link_libraries(segment_header_test shared_memory_manager)
-
-  ament_add_gmock(segment_info_utils_test test/segment_info_utils_test.cpp)
-  target_include_directories(segment_info_utils_test PUBLIC
-    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-    $<INSTALL_INTERFACE:include>
-  )
-  target_link_libraries(segment_info_utils_test shared_memory_manager)
-
-  ament_add_gmock(domain_socket_utils_test test/domain_socket_utils_test.cpp)
-  target_include_directories(domain_socket_utils_test PUBLIC
-    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-    $<INSTALL_INTERFACE:include>
-  )
-  target_link_libraries(domain_socket_utils_test shared_memory_manager)
-
-  ament_add_gmock(thread_test test/thread_test.cpp)
-  target_include_directories(thread_test PUBLIC
-    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-    $<INSTALL_INTERFACE:include>
-  )
-  target_link_libraries(thread_test shared_memory_manager)
-
-  ament_add_gmock(joint_limits_utils_test test/joint_limits_utils_test.cpp)
-  target_include_directories(joint_limits_utils_test PUBLIC
-    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-    $<INSTALL_INTERFACE:include>
-  )
-  target_link_libraries(joint_limits_utils_test shared_memory_manager)
-
-  ament_add_gmock(joint_limits_test test/joint_limits_test.cpp)
-  target_include_directories(joint_limits_test PUBLIC
-    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-    $<INSTALL_INTERFACE:include>
-  )
-  target_link_libraries(joint_limits_test shared_memory_manager)
-
-  ament_add_gmock(hardware_interface_registry_test test/hardware_interface_registry_test.cpp)
-  target_include_directories(hardware_interface_registry_test PUBLIC
-    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-    $<INSTALL_INTERFACE:include>
-  )
-  target_link_libraries(hardware_interface_registry_test shared_memory_manager)
-
-  ament_add_gmock(log_test test/log_test.cpp)
-  target_include_directories(log_test PUBLIC
-    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-    $<INSTALL_INTERFACE:include>
-  )
-
-endif()
-
 ament_export_dependencies(
   flatbuffers_vendor
   tl_expected_vendor
+  icon_shared_memory_vendor
   eigen_vendor
   controller_interface
   hardware_interface

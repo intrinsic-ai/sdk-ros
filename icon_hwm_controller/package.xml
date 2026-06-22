@@ -11,6 +11,7 @@
   <build_depend>generate_parameter_library</build_depend>
 
   <depend>flatbuffers_vendor</depend>
+  <depend>icon_shared_memory_vendor</depend>
   <depend>tl_expected_vendor</depend>
   <depend>eigen_vendor</depend>
   <depend>controller_interface</depend>

@@ -1,0 +1,22 @@
+{
+  "@com_github_google_flatbuffers//:flatbuffers": {
+    "package_name": "FlatBuffers",
+    "target_name": "flatbuffers::flatbuffers"
+  },
+  "@com_github_google_flatbuffers//:runtime_cc": {
+    "package_name": "FlatBuffers",
+    "target_name": "flatbuffers::flatbuffers"
+  },
+  "@com_gitlab_libeigen_eigen//:eigen": {
+    "package_name": "Eigen3",
+    "target_name": "Eigen3::Eigen"
+  },
+  "@com_google_googletest//:gtest": {
+    "package_name": "GTest",
+    "target_name": "GTest::gtest"
+  },
+  "@tl-expected//:tl-expected": {
+    "package_name": "tl-expected",
+    "target_name": "tl::expected"
+  }
+}

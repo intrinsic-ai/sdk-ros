@@ -1,4 +1,3 @@
-#include "intrinsic/utils/strerror.hpp"
 #include "icon_hwm_controller/icon_hwm_controller.hpp"
 
 #include <cmath>
@@ -6,22 +5,30 @@
 
 #include "rcutils/logging.h"
 
-#include "intrinsic/thread/thread.hpp"
-#include "intrinsic/utils/log.hpp"
-#include "intrinsic/utils/time.hpp"
-#include "intrinsic/hal/joint_command_utils.hpp"
-#include "intrinsic/hal/joint_state_utils.hpp"
-#include "intrinsic/hal/joint_limits_utils.hpp"
-#include "intrinsic/hal/hardware_module_state_utils.hpp"
-#include "intrinsic/hal/hardware_interface_traits.hpp"
-#include "intrinsic/hal/hardware_interface_registry.hpp"
-#include "intrinsic/hal/icon_state_register.hpp"
-#include "intrinsic/shared_memory_manager/domain_socket_server.hpp"
-#include "intrinsic/shared_memory_manager/shared_memory_manager.hpp"
+#include "util/thread/thread.h"
+#include "icon/utils/log.h"
+#include "icon/utils/strerror.h"
+#include "icon/utils/time.h"
+#include "icon/hal/interfaces/joint_command_utils.h"
+#include "icon/hal/interfaces/joint_state_utils.h"
+#include "icon/hal/interfaces/joint_limits_utils.h"
+#include "icon/hal/interfaces/hardware_module_state_utils.h"
+#include "icon/hal/hardware_interface_traits.h"
+#include "icon/hal/hardware_interface_registry.h"
+#include "icon/hal/icon_state_register.h"
+#include "icon/interprocess/shared_memory_manager/domain_socket_server.h"
+#include "icon/interprocess/shared_memory_manager/shared_memory_manager.h"
+
+#include "flatbuffer_definitions/icon/hal/interfaces/joint_command.fbs.h"
+#include "flatbuffer_definitions/icon/hal/interfaces/joint_state.fbs.h"
+#include "flatbuffer_definitions/icon/hal/interfaces/joint_limits.fbs.h"
+#include "flatbuffer_definitions/icon/hal/interfaces/hardware_module_state.fbs.h"
+#include "flatbuffer_definitions/icon/hal/interfaces/icon_state.fbs.h"
+#include "flatbuffer_definitions/icon/interprocess/shared_memory_manager/segment_info.fbs.h"
 
 #include "realtime_tools/realtime_helpers.hpp"
 
-namespace intrinsic::hal::hardware_interface_traits
+namespace intrinsic::icon::hardware_interface_traits
 {
 
 INTRINSIC_ADD_HARDWARE_INTERFACE(intrinsic_fbs::JointPositionCommand,
@@ -67,15 +74,15 @@ namespace
 RCUTILS_LOG_SEVERITY ConvertSeverity(intrinsic::log::Logger::Severity severity)
 {
   switch(severity) {
-    case intrinsic::log::Logger::kDebug:
+    case intrinsic::log::Logger::Severity::kDebug:
       return RCUTILS_LOG_SEVERITY_DEBUG;
-    case intrinsic::log::Logger::kInfo:
+    case intrinsic::log::Logger::Severity::kInfo:
       return RCUTILS_LOG_SEVERITY_INFO;
-    case intrinsic::log::Logger::kWarning:
+    case intrinsic::log::Logger::Severity::kWarning:
       return RCUTILS_LOG_SEVERITY_WARN;
-    case intrinsic::log::Logger::kError:
+    case intrinsic::log::Logger::Severity::kError:
       return RCUTILS_LOG_SEVERITY_ERROR;
-    case intrinsic::log::Logger::kFatal:
+    case intrinsic::log::Logger::Severity::kFatal:
       return RCUTILS_LOG_SEVERITY_FATAL;
     default:
       return RCUTILS_LOG_SEVERITY_UNSET;
@@ -83,7 +90,7 @@ RCUTILS_LOG_SEVERITY ConvertSeverity(intrinsic::log::Logger::Severity severity)
 }
 }
 IconHwmController::IconHwmController()
-:logger_(intrinsic::log::Logger(intrinsic::log::Logger::kInfo,
+:logger_(intrinsic::log::Logger(intrinsic::log::Logger::Severity::kInfo,
     [this](const intrinsic::log::Logger::LogEntry & entry){
       auto rutils_severity = ConvertSeverity(entry.severity);
       const auto name = get_node()->get_logger().get_name();
@@ -167,7 +174,7 @@ controller_interface::CallbackReturn IconHwmController::on_configure(
 
   // Create Shared Memory Manager
   std::string shm_namespace = params_.shm_namespace;
-  auto shared_memory_manager = intrinsic::hal::SharedMemoryManager::Create(shm_namespace,
+  auto shared_memory_manager = intrinsic::icon::SharedMemoryManager::Create(shm_namespace,
       params_.name, &logger_);
   if (!shared_memory_manager.has_value()) {
     RCLCPP_ERROR(get_node()->get_logger(), "Failed to create SharedMemoryManager: %s",
@@ -175,10 +182,10 @@ controller_interface::CallbackReturn IconHwmController::on_configure(
     return controller_interface::CallbackReturn::ERROR;
   }
   shm_manager_ = std::move(shared_memory_manager.value());
-  auto domain_socket_server = intrinsic::hal::DomainSocketServer::Create(
-    intrinsic::hal::SocketDirectoryFromNamespace(shm_manager_->SharedMemoryNamespace()),
+  auto domain_socket_server = intrinsic::icon::DomainSocketServer::Create(
+    intrinsic::icon::SocketDirectoryFromNamespace(shm_manager_->SharedMemoryNamespace()),
     shm_manager_->ModuleName(),
-    intrinsic::hal::DomainSocketServer::kDefaultLockAcquireTimeout,
+    intrinsic::icon::DomainSocketServer::kDefaultLockAcquireTimeout,
     &logger_
   );
   if (!domain_socket_server.has_value()) {
@@ -188,10 +195,10 @@ controller_interface::CallbackReturn IconHwmController::on_configure(
   }
   domain_socket_server_ = std::move(domain_socket_server.value());
 
-  intrinsic::hal::HardwareInterfaceRegistry registry(*shm_manager_);
+  intrinsic::icon::HardwareInterfaceRegistry registry(*shm_manager_);
   // Advertise IconState
   auto icon_state =
-    registry.AdvertiseInterface<intrinsic_fbs::IconState>(intrinsic::hal::kIconStateInterfaceName,
+    registry.AdvertiseInterface<intrinsic_fbs::IconState>(intrinsic::icon::kIconStateInterfaceName,
       &logger_);
   if (!icon_state.has_value()) {
     RCLCPP_ERROR(get_node()->get_logger(), "Failed to advertise IconState: %s",
@@ -305,84 +312,84 @@ controller_interface::CallbackReturn IconHwmController::on_configure(
       return intrinsic::OkStatus();
     };
   {
-    auto prepare_server_result = intrinsic::hal::RemoteTriggerServer::Create(*shm_manager_,
+    auto prepare_server_result = intrinsic::icon::RemoteTriggerServer::Create(*shm_manager_,
         "prepare", &logger_, [this](){(void)Prepare();});
     if (!prepare_server_result.has_value()) {
       RCLCPP_ERROR(get_node()->get_logger(), "Failed to create prepare server: %s",
           prepare_server_result.error().message.c_str());
       return controller_interface::CallbackReturn::ERROR;
     }
-    prepare_server_ = std::make_unique<intrinsic::hal::RemoteTriggerServer>(
+    prepare_server_ = std::make_unique<intrinsic::icon::RemoteTriggerServer>(
       std::move(prepare_server_result.value()));
   }
   {
-    auto activate_server_result = intrinsic::hal::RemoteTriggerServer::Create(*shm_manager_,
+    auto activate_server_result = intrinsic::icon::RemoteTriggerServer::Create(*shm_manager_,
         "activate", &logger_, [this](){(void)Activate();});
     if (!activate_server_result.has_value()) {
       RCLCPP_ERROR(get_node()->get_logger(), "Failed to create activate server: %s",
           activate_server_result.error().message.c_str());
       return controller_interface::CallbackReturn::ERROR;
     }
-    activate_server_ = std::make_unique<intrinsic::hal::RemoteTriggerServer>(
+    activate_server_ = std::make_unique<intrinsic::icon::RemoteTriggerServer>(
       std::move(activate_server_result.value()));
   }
   {
-    auto deactivate_server_result = intrinsic::hal::RemoteTriggerServer::Create(*shm_manager_,
+    auto deactivate_server_result = intrinsic::icon::RemoteTriggerServer::Create(*shm_manager_,
         "deactivate", &logger_, [this](){(void)Deactivate();});
     if (!deactivate_server_result.has_value()) {
       RCLCPP_ERROR(get_node()->get_logger(), "Failed to create deactivate server: %s",
           deactivate_server_result.error().message.c_str());
       return controller_interface::CallbackReturn::ERROR;
     }
-    deactivate_server_ = std::make_unique<intrinsic::hal::RemoteTriggerServer>(
+    deactivate_server_ = std::make_unique<intrinsic::icon::RemoteTriggerServer>(
       std::move(deactivate_server_result.value()));
   }
   {
-    auto enable_motion_server_result = intrinsic::hal::RemoteTriggerServer::Create(*shm_manager_,
+    auto enable_motion_server_result = intrinsic::icon::RemoteTriggerServer::Create(*shm_manager_,
         "enable_motion", &logger_, [this](){(void)EnableMotion();});
     if (!enable_motion_server_result.has_value()) {
       RCLCPP_ERROR(get_node()->get_logger(), "Failed to create enable_motion server: %s",
           enable_motion_server_result.error().message.c_str());
       return controller_interface::CallbackReturn::ERROR;
     }
-    enable_motion_server_ = std::make_unique<intrinsic::hal::RemoteTriggerServer>(
+    enable_motion_server_ = std::make_unique<intrinsic::icon::RemoteTriggerServer>(
       std::move(enable_motion_server_result.value()));
   }
   {
-    auto disable_motion_server_result = intrinsic::hal::RemoteTriggerServer::Create(*shm_manager_,
+    auto disable_motion_server_result = intrinsic::icon::RemoteTriggerServer::Create(*shm_manager_,
         "disable_motion", &logger_, [this](){(void)DisableMotion();});
     if (!disable_motion_server_result.has_value()) {
       RCLCPP_ERROR(get_node()->get_logger(), "Failed to create disable_motion server: %s",
           disable_motion_server_result.error().message.c_str());
       return controller_interface::CallbackReturn::ERROR;
     }
-    disable_motion_server_ = std::make_unique<intrinsic::hal::RemoteTriggerServer>(
+    disable_motion_server_ = std::make_unique<intrinsic::icon::RemoteTriggerServer>(
       std::move(disable_motion_server_result.value()));
   }
   {
-    auto clear_faults_server_result = intrinsic::hal::RemoteTriggerServer::Create(*shm_manager_,
+    auto clear_faults_server_result = intrinsic::icon::RemoteTriggerServer::Create(*shm_manager_,
         "clear_faults", &logger_, [this](){(void)ClearFaults();});
     if (!clear_faults_server_result.has_value()) {
       RCLCPP_ERROR(get_node()->get_logger(), "Failed to create clear_faults server: %s",
           clear_faults_server_result.error().message.c_str());
       return controller_interface::CallbackReturn::ERROR;
     }
-    clear_faults_server_ = std::make_unique<intrinsic::hal::RemoteTriggerServer>(
+    clear_faults_server_ = std::make_unique<intrinsic::icon::RemoteTriggerServer>(
       std::move(clear_faults_server_result.value()));
   }
   {
-    auto shutdown_server_result = intrinsic::hal::RemoteTriggerServer::Create(*shm_manager_,
+    auto shutdown_server_result = intrinsic::icon::RemoteTriggerServer::Create(*shm_manager_,
         "shutdown", &logger_, [this](){(void)Shutdown();});
     if (!shutdown_server_result.has_value()) {
       RCLCPP_ERROR(get_node()->get_logger(), "Failed to create shutdown server: %s",
           shutdown_server_result.error().message.c_str());
       return controller_interface::CallbackReturn::ERROR;
     }
-    shutdown_server_ = std::make_unique<intrinsic::hal::RemoteTriggerServer>(
+    shutdown_server_ = std::make_unique<intrinsic::icon::RemoteTriggerServer>(
       std::move(shutdown_server_result.value()));
   }
   {
-    auto read_status_server_result = intrinsic::hal::RemoteTriggerServer::Create(*shm_manager_,
+    auto read_status_server_result = intrinsic::icon::RemoteTriggerServer::Create(*shm_manager_,
         "read_status", &logger_, [this](){
           (void)ReadStatus();
                           });
@@ -391,11 +398,11 @@ controller_interface::CallbackReturn IconHwmController::on_configure(
           read_status_server_result.error().message.c_str());
       return controller_interface::CallbackReturn::ERROR;
     }
-    read_status_server_ = std::make_unique<intrinsic::hal::RemoteTriggerServer>(
+    read_status_server_ = std::make_unique<intrinsic::icon::RemoteTriggerServer>(
       std::move(read_status_server_result.value()));
   }
   {
-    auto apply_command_server_result = intrinsic::hal::RemoteTriggerServer::Create(*shm_manager_,
+    auto apply_command_server_result = intrinsic::icon::RemoteTriggerServer::Create(*shm_manager_,
         "apply_command", &logger_, [this](){
           (void)ApplyCommand();
                             });
@@ -404,7 +411,7 @@ controller_interface::CallbackReturn IconHwmController::on_configure(
           apply_command_server_result.error().message.c_str());
       return controller_interface::CallbackReturn::ERROR;
     }
-    apply_command_server_ = std::make_unique<intrinsic::hal::RemoteTriggerServer>(
+    apply_command_server_ = std::make_unique<intrinsic::icon::RemoteTriggerServer>(
       std::move(apply_command_server_result.value()));
   }
   // Start the background threads for remote trigger servers.
@@ -725,9 +732,9 @@ bool IconHwmController::SetStateDirectly(
   bool silent)
 {
   auto current_state = state_code_.load();
-  auto guard_res = intrinsic::hal::HardwareModuleTransitionGuard(current_state, state);
-  if (!force && guard_res != intrinsic::hal::TransitionGuardResult::kAllowed) {
-    if (!silent && guard_res == intrinsic::hal::TransitionGuardResult::kProhibited) {
+  auto guard_res = intrinsic::icon::HardwareModuleTransitionGuard(current_state, state);
+  if (!force && guard_res != intrinsic::icon::TransitionGuardResult::kAllowed) {
+    if (!silent && guard_res == intrinsic::icon::TransitionGuardResult::kProhibited) {
       RCLCPP_ERROR(get_node()->get_logger(), "Switching from %s to %s is prohibited!",
         intrinsic_fbs::EnumNameStateCode(current_state),
         intrinsic_fbs::EnumNameStateCode(state));
