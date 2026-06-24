@@ -74,10 +74,6 @@ RUN \
     && echo "  ubuntu: [python3-absl]" >> /etc/ros/rosdep/custom.yaml \
     && echo "python3-retrying:" >> /etc/ros/rosdep/custom.yaml \
     && echo "  ubuntu: [python3-retrying]" >> /etc/ros/rosdep/custom.yaml \
-    && echo "colcon-core:" >> /etc/ros/rosdep/custom.yaml \
-    && echo "  ubuntu: [python3-colcon-core]" >> /etc/ros/rosdep/custom.yaml \
-    && echo "colcon-package-selection:" >> /etc/ros/rosdep/custom.yaml \
-    && echo "  ubuntu: [python3-colcon-package-selection]" >> /etc/ros/rosdep/custom.yaml \
     && echo "yaml file:///etc/ros/rosdep/custom.yaml" > /etc/ros/rosdep/sources.list.d/50-custom.list \
     && rosdep update \
     && cd $SKILL_WORKSPACE \
@@ -140,10 +136,6 @@ RUN \
     && echo "  ubuntu: [python3-absl]" >> /etc/ros/rosdep/custom.yaml \
     && echo "python3-retrying:" >> /etc/ros/rosdep/custom.yaml \
     && echo "  ubuntu: [python3-retrying]" >> /etc/ros/rosdep/custom.yaml \
-    && echo "colcon-core:" >> /etc/ros/rosdep/custom.yaml \
-    && echo "  ubuntu: [python3-colcon-core]" >> /etc/ros/rosdep/custom.yaml \
-    && echo "colcon-package-selection:" >> /etc/ros/rosdep/custom.yaml \
-    && echo "  ubuntu: [python3-colcon-package-selection]" >> /etc/ros/rosdep/custom.yaml \
     && echo "yaml file:///etc/ros/rosdep/custom.yaml" > /etc/ros/rosdep/sources.list.d/50-custom.list \
     && rosdep update \
     && cd $SKILL_WORKSPACE \
