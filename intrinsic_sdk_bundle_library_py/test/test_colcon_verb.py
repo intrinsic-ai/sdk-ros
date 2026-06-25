@@ -86,7 +86,7 @@ class TestColconVerb(unittest.TestCase):
         'id { package: "com.example" name: "my_skill" }\n'
         'options { cc_config {} }'
     ))
-    @patch('pathlib.Path.glob')
+    @patch('pathlib.Path.rglob')
     def test_main_with_skill(
         self, mock_glob, mock_open_file, mock_get_packages,
         mock_build_container, mock_build_bundle

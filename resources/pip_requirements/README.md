@@ -3,7 +3,6 @@
 This directory contains the source files used to generate the pinned Python dependencies and their secure hashes for the skill Dockerfiles.
 
 These dependencies are **embedded** directly into the following Dockerfiles to ensure they are installed securely and verifiably without depending on the build context:
-- `resources/Dockerfile.skill`
 - `intrinsic_sdk_bundle_library_py/resource/skill.Dockerfile`
 
 ## Files
