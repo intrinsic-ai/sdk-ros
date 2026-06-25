@@ -53,7 +53,9 @@ int main(int argc, char* argv[]) {
 
   // If external router address is provided, override the Zenoh environment
   // variable
-  std::string zenoh_config_override = "connect/endpoints=[\"";
+  std::string zenoh_config_override =
+      "listen/endpoints=[\"ws/0.0.0.0:" +
+      std::to_string(runtime_context.http_port()) + "\"];connect/endpoints=[\"";
   if (!external_router_address.empty()) {
     zenoh_config_override += external_router_address;
   } else {

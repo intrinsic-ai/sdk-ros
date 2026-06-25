@@ -22,6 +22,7 @@ service_def {
       archive_filename: "flowstate_ros_bridge.tar"
     }
   }
+  http_config {}
 }
 assets {
   default_configuration_filename: "default_config.binarypb",
