@@ -63,7 +63,7 @@ class BundleVerb(VerbExtensionPoint):
         for decorator in selected_decorators:
             pkg_path = Path(decorator.descriptor.path)
             # Find manifest file
-            manifests = list(pkg_path.glob('*.manifest.textproto'))
+            manifests = list(pkg_path.rglob('*.manifest.textproto'))
             if not manifests:
                 continue
 

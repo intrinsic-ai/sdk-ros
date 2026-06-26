@@ -44,17 +44,49 @@ class TestBuild(unittest.TestCase):
         version = build.get_sdk_version()
         self.assertIsNone(version)
 
+    @patch('urllib.request.urlopen')
     @patch('urllib.request.urlretrieve')
     @patch('os.chmod')
     @patch('os.path.exists', return_value=False)
     @patch('platform.system', return_value='Linux')
     @patch('platform.machine', return_value='x86_64')
     def test_download_inbuild(
-        self, mock_machine, mock_system, mock_exists, mock_chmod, mock_urlretrieve
+        self, mock_machine, mock_system, mock_exists, mock_chmod, mock_urlretrieve, mock_urlopen
     ):
+        mock_urlopen.return_value.__enter__.return_value = MagicMock()
         path = build.download_inbuild('v0.1.0')
         self.assertEqual(path, './inbuild')
         mock_urlretrieve.assert_called_once()
+
+    @patch('urllib.request.urlopen')
+    def test_resolve_latest_version_base_not_exists_patch_exists(self, mock_urlopen):
+        from urllib.error import HTTPError
+        mock_404 = HTTPError('url', 404, 'Not Found', {}, None)
+        mock_urlopen.side_effect = [mock_404, MagicMock(), mock_404]
+        res = build._resolve_latest_version('v1.31.20260427', 'inbuild-linux-amd64')
+        self.assertEqual(res, 'v1.31.20260427.1')
+
+    @patch('urllib.request.urlopen')
+    def test_resolve_latest_version_base_exists(self, mock_urlopen):
+        from urllib.error import HTTPError
+        mock_404 = HTTPError('url', 404, 'Not Found', {}, None)
+        mock_urlopen.side_effect = [MagicMock(), mock_404]
+        res = build._resolve_latest_version('v1.31.20260427', 'inbuild-linux-amd64')
+        self.assertEqual(res, 'v1.31.20260427')
+
+    @patch('urllib.request.urlopen')
+    def test_resolve_latest_version_newer_patch_exists(self, mock_urlopen):
+        from urllib.error import HTTPError
+        mock_404 = HTTPError('url', 404, 'Not Found', {}, None)
+        mock_urlopen.side_effect = [MagicMock(), MagicMock(), mock_404]
+        res = build._resolve_latest_version('v1.31.20260427.1', 'inbuild-linux-amd64')
+        self.assertEqual(res, 'v1.31.20260427.2')
+
+    @patch('urllib.request.urlopen')
+    def test_resolve_latest_version_network_error_fallback(self, mock_urlopen):
+        mock_urlopen.side_effect = Exception('Connection refused')
+        res = build._resolve_latest_version('v1.31.20260427', 'inbuild-linux-amd64')
+        self.assertEqual(res, 'v1.31.20260427')
 
     @patch('subprocess.run')
     def test_run_command(self, mock_run):
