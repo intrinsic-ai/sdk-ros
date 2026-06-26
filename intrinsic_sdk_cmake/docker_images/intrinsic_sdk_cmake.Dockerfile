@@ -58,9 +58,6 @@ RUN \
     && rm -f /etc/apt/apt.conf.d/docker-clean \
     && echo 'Binary::apt::APT::Keep-Downloaded-Packages "true";' >/etc/apt/apt.conf.d/keep-cache \
     && apt-get update \
-    && echo "python3-absl-py:" > /etc/ros/rosdep/custom.yaml \
-    && echo "  ubuntu: [python3-absl]" >> /etc/ros/rosdep/custom.yaml \
-    && echo "yaml file:///etc/ros/rosdep/custom.yaml" > /etc/ros/rosdep/sources.list.d/50-custom.list \
     && rosdep update --rosdistro ${ROS_DISTRO} \
     && cd /opt/intrinsic/intrinsic_sdk_cmake \
     && touch src/intrinsic_sdk_ros/intrinsic_sdk/COLCON_IGNORE \

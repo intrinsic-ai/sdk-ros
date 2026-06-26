@@ -45,9 +45,6 @@ RUN if [ -d /opt/ros/underlay/src/sdk-ros/intrinsic_sdk_bundle_library_py/test/f
 
 RUN . /opt/ros/${ROS_DISTRO}/setup.sh \
     && apt-get update \
-    && echo "python3-absl-py:" > /etc/ros/rosdep/custom.yaml \
-    && echo "  ubuntu: [python3-absl]" >> /etc/ros/rosdep/custom.yaml \
-    && echo "yaml file:///etc/ros/rosdep/custom.yaml" > /etc/ros/rosdep/sources.list.d/50-custom.list \
     && rosdep update \
     && rosdep install --from-paths src --ignore-src -r -y \
     && apt install -y ros-${ROS_DISTRO}-ament-cmake-vendor-package \

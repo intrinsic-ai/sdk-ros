@@ -69,10 +69,6 @@ RUN \
     && echo 'Binary::apt::APT::Keep-Downloaded-Packages "true";' >/etc/apt/apt.conf.d/keep-cache \
     && apt-get update \
     && (rosdep init || true) \
-    # TODO(susanachl): Try to get these upstream in ros/rosdistro \
-    && echo "python3-absl-py:" > /etc/ros/rosdep/custom.yaml \
-    && echo "  ubuntu: [python3-absl]" >> /etc/ros/rosdep/custom.yaml \
-    && echo "yaml file:///etc/ros/rosdep/custom.yaml" > /etc/ros/rosdep/sources.list.d/50-custom.list \
     && rosdep update \
     && cd $SKILL_WORKSPACE \
     && rosdep install \
@@ -129,10 +125,6 @@ RUN \
     && echo 'Binary::apt::APT::Keep-Downloaded-Packages "true";' >/etc/apt/apt.conf.d/keep-cache \
     && apt-get update \
     && (rosdep init || true) \
-    # TODO(susanachl): Try to get these upstream in ros/rosdistro \
-    && echo "python3-absl-py:" > /etc/ros/rosdep/custom.yaml \
-    && echo "  ubuntu: [python3-absl]" >> /etc/ros/rosdep/custom.yaml \
-    && echo "yaml file:///etc/ros/rosdep/custom.yaml" > /etc/ros/rosdep/sources.list.d/50-custom.list \
     && rosdep update \
     && cd $SKILL_WORKSPACE \
     && rosdep install \
