@@ -1,5 +1,5 @@
---- a/intrinsic/platform/pubsub/zenoh_util/zenoh_helpers.cc	2026-05-06 20:23:45.229207000 +0000
-+++ b/intrinsic/platform/pubsub/zenoh_util/zenoh_helpers.cc	2026-05-07 07:20:25.229618669 +0000
+--- a/intrinsic/platform/pubsub/zenoh_util/zenoh_helpers.cc
++++ b/intrinsic/platform/pubsub/zenoh_util/zenoh_helpers.cc
 @@ -2,7 +2,9 @@
  
  #include "intrinsic/platform/pubsub/zenoh_util/zenoh_helpers.h"
@@ -10,22 +10,23 @@
  #include <string>
  #include <vector>
  
-@@ -11,13 +13,10 @@
- #include "absl/strings/str_cat.h"
+@@ -13,12 +15,12 @@
  #include "absl/strings/str_split.h"
  #include "absl/strings/string_view.h"
+ #include "ortools/base/file.h"
 -#include "ortools/base/path.h"
 -#include "rules_cc/cc/runfiles/runfiles.h"
 +// #include "ortools/base/path.h"
++// #include "rules_cc/cc/runfiles/runfiles.h"
  
  namespace intrinsic {
  
 -using ::rules_cc::cc::runfiles::Runfiles;
--
++// using ::rules_cc::cc::runfiles::Runfiles;
+ 
  bool RunningUnderTest() {
    return (getenv("TEST_TMPDIR") != nullptr) ||
-          (getenv("PORTSERVER_ADDRESS") != nullptr);
-@@ -27,25 +26,32 @@
+@@ -29,33 +31,32 @@
    return getenv("KUBERNETES_SERVICE_HOST") != nullptr;
  }
  
@@ -38,24 +39,11 @@
 +#endif
 +
  std::string GetZenohRunfilesPath(absl::string_view file_path) {
--  std::string error;
--  std::string repository = BAZEL_CURRENT_REPOSITORY;
--  std::string apparentRepoName = "";
--  std::unique_ptr<Runfiles> runfiles;
--  if (RunningUnderTest()) {
--    runfiles.reset(Runfiles::CreateForTest(repository, &error));
--  } else if (RunningInKubernetes()) {
--    runfiles.reset(Runfiles::Create(repository, &error));
--  } else {
--    runfiles.reset(Runfiles::Create(program_invocation_name, &error));
--  }
--
--  if (RunningInKubernetes() || RunningUnderTest()) {
--    apparentRepoName = "ai_intrinsic_sdks";
--  } else {
--    apparentRepoName = repository;
--  }
--  return runfiles->Rlocation(absl::StrCat(apparentRepoName, "/", file_path));
+-  // The simplest scenario is that the file is available at a global
+-  // path, which happens when running in Kubernetes or in Docker.
+-  std::string global_path = absl::StrCat("/", file_path);
+-  if (file::Exists(global_path, file::Defaults()).ok()) {
+-    return global_path;
 +  // Patched by intrinsic-dev/intrinsic_sdk_ros.git to work in a CMake context.
 +  // TODO(wjwwood): consider using ament_index to make this code relocatable.
 +  std::array<std::filesystem::path, 2> prefix_paths = {
@@ -69,8 +57,27 @@
 +    if (std::filesystem::exists(possible_path)) {
 +      return possible_path.string();
 +    }
-+   }
-+
+   }
+ 
+-  // Otherwise, try to calculate a path using Bazel runfiles.
+-  std::string error;
+-  std::string repository = BAZEL_CURRENT_REPOSITORY;
+-  std::string apparentRepoName = "";
+-  std::unique_ptr<Runfiles> runfiles;
+-  if (RunningUnderTest()) {
+-    runfiles.reset(Runfiles::CreateForTest(repository, &error));
+-  } else {
+-    runfiles.reset(Runfiles::Create(program_invocation_name, &error));
+-  }
+-  if (!runfiles) {
+-    LOG(FATAL) << "Could not initialize runfiles: " << error;
+-  }
+-  if (RunningInKubernetes() || RunningUnderTest()) {
+-    apparentRepoName = "ai_intrinsic_sdks";
+-  } else {
+-    apparentRepoName = repository;
+-  }
+-  return runfiles->Rlocation(absl::StrCat(apparentRepoName, "/", file_path));
 +  // Return the original file_path if nothing better was found.
 +  return std::string(file_path);
  }

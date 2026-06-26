@@ -1,15 +1,34 @@
-# Through a complex process, the "imw" library is compiled elsewhere and
-# committed to the SDK as a binary, but only amd64.
-if(CMAKE_HOST_SYSTEM_PROCESSOR STREQUAL "x86_64")
-  set(intrinsic_sdk_IMW_ZENOH_LIBRARY_DIRNAME
-    "intrinsic/middleware")
-  set(intrinsic_sdk_IMW_ZENOH_LIBRARY_RELPATH
-    "${intrinsic_sdk_IMW_ZENOH_LIBRARY_DIRNAME}/libimw_zenoh.so.1")
-  set(intrinsic_sdk_IMW_ZENOH_LIBRARY_PATH
-    "${intrinsic_sdk_SOURCE_DIR}/${intrinsic_sdk_IMW_ZENOH_LIBRARY_RELPATH}")
-else()
-  message(FATAL_ERROR "Only x86_64 machines are supported, found: ${CMAKE_HOST_SYSTEM_PROCESSOR}")
-endif()
+set(sdk_bins_DIR "${CMAKE_CURRENT_BINARY_DIR}/sdk_bins")
+file(MAKE_DIRECTORY "${sdk_bins_DIR}")
+
+# Build libimw_zenoh.so using Bazel.
+add_custom_command(
+  OUTPUT "${sdk_bins_DIR}/libimw_zenoh.so"
+  WORKING_DIRECTORY "${intrinsic_sdk_SOURCE_DIR}"
+  COMMAND
+    ${bazelisk_vendor_EXECUTABLE}
+      --nohome_rc
+      --quiet
+      build
+        --experimental_convenience_symlinks=ignore
+        //incode/middleware/zenoh:libimw_zenoh.so
+  COMMAND
+    bash -c "cp \$(${bazelisk_vendor_EXECUTABLE} --nohome_rc info bazel-bin)/incode/middleware/zenoh/libimw_zenoh.so ${sdk_bins_DIR}/libimw_zenoh.so"
+  VERBATIM
+)
+
+add_custom_target(imw_zenoh_bin
+  ALL
+  DEPENDS
+    "${sdk_bins_DIR}/libimw_zenoh.so"
+)
+
+# Create an imported shared library
+add_library(imw_zenoh SHARED IMPORTED)
+set_target_properties(imw_zenoh PROPERTIES
+  IMPORTED_LOCATION "${sdk_bins_DIR}/libimw_zenoh.so"
+)
+add_dependencies(imw_zenoh imw_zenoh_bin)
 
 set(intrinsic_sdk_IMW_ZENOH_CONFIG_DIRNAME
   "intrinsic/platform/pubsub/zenoh_util")
@@ -20,8 +39,8 @@ set(intrinsic_sdk_IMW_ZENOH_CONFIG_PATH
 
 # Install the files for use during runtime.
 install(
-  FILES "${intrinsic_sdk_IMW_ZENOH_LIBRARY_PATH}"
-  DESTINATION "lib/${intrinsic_sdk_IMW_ZENOH_LIBRARY_DIRNAME}"
+  FILES "${sdk_bins_DIR}/libimw_zenoh.so"
+  DESTINATION lib
 )
 install(
   FILES "${intrinsic_sdk_IMW_ZENOH_CONFIG_PATH}"

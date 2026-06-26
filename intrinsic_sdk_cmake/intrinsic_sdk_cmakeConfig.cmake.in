@@ -4,6 +4,8 @@ set(_prefix "${intrinsic_sdk_cmake_DIR}/../../..")
 include("${_prefix}/share/intrinsic_sdk_cmake/cmake/dependencies.cmake")
 include("${_prefix}/share/intrinsic_sdk_cmake/cmake/intrinsic_sdk_cmakeTargets.cmake")
 
+include("${_prefix}/share/intrinsic_sdk_cmake/cmake/imw_zenoh-target.cmake")
+
 set(intrinsic_sdk_cmake_DESCRIPTOR_SET_FILE
   "${_prefix}/share/intrinsic_sdk_cmake/intrinsic_proto.desc"
 )

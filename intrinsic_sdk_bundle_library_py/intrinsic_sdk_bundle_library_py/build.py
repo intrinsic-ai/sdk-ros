@@ -96,9 +96,55 @@ def get_sdk_version():
         return None
 
 
-def download_inbuild(sdk_version, dest_dir='.'):
-    download_version = sdk_version
+def _resolve_latest_version(sdk_version, binary_name):
+    # Parse version string
+    parts = sdk_version.split('.')
+    if len(parts) == 3:
+        base_version = sdk_version
+        start_patch = 0
+    elif len(parts) == 4:
+        base_version = '.'.join(parts[:3])
+        try:
+            start_patch = int(parts[3])
+        except ValueError:
+            return sdk_version
+    else:
+        return sdk_version
 
+    best_version = None
+    consecutive_failures = 0
+    current_patch = start_patch
+
+    while True:
+        if current_patch - start_patch >= 3:
+            break
+
+        if current_patch == 0:
+            version_to_test = base_version
+        else:
+            version_to_test = f'{base_version}.{current_patch}'
+
+        url = (
+            f'https://github.com/intrinsic-ai/sdk/releases/download/'
+            f'{version_to_test}/{binary_name}'
+        )
+
+        req = urllib.request.Request(url, method='HEAD')
+        try:
+            with urllib.request.urlopen(req):
+                best_version = version_to_test
+                consecutive_failures = 0
+        except Exception:
+            consecutive_failures += 1
+            if best_version is not None or consecutive_failures >= 3:
+                break
+
+        current_patch += 1
+
+    return best_version if best_version is not None else sdk_version
+
+
+def download_inbuild(sdk_version, dest_dir='.'):
     system = platform.system().lower()
     machine = platform.machine().lower()
 
@@ -115,6 +161,8 @@ def download_inbuild(sdk_version, dest_dir='.'):
 
     # Construct filename
     binary_name = f'inbuild-{system}-{arch}{ext}'
+
+    download_version = _resolve_latest_version(sdk_version, binary_name)
 
     inbuild_path = os.path.join(dest_dir, 'inbuild' + ext)
 
