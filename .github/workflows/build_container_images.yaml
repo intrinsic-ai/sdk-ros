@@ -30,7 +30,12 @@ jobs:
 
       # Extract the intrinsic sdk version being used.
       - name: Get intrinsic-ai/sdk Version
-        run: echo "INTRINSIC_AI_SDK_VERSION=$(cat intrinsic_sdk_bundle_library_py/resource/sdk_version.json | jq -r '.sdk_version')" >> $GITHUB_ENV
+        run: echo "INTRINSIC_AI_SDK_VERSION=$(cat intrinsic_sdk_cmake/cmake/sdk_version.json | jq -r '.sdk_version')" >> $GITHUB_ENV
+      - run: |
+          if [ -z "$INTRINSIC_AI_SDK_VERSION" ]; then
+            echo "Error: INTRINSIC_AI_SDK_VERSION is empty!" >&2
+            exit 1
+          fi
       - run: echo "The Intrinsic SDK version being used is ${{ env.INTRINSIC_AI_SDK_VERSION }}"
       - id: intrinsic_ai_sdk_version
         run: echo "version=${{ env.INTRINSIC_AI_SDK_VERSION }}" >> "$GITHUB_OUTPUT"
