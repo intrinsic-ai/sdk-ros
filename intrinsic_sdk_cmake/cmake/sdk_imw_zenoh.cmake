@@ -1,34 +1,23 @@
-set(sdk_bins_DIR "${CMAKE_CURRENT_BINARY_DIR}/sdk_bins")
-file(MAKE_DIRECTORY "${sdk_bins_DIR}")
-
-# Build libimw_zenoh.so using Bazel.
-add_custom_command(
-  OUTPUT "${sdk_bins_DIR}/libimw_zenoh.so"
-  WORKING_DIRECTORY "${intrinsic_sdk_SOURCE_DIR}"
-  COMMAND
-    ${bazelisk_vendor_EXECUTABLE}
-      --nohome_rc
-      --quiet
-      build
-        --experimental_convenience_symlinks=ignore
-        //incode/middleware/zenoh:libimw_zenoh.so
-  COMMAND
-    bash -c "cp \$(${bazelisk_vendor_EXECUTABLE} --nohome_rc info bazel-bin)/incode/middleware/zenoh/libimw_zenoh.so ${sdk_bins_DIR}/libimw_zenoh.so"
-  VERBATIM
+file(GLOB imw_zenoh_SRCS "${intrinsic_sdk_SOURCE_DIR}/intrinsic/middleware/zenoh/*.cc")
+add_library(imw_zenoh SHARED ${imw_zenoh_SRCS})
+add_library(${PROJECT_NAME}::imw_zenoh ALIAS imw_zenoh)
+set_target_properties(imw_zenoh PROPERTIES POSITION_INDEPENDENT_CODE ON)
+target_include_directories(imw_zenoh PRIVATE
+  "$<BUILD_INTERFACE:${intrinsic_sdk_SOURCE_DIR}>"
+  "$<BUILD_INTERFACE:${intrinsic_fbs_gen_dir}>"
+  "$<INSTALL_INTERFACE:include/${PROJECT_NAME}>"
 )
-
-add_custom_target(imw_zenoh_bin
-  ALL
-  DEPENDS
-    "${sdk_bins_DIR}/libimw_zenoh.so"
+find_package(zenoh_cpp_vendor REQUIRED)
+target_link_libraries(imw_zenoh PRIVATE
+  absl::base
+  absl::log
+  absl::status
+  absl::statusor
+  absl::strings
+  absl::synchronization
+  gz-transport::gz-transport
+  zenohc::lib
 )
-
-# Create an imported shared library
-add_library(imw_zenoh SHARED IMPORTED)
-set_target_properties(imw_zenoh PROPERTIES
-  IMPORTED_LOCATION "${sdk_bins_DIR}/libimw_zenoh.so"
-)
-add_dependencies(imw_zenoh imw_zenoh_bin)
 
 set(intrinsic_sdk_IMW_ZENOH_CONFIG_DIRNAME
   "intrinsic/platform/pubsub/zenoh_util")
@@ -39,10 +28,15 @@ set(intrinsic_sdk_IMW_ZENOH_CONFIG_PATH
 
 # Install the files for use during runtime.
 install(
-  FILES "${sdk_bins_DIR}/libimw_zenoh.so"
-  DESTINATION lib
+  TARGETS imw_zenoh
+  EXPORT ${PROJECT_NAME}Targets
+  ARCHIVE DESTINATION lib
+  LIBRARY DESTINATION lib
+  RUNTIME DESTINATION bin
 )
-install(
-  FILES "${intrinsic_sdk_IMW_ZENOH_CONFIG_PATH}"
-  DESTINATION "share/${intrinsic_sdk_IMW_ZENOH_CONFIG_DIRNAME}"
-)
+if(EXISTS "${intrinsic_sdk_IMW_ZENOH_CONFIG_PATH}")
+  install(
+    FILES "${intrinsic_sdk_IMW_ZENOH_CONFIG_PATH}"
+    DESTINATION "share/${intrinsic_sdk_IMW_ZENOH_CONFIG_DIRNAME}"
+  )
+endif()

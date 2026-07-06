@@ -29,6 +29,7 @@ list(FILTER intrinsic_SRCS EXCLUDE REGEX "/intrinsic/util/proto/source_code_info
 list(FILTER intrinsic_SRCS EXCLUDE REGEX "/intrinsic/util/path_resolver/")
 list(FILTER intrinsic_SRCS EXCLUDE REGEX "/intrinsic/scene/product/")
 list(FILTER intrinsic_SRCS EXCLUDE REGEX "/incode/")
+list(FILTER intrinsic_SRCS EXCLUDE REGEX "/intrinsic/middleware/zenoh/")
 
 add_library(${PROJECT_NAME} SHARED ${intrinsic_SRCS})
 add_library(${PROJECT_NAME}::${PROJECT_NAME} ALIAS ${PROJECT_NAME})
