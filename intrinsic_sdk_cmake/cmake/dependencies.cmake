@@ -16,6 +16,7 @@ find_package(pybind11_abseil_vendor REQUIRED)
 find_package(pybind11_protobuf_vendor REQUIRED)
 find_package(ortools_vendor REQUIRED)
 find_package(opencensus_cpp_vendor REQUIRED)
+find_package(zenoh_cpp_vendor REQUIRED)
 
 # Find project dependencies.
 find_package(Eigen3 REQUIRED)

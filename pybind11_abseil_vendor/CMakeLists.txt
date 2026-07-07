@@ -41,9 +41,13 @@ ament_vendor(pybind11_abseil_vendor
 
 ament_get_python_install_dir(PYTHON_INSTALL_DIR)
 install(CODE "
-  file(MAKE_DIRECTORY \"\${CMAKE_INSTALL_PREFIX}/${PYTHON_INSTALL_DIR}/pybind11_abseil\")
-  file(TOUCH \"\${CMAKE_INSTALL_PREFIX}/${PYTHON_INSTALL_DIR}/pybind11_abseil/__init__.py\")
-  file(COPY \"\${CMAKE_INSTALL_PREFIX}/opt/pybind11_abseil_vendor/lib/status.so\" DESTINATION \"\${CMAKE_INSTALL_PREFIX}/${PYTHON_INSTALL_DIR}/pybind11_abseil\")
+  set(DEST_DIR \"\$ENV{DESTDIR}\${CMAKE_INSTALL_PREFIX}/${PYTHON_INSTALL_DIR}/pybind11_abseil\")
+  file(MAKE_DIRECTORY \"\${DEST_DIR}\")
+  file(TOUCH \"\${DEST_DIR}/__init__.py\")
+  file(GLOB STATUS_MODULES \"\${CMAKE_INSTALL_PREFIX}/opt/pybind11_abseil_vendor/lib*/status*\")
+  foreach(STATUS_MOD \${STATUS_MODULES})
+    file(INSTALL \"\${STATUS_MOD}\" DESTINATION \"\${DEST_DIR}\" USE_SOURCE_PERMISSIONS)
+  endforeach()
 ")
 
 ament_package()
