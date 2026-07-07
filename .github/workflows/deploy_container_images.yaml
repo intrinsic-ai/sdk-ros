@@ -34,6 +34,11 @@ jobs:
       # Extract the intrinsic sdk version being used.
       - name: Get intrinsic-ai/sdk Version
         run: echo "INTRINSIC_AI_SDK_VERSION=${{ needs.build-test.outputs.intrinsic_ai_sdk_version }}" >> $GITHUB_ENV
+      - run: |
+          if [ -z "$INTRINSIC_AI_SDK_VERSION" ]; then
+            echo "Error: INTRINSIC_AI_SDK_VERSION is empty!" >&2
+            exit 1
+          fi
       - run: echo "The Intrinsic SDK version being used is ${{ env.INTRINSIC_AI_SDK_VERSION }}"
 
       # Login to ghcr.io.
