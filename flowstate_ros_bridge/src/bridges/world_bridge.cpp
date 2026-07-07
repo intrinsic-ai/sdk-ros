@@ -281,15 +281,9 @@ absl::Status WorldBridge::Data::SendObjectVisualizationMessages(
           const auto& geo_ref = geometry.geo_ref();
           const std::string object_name =
               StripTfPrefixes(object.Name().value(), strip_flowstate_tf_prefixes_);
-          const std::vector<absl::string_view> parts =
-              absl::StrSplit(object_name, '/');
-          const absl::string_view short_name = parts.back();
-
-          // In V1 SDK, the Flowstate TF stream appends the short object name
-          // again between the full path and the entity name.
           std::string tf_frame_name =
-              absl::StrFormat("%s%s/%s/%s", tf_prefix_.c_str(), object_name,
-                              short_name, entity.second.name());
+              absl::StrFormat("%s%s/%s", tf_prefix_.c_str(), object_name,
+                              entity.second.name());
 
           // Let's be smarter in the future. For now, just skip over
           // the intcas:// prefix
