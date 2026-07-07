@@ -48,7 +48,6 @@ install(
 install(
   FILES
     cmake/dependencies.cmake
-    cmake/imw_zenoh-target.cmake
   DESTINATION share/${PROJECT_NAME}/cmake
 )
 

@@ -29,7 +29,6 @@ list(FILTER intrinsic_SRCS EXCLUDE REGEX "/intrinsic/util/proto/source_code_info
 list(FILTER intrinsic_SRCS EXCLUDE REGEX "/intrinsic/util/path_resolver/")
 list(FILTER intrinsic_SRCS EXCLUDE REGEX "/intrinsic/scene/product/")
 list(FILTER intrinsic_SRCS EXCLUDE REGEX "/incode/")
-list(FILTER intrinsic_SRCS EXCLUDE REGEX "/intrinsic/middleware/zenoh/")
 
 add_library(${PROJECT_NAME} SHARED ${intrinsic_SRCS})
 add_library(${PROJECT_NAME}::${PROJECT_NAME} ALIAS ${PROJECT_NAME})
@@ -62,8 +61,8 @@ target_link_libraries(${PROJECT_NAME}
     pybind11_abseil::import_status_module
     pybind11_protobuf::pybind11_native_proto_caster
     Python::Python
+    zenohc::lib
     # Local targets
-    imw_zenoh
     intrinsic_sdk_protos
     intrinsic_sdk_services
 )
