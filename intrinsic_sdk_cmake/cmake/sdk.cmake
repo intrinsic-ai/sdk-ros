@@ -61,8 +61,8 @@ target_link_libraries(${PROJECT_NAME}
     pybind11_abseil::import_status_module
     pybind11_protobuf::pybind11_native_proto_caster
     Python::Python
+    zenohc::lib
     # Local targets
-    imw_zenoh
     intrinsic_sdk_protos
     intrinsic_sdk_services
 )

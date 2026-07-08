@@ -26,11 +26,6 @@ include(cmake/sdk_protos.cmake)
 # Build flatbuffers.
 include(cmake/sdk_flatbuffers.cmake)
 
-# Find and install the imw_zenoh shared-library and config file.
-# Note that the cmake variables used in compiler definitions in sdk.cmake, like
-# intrinsic_sdk_IMW_ZENOH_LIBRARY_RELPATH and others, are set in this file.
-include(cmake/sdk_imw_zenoh.cmake)
-
 # Build the sdk C++ sources into a library.
 include(cmake/sdk.cmake)
 
@@ -48,7 +43,6 @@ install(
 install(
   FILES
     cmake/dependencies.cmake
-    cmake/imw_zenoh-target.cmake
   DESTINATION share/${PROJECT_NAME}/cmake
 )
 

@@ -36,6 +36,7 @@
   <depend>pybind11_abseil_vendor</depend>
   <depend>pybind11_protobuf_vendor</depend>
   <depend>python3-retrying</depend>
+  <depend>zenoh_cpp_vendor</depend>
 
   <export>
     <build_type>cmake</build_type>
