@@ -10,6 +10,16 @@ endif()
 find_package(ament_cmake REQUIRED)
 find_package(ament_cmake_vendor_package REQUIRED)
 
+set(prometheus_satisfied_by_system FALSE)
+find_package(prometheus-cpp QUIET)
+if(prometheus-cpp_FOUND)
+  message(STATUS "Found prometheus-cpp, skipping build.")
+  set(prometheus_satisfied_by_system TRUE)
+else()
+  message(STATUS "prometheus-cpp not found, building.")
+  set(prometheus_satisfied_by_system FALSE)
+endif()
+
 ament_vendor(prometheus_cpp_vendor
   VCS_URL https://github.com/jupp0r/prometheus-cpp
   # Based on:
@@ -25,6 +35,7 @@ ament_vendor(prometheus_cpp_vendor
     -DBUILD_SHARED_LIBS=ON
     -DENABLE_PUSH=OFF
     -DENABLE_COMPRESSION=OFF
+  SATISFIED ${prometheus_satisfied_by_system}
 )
 
 ament_package()
