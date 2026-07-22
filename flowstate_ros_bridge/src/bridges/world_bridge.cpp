@@ -50,6 +50,7 @@ constexpr const char* kThrottleRobotStateTopicParamName =
     "throttle_robot_state_topic";
 constexpr const char* kOverrideJointNamesParamName = "override_joint_names";
 constexpr const char* kAlignTfTimestampsParamName = "align_tf_timestamps";
+constexpr const char* kForceTorqueToolTransformParamName = "force_torque_tool_transform";
 
 ///=============================================================================
 void WorldBridge::declare_ros_parameters(
@@ -92,6 +93,9 @@ void WorldBridge::declare_ros_parameters(
   param_interface->declare_parameter(
       kOverrideJointNamesParamName,
       rclcpp::ParameterValue(std::vector<std::string>{}));
+  param_interface->declare_parameter(
+      kForceTorqueToolTransformParamName,
+      rclcpp::ParameterValue(std::vector<double>{0, 0, 0, 0, 0, 0}));
 }
 
 ///=============================================================================
@@ -176,6 +180,29 @@ bool WorldBridge::initialize(ROSNodeInterfaces ros_node_interfaces,
             << data_->robot_joint_state_topic_enabled_;
   LOG(INFO) << "Force Torque Bridge Enabled: "
             << data_->force_torque_topic_enabled_;
+
+  std::vector<double> ft_transform =
+      param_interface->get_parameter(kForceTorqueToolTransformParamName)
+          .as_double_array();
+  data_->ft_transform_matrix_ = Eigen::Isometry3d::Identity();
+  if (ft_transform.size() == 6) {
+    double x = ft_transform[0];
+    double y = ft_transform[1];
+    double z = ft_transform[2];
+    double roll = ft_transform[3] * M_PI / 180.0;
+    double pitch = ft_transform[4] * M_PI / 180.0;
+    double yaw = ft_transform[5] * M_PI / 180.0;
+
+    data_->ft_transform_matrix_.translation() = Eigen::Vector3d(x, y, z);
+    Eigen::AngleAxisd rollAngle(roll, Eigen::Vector3d::UnitX());
+    Eigen::AngleAxisd pitchAngle(pitch, Eigen::Vector3d::UnitY());
+    Eigen::AngleAxisd yawAngle(yaw, Eigen::Vector3d::UnitZ());
+    Eigen::Quaterniond q = yawAngle * pitchAngle * rollAngle;
+    data_->ft_transform_matrix_.linear() = q.matrix();
+  } else {
+    LOG(WARNING) << "Invalid force_torque_tool_transform size! Expected 6, got "
+                 << ft_transform.size() << ". Using identity transform.";
+  }
 
   // Create ROS publishers
   data_->robot_joint_state_pub_ =
@@ -644,12 +671,32 @@ void WorldBridge::PublishForceTorqueSensor(
   wrench_msg.header.frame_id = frame_id;
 
   const auto& w = part_status.wrench_at_ft();
-  wrench_msg.wrench.force.x = w.x();
-  wrench_msg.wrench.force.y = w.y();
-  wrench_msg.wrench.force.z = w.z();
-  wrench_msg.wrench.torque.x = w.rx();
-  wrench_msg.wrench.torque.y = w.ry();
-  wrench_msg.wrench.torque.z = w.rz();
+  
+  Eigen::Vector3d f_s(w.x(), w.y(), w.z());
+  Eigen::Vector3d t_s(w.rx(), w.ry(), w.rz());
+
+  // Apply tool transformation
+  // Sensor wrench transformed to tool frame.
+  // Assuming transform is from sensor to tool: T_tool = T_sensor * ft_transform_matrix_
+  // Math: 
+  // F_t = R^T * F_s
+  // T_t = R^T * (T_s - r x F_s)
+  // where R is rotation from sensor to tool, and r is translation from sensor to tool in sensor frame.
+  // R = ft_transform_matrix_.linear()
+  // r = ft_transform_matrix_.translation()
+  
+  Eigen::Matrix3d R = data_->ft_transform_matrix_.linear();
+  Eigen::Vector3d r = data_->ft_transform_matrix_.translation();
+
+  Eigen::Vector3d f_t = R.transpose() * f_s;
+  Eigen::Vector3d t_t = R.transpose() * (t_s - r.cross(f_s));
+
+  wrench_msg.wrench.force.x = f_t.x();
+  wrench_msg.wrench.force.y = f_t.y();
+  wrench_msg.wrench.force.z = f_t.z();
+  wrench_msg.wrench.torque.x = t_t.x();
+  wrench_msg.wrench.torque.y = t_t.y();
+  wrench_msg.wrench.torque.z = t_t.z();
 
   data_->force_torque_pub_->publish(wrench_msg);
 }

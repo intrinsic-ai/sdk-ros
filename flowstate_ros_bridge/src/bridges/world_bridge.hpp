@@ -17,6 +17,7 @@
 
 #include <memory>
 #include <thread>
+#include <Eigen/Geometry>
 
 #include "absl/container/flat_hash_map.h"
 #include "absl/container/flat_hash_set.h"
@@ -100,6 +101,7 @@ class WorldBridge : public BridgeInterface {
     bool robot_joint_state_topic_enabled_;
     bool force_torque_topic_enabled_;
     std::string ft_sensor_frame_id_;
+    Eigen::Isometry3d ft_transform_matrix_;
     std::string robot_base_frame_id_;
     // Cached part names to avoid repeated map iteration
     std::optional<std::string> robot_arm_part_name_;
