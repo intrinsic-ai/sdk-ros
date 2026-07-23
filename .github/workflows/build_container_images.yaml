@@ -14,7 +14,7 @@ jobs:
       # docker images until they can be tested without pushing to the remote
       # container registry on ghcr.io.
       registry:
-        image: registry:2
+        image: registry:3
         ports:
           - 5000:5000
     outputs:
