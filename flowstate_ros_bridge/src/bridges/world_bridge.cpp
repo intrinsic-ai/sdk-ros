@@ -195,10 +195,10 @@ bool WorldBridge::initialize(ROSNodeInterfaces ros_node_interfaces,
     double yaw = ft_transform[5] * M_PI / 180.0;
 
     data_->ft_transform_matrix_.translation() = Eigen::Vector3d(x, y, z);
-    Eigen::AngleAxisd rollAngle(roll, Eigen::Vector3d::UnitX());
-    Eigen::AngleAxisd pitchAngle(pitch, Eigen::Vector3d::UnitY());
-    Eigen::AngleAxisd yawAngle(yaw, Eigen::Vector3d::UnitZ());
-    Eigen::Quaterniond q = yawAngle * pitchAngle * rollAngle;
+# Use the ZYX convention
+Eigen::Quaterniond q = Eigen::AngleAxisd(yaw, Eigen::Vector3d::UnitZ())
+                     * Eigen::AngleAxisd(pitch, Eigen::Vector3d::UnitY())
+                     * Eigen::AngleAxisd(roll, Eigen::Vector3d::UnitX());
     data_->ft_transform_matrix_.linear() = q.matrix();
   } else {
     LOG(WARNING) << "Invalid force_torque_tool_transform size! Expected 6, got "
