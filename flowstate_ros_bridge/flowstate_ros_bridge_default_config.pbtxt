@@ -27,6 +27,14 @@
     robot_controller_instance: "robot_controller"
     throttle_robot_state_topic: false
     override_joint_names: []
+    force_torque_tool_transform: {
+      x: 0.0
+      y: 0.0
+      z: 0.0
+      roll: 0.0
+      pitch: 0.0
+      yaw: 0.0
+    }
   },
   align_tf_timestamps: true
 }
