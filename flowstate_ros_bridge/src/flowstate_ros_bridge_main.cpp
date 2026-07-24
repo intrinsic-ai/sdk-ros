@@ -126,19 +126,17 @@ int main(int argc, char* argv[]) {
   params.emplace_back("override_joint_names", override_joint_names);
 
   if (s.has_force_torque_tool_transform()) {
-    std::vector<double> ft_transform = {
-        s.force_torque_tool_transform().x(),
-        s.force_torque_tool_transform().y(),
-        s.force_torque_tool_transform().z(),
-        s.force_torque_tool_transform().roll(),
-        s.force_torque_tool_transform().pitch(),
-        s.force_torque_tool_transform().yaw()
-    };
+    std::vector<double> ft_transform = {s.force_torque_tool_transform().x(),
+                                        s.force_torque_tool_transform().y(),
+                                        s.force_torque_tool_transform().z(),
+                                        s.force_torque_tool_transform().roll(),
+                                        s.force_torque_tool_transform().pitch(),
+                                        s.force_torque_tool_transform().yaw()};
     params.emplace_back("force_torque_tool_transform", ft_transform);
   } else {
-    params.emplace_back("force_torque_tool_transform", std::vector<double>{0, 0, 0, 0, 0, 0});
+    params.emplace_back("force_torque_tool_transform",
+                        std::vector<double>{0, 0, 0, 0, 0, 0});
   }
-
 
   options.parameter_overrides(params);
 

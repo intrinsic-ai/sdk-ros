@@ -50,7 +50,8 @@ constexpr const char* kThrottleRobotStateTopicParamName =
     "throttle_robot_state_topic";
 constexpr const char* kOverrideJointNamesParamName = "override_joint_names";
 constexpr const char* kAlignTfTimestampsParamName = "align_tf_timestamps";
-constexpr const char* kForceTorqueToolTransformParamName = "force_torque_tool_transform";
+constexpr const char* kForceTorqueToolTransformParamName =
+    "force_torque_tool_transform";
 
 ///=============================================================================
 void WorldBridge::declare_ros_parameters(
@@ -671,20 +672,18 @@ void WorldBridge::PublishForceTorqueSensor(
   wrench_msg.header.frame_id = frame_id;
 
   const auto& w = part_status.wrench_at_ft();
-  
+
   Eigen::Vector3d f_s(w.x(), w.y(), w.z());
   Eigen::Vector3d t_s(w.rx(), w.ry(), w.rz());
 
   // Apply tool transformation
   // Sensor wrench transformed to tool frame.
-  // Assuming transform is from sensor to tool: T_tool = T_sensor * ft_transform_matrix_
-  // Math: 
-  // F_t = R^T * F_s
-  // T_t = R^T * (T_s - r x F_s)
-  // where R is rotation from sensor to tool, and r is translation from sensor to tool in sensor frame.
-  // R = ft_transform_matrix_.linear()
-  // r = ft_transform_matrix_.translation()
-  
+  // Assuming transform is from sensor to tool: T_tool = T_sensor *
+  // ft_transform_matrix_ Math: F_t = R^T * F_s T_t = R^T * (T_s - r x F_s)
+  // where R is rotation from sensor to tool, and r is translation from sensor
+  // to tool in sensor frame. R = ft_transform_matrix_.linear() r =
+  // ft_transform_matrix_.translation()
+
   Eigen::Matrix3d R = data_->ft_transform_matrix_.linear();
   Eigen::Vector3d r = data_->ft_transform_matrix_.translation();
 

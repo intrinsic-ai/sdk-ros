@@ -15,9 +15,9 @@
 #ifndef BRIDGES__WORLD_BRIDGE_HPP_
 #define BRIDGES__WORLD_BRIDGE_HPP_
 
+#include <Eigen/Geometry>
 #include <memory>
 #include <thread>
-#include <Eigen/Geometry>
 
 #include "absl/container/flat_hash_map.h"
 #include "absl/container/flat_hash_set.h"
