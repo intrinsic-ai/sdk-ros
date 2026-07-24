@@ -676,13 +676,22 @@ void WorldBridge::PublishForceTorqueSensor(
   Eigen::Vector3d f_s(w.x(), w.y(), w.z());
   Eigen::Vector3d t_s(w.rx(), w.ry(), w.rz());
 
-  // Apply tool transformation
-  // Sensor wrench transformed to tool frame.
-  // Assuming transform is from sensor to tool: T_tool = T_sensor *
-  // ft_transform_matrix_ Math: F_t = R^T * F_s T_t = R^T * (T_s - r x F_s)
-  // where R is rotation from sensor to tool, and r is translation from sensor
-  // to tool in sensor frame. R = ft_transform_matrix_.linear() r =
-  // ft_transform_matrix_.translation()
+  /**
+   * Transform the wrench from sensor frame to tool frame.
+   * 
+   * Transformation ft_transform_matrix_ is from sensor to tool frame,
+   * Then the tool transformation T_tool can be expressed as: 
+   *  T_tool = T_sensor * ft_transform_matrix_ 
+   * 
+   * Linear part of wrench: F_t = R.transpose() * F_s 
+   * Torque part of wrench: T_t = R.transpose() * (T_s - r.cross(F_s))
+   * 
+   * Where 
+   * R is rotation from sensor to tool
+   *    R = ft_transform_matrix_.linear()
+   * r is translation from sensor to tool in sensor frame, 
+   *    r = ft_transform_matrix_.translation()
+   */
 
   Eigen::Matrix3d R = data_->ft_transform_matrix_.linear();
   Eigen::Vector3d r = data_->ft_transform_matrix_.translation();
