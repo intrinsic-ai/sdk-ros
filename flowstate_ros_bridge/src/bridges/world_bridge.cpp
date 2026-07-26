@@ -195,10 +195,11 @@ bool WorldBridge::initialize(ROSNodeInterfaces ros_node_interfaces,
     double yaw = ft_transform[5] * M_PI / 180.0;
 
     data_->ft_transform_matrix_.translation() = Eigen::Vector3d(x, y, z);
-# Use the ZYX convention
-Eigen::Quaterniond q = Eigen::AngleAxisd(yaw, Eigen::Vector3d::UnitZ())
-                     * Eigen::AngleAxisd(pitch, Eigen::Vector3d::UnitY())
-                     * Eigen::AngleAxisd(roll, Eigen::Vector3d::UnitX());
+
+    // Use the ZYX convention
+    Eigen::Quaterniond q = Eigen::AngleAxisd(yaw, Eigen::Vector3d::UnitZ()) *
+                           Eigen::AngleAxisd(pitch, Eigen::Vector3d::UnitY()) *
+                           Eigen::AngleAxisd(roll, Eigen::Vector3d::UnitX());
     data_->ft_transform_matrix_.linear() = q.matrix();
   } else {
     LOG(WARNING) << "Invalid force_torque_tool_transform size! Expected 6, got "
@@ -678,18 +679,18 @@ void WorldBridge::PublishForceTorqueSensor(
 
   /**
    * Transform the wrench from sensor frame to tool frame.
-   * 
+   *
    * Transformation ft_transform_matrix_ is from sensor to tool frame,
-   * Then the tool transformation T_tool can be expressed as: 
-   *  T_tool = T_sensor * ft_transform_matrix_ 
-   * 
-   * Linear part of wrench: F_t = R.transpose() * F_s 
+   * Then the tool transformation T_tool can be expressed as:
+   *  T_tool = T_sensor * ft_transform_matrix_
+   *
+   * Linear part of wrench: F_t = R.transpose() * F_s
    * Torque part of wrench: T_t = R.transpose() * (T_s - r.cross(F_s))
-   * 
-   * Where 
+   *
+   * Where
    * R is rotation from sensor to tool
    *    R = ft_transform_matrix_.linear()
-   * r is translation from sensor to tool in sensor frame, 
+   * r is translation from sensor to tool in sensor frame,
    *    r = ft_transform_matrix_.translation()
    */
 
