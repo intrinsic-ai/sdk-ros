@@ -3,16 +3,20 @@
 import http.server
 import socketserver
 import sys
+import threading
 import rclpy
-from rclpy.executors import ExternalShutdownException
+from rclpy.executors import MultiThreadedExecutor, ExternalShutdownException
 from flowstate_interfaces.srv import GetResource
 
-
 class RvizGetHandler(http.server.BaseHTTPRequestHandler):
+    # Dictionaries to cache meshes across all threads
+    _cache = {}
+    _locks = {}
+    _global_lock = threading.Lock()
+
     def __init__(self, node, client, *args, **kwargs):
         self.node = node
         self.client = client
-        # do_GET() will be invoked by super().__init__()
         super().__init__(*args, **kwargs)
 
     def do_GET(self):
@@ -23,16 +27,46 @@ class RvizGetHandler(http.server.BaseHTTPRequestHandler):
             self.end_headers()
             self.wfile.write(b'Not found\r\n')
             return
-        request = GetResource.Request()
-        request.path = self.path
-        future = self.client.call_async(request)
-        rclpy.spin_until_future_complete(self.node, future)
-        response = future.result()
-        print(f'response payload size: {len(response.body)}')
+        
+        # If already downloaded, serve it.
+        if self.path in self.__class__._cache:
+            self._serve_from_cache()
+            return
+
+        # Prevent threads from asking for the same mesh at the same time.
+        with self.__class__._global_lock:
+            if self.path not in self.__class__._locks:
+                self.__class__._locks[self.path] = threading.Lock()
+            path_lock = self.__class__._locks[self.path]
+        
+        with path_lock:
+            # Double check the cache inside the lock (another thread might have just fetched it).
+            if self.path in self.__class__._cache:
+                self._serve_from_cache()
+                return
+            
+            # Fetch from the ROS 2 Service (will only happen once per unique mesh).
+            print(f"Fetching {self.path} from ROS 2 Service...")
+            request = GetResource.Request()
+            request.path = self.path
+            
+            future = self.client.call_async(request)
+            event = threading.Event()
+            future.add_done_callback(lambda _: event.set())
+            event.wait()
+            
+            response = future.result()
+            
+            # Save the mesh to RAM.
+            self.__class__._cache[self.path] = response.body
+            self._serve_from_cache()
+
+    def _serve_from_cache(self):
+        body = self.__class__._cache.get(self.path, b'')
         self.send_response(200)
         self.send_header('Content-type', 'model/gltf-binary')
         self.end_headers()
-        self.wfile.write(response.body)
+        self.wfile.write(body)
 
 
 def main(argv):
@@ -41,16 +75,28 @@ def main(argv):
         node = rclpy.create_node('rviz_http_proxy')
         node.declare_parameter('http_port', 8123)
         client = node.create_client(GetResource, 'flowstate_get_resource')
+        
+        executor = MultiThreadedExecutor(num_threads=200)
+        executor.add_node(node)
+        
+        spin_thread = threading.Thread(target=executor.spin, daemon=True)
+        spin_thread.start()
+
         while not client.wait_for_service(timeout_sec=1.0):
             node.get_logger().info('waiting for flowstate_get_resource service...')
+            
         factory = lambda *args, **kwargs: RvizGetHandler(node, client, *args, **kwargs)
         port = node.get_parameter('http_port').get_parameter_value().integer_value
-        with socketserver.TCPServer(('', port), factory) as httpd:
-            print(f'serving on port {port}')
+        
+        with socketserver.ThreadingTCPServer(('', port), factory) as httpd:
+            print(f'serving on port {port} with caching enabled')
             httpd.serve_forever()
+            
     except (KeyboardInterrupt, ExternalShutdownException):
         pass
-
+    finally:
+        if rclpy.ok():
+            rclpy.shutdown()
 
 if __name__ == '__main__':
     main(sys.argv)

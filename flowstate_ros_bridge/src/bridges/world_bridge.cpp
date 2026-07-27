@@ -17,6 +17,8 @@
 #include <limits>
 #include <string>
 #include <utility>
+#include <chrono>
+#include <thread>
 
 #include "absl/log/log.h"
 #include "absl/status/status.h"
@@ -133,12 +135,14 @@ bool WorldBridge::initialize(ROSNodeInterfaces ros_node_interfaces,
           data_->node_interfaces_
               .get<rclcpp::node_interfaces::NodeTopicsInterface>();
 
+  // Increased to prevent UDP drops during mass spawn
   data_->tf_pub_ = rclcpp::create_publisher<tf2_msgs::msg::TFMessage>(
       param_interface, topics_interface, "tf",
-      tf2_ros::DynamicBroadcasterQoS());
+      rclcpp::QoS(rclcpp::KeepLast(1000)));
 
+  // Increased to prevent UDP drops during mass spawn
   const rclcpp::QoS markers_qos =
-      rclcpp::QoS(rclcpp::KeepLast(1)).transient_local();
+      rclcpp::QoS(rclcpp::KeepLast(1000)).transient_local();
   data_->workcell_markers_pub_ =
       rclcpp::create_publisher<visualization_msgs::msg::MarkerArray>(
           param_interface, topics_interface, "workcell_markers", markers_qos);
@@ -217,23 +221,44 @@ bool WorldBridge::initialize(ROSNodeInterfaces ros_node_interfaces,
   data_->viz_thread_ = std::make_shared<std::thread>([data_wp]() {
     while (rclcpp::ok()) {
       if (auto data = data_wp.lock()) {
+        std::optional<std::vector<std::string>> local_object_names;
+
         data->mutex_.LockWhen(absl::Condition(
             +[](bool* condn) { return *condn; }, &data->send_new_objects_));
-
-        const absl::Status status =
-            data->SendObjectVisualizationMessages(data->send_object_names_);
-        if (!status.ok()) {
-          LOG(ERROR) << "Unable to send object visualization messages: "
-                     << status.message();
-          continue;
-        }
+        local_object_names = data->send_object_names_;
+        
         if (data->send_object_names_.has_value()) {
-          // Clear object names if object retrival and publishing is successful
           data->send_object_names_.value().clear();
         }
         data->send_new_objects_ = false;
 
+        // Unlock the mutex before the network operations.
         data->mutex_.Unlock();
+
+        // Send messages using the local copy (Relies on Retry Logic rather than hardcoded sleep).
+        const absl::Status status =
+            data->SendObjectVisualizationMessages(local_object_names);
+            
+        if (!status.ok()) {
+          LOG(ERROR) << "Unable to send object visualization messages: "
+                     << status.message() << ". Re-queueing objects to retry...";
+          
+          // Put the failed objects back into the queue so they aren't lost.
+          data->mutex_.Lock();
+          if (data->send_object_names_.has_value()) {
+            data->send_object_names_.value().insert(
+                data->send_object_names_.value().end(),
+                local_object_names.value().begin(), local_object_names.value().end());
+          } else {
+            data->send_object_names_ = local_object_names;
+          }
+          data->send_new_objects_ = true;
+          data->mutex_.Unlock();
+          
+          // Sleep briefly to give Flowstate time to register the new boxes before retrying.
+          std::this_thread::sleep_for(std::chrono::milliseconds(200));
+          continue;
+        }
       } else {
         LOG(ERROR) << "data has expired! Terminating thread sending "
                       "visualization objects";
@@ -247,10 +272,24 @@ bool WorldBridge::initialize(ROSNodeInterfaces ros_node_interfaces,
 
 absl::Status WorldBridge::Data::SendObjectVisualizationMessages(
     std::optional<std::vector<std::string>> object_names) {
+  
+  // Capture the exact number of objects asked for before fetch them.
+  size_t requested_size = 0;
+  if (object_names.has_value()) {
+    requested_size = object_names.value().size();
+  }
+
   absl::StatusOr<std::vector<intrinsic::world::WorldObject>> objects =
       world_->GetObjects(std::move(object_names));
+      
   if (!objects.ok()) {
     return objects.status();
+  }
+
+  // If Flowstate gives a partial list, reject it to trigger a retry.
+  if (requested_size > 0 && objects->size() < requested_size) {
+    return absl::NotFoundError(
+        "Flowstate returned a partial object list. Retrying until all are ready...");
   }
 
   LOG(INFO) << "Retrieved " << objects->size() << " world objects:";
@@ -285,8 +324,6 @@ absl::Status WorldBridge::Data::SendObjectVisualizationMessages(
               absl::StrFormat("%s%s/%s", tf_prefix_.c_str(), object_name,
                               entity.second.name());
 
-          // Let's be smarter in the future. For now, just skip over
-          // the intcas:// prefix
           const std::string gltf_path = absl::StrFormat(
               "gltf/%s_%s.glb", geo_ref.exact_geometry_ref().substr(9),
               geo_ref.renderable_ref().substr(9));
@@ -341,36 +378,36 @@ absl::Status WorldBridge::Data::SendObjectVisualizationMessages(
           marker_msg.pose.orientation.y = quat.y();
           marker_msg.pose.orientation.z = quat.z();
           marker_msg.pose.orientation.w = quat.w();
-          // Currently all of our meshes have unit scaling. If this changes,
-          // we could use Transform::computeRotationScaling() but that costs
-          // a SVD, and it doesn't seem worth it when _all_ of our meshes are
-          // already at unit scale.
           marker_msg.scale.x = 1.0;
           marker_msg.scale.y = 1.0;
           marker_msg.scale.z = 1.0;
-          // Leave color as (1, 1, 1, 1) so that the mesh color is as expected
-          // from the embedded glTF textures.
           marker_msg.color.r = 1.0;
           marker_msg.color.g = 1.0;
           marker_msg.color.b = 1.0;
           marker_msg.color.a = 1.0;
-          // Set lifetime to (0, 0) to indicate these meshes never expire.
           marker_msg.lifetime.sec = 0;
           marker_msg.lifetime.nanosec = 0;
-          // Lock the mesh to its TF frame so that motion is handled correctly
           marker_msg.frame_locked = true;
-          // Set the mesh resource path to the HTTP/rmw_zenoh proxy
           marker_msg.mesh_resource = mesh_url_prefix_ + gltf_path;
           marker_msg.mesh_use_embedded_materials = true;
 
           array_msg.markers.push_back(std::move(marker_msg));
+
+          // Publish if array reaches 50 markers to stay under UDP limits.
+          if (array_msg.markers.size() >= 50) {
+            workcell_markers_pub_->publish(array_msg);
+            array_msg.markers.clear();
+            
+            // Give RViz 50ms to actually render the meshes before sending more.
+            std::this_thread::sleep_for(std::chrono::milliseconds(50)); 
+          }
         }
       }
-      // LOG(INFO) << entity.second;
     }
   }
   LOG(INFO) << "Total gltf size: " << total_gltf_size << " bytes";
 
+  // Publish remaining markers if any.
   if (!array_msg.markers.empty()) {
     workcell_markers_pub_->publish(array_msg);
   }
@@ -387,7 +424,6 @@ std::string WorldBridge::StripTfPrefixes(
     const std::vector<std::string>& prefixes) {
   absl::string_view stripped = frame;
   for (const auto& prefix : prefixes) {
-    // Add check to only strip the prefix once per frame
     if (!prefix.empty() && absl::StartsWith(stripped, prefix)) {
       stripped = absl::StripPrefix(stripped, prefix);
       break;
@@ -399,21 +435,21 @@ std::string WorldBridge::StripTfPrefixes(
 ///=============================================================================
 void WorldBridge::TfCallback(const intrinsic_proto::TFMessage& tf_proto) {
   rclcpp::Clock clock;
-  const rclcpp::Time t_start = clock.now();
+  const rclcpp::Time now = clock.now();
 
-  absl::flat_hash_set<std::string> new_tf_frame_names;
   absl::flat_hash_set<std::string> new_object_names;
 
   tf2_msgs::msg::TFMessage tf_ros;
   tf_ros.transforms = std::vector<geometry_msgs::msg::TransformStamped>(
       tf_proto.transforms_size());
   int tf_idx = 0;
+
   for (const auto& ts_proto : tf_proto.transforms()) {
     geometry_msgs::msg::TransformStamped* ts_ros = &tf_ros.transforms[tf_idx++];
     ts_ros->header.stamp.sec = ts_proto.header().stamp().seconds();
     ts_ros->header.stamp.nanosec = ts_proto.header().stamp().nanos();
 
-    // Strip away Flowstate TF prefixes
+    // Strip away Flowstate TF prefixes.
     const std::string frame_id =
         StripTfPrefixes(ts_proto.header().frame_id(), data_->strip_flowstate_tf_prefixes_);
 
@@ -423,17 +459,16 @@ void WorldBridge::TfCallback(const intrinsic_proto::TFMessage& tf_proto) {
     ts_ros->header.frame_id = data_->tf_prefix_ + frame_id;
     ts_ros->child_frame_id = data_->tf_prefix_ + child_frame_id;
 
-    new_tf_frame_names.insert(ts_ros->child_frame_id);
+    data_->tf_frame_last_seen_[ts_ros->child_frame_id] = now;
+
     if (!data_->tf_frame_names_.contains(ts_ros->child_frame_id)) {
-      // We parse the "OBJECT_NAME/ENTITY_NAME" string to get the OBJECT_NAME
+      data_->tf_frame_names_.insert(ts_ros->child_frame_id);
       LOG(INFO) << "new child_frame_id: " << ts_ros->child_frame_id;
       const std::size_t str_end = child_frame_id.find('/');
       new_object_names.insert(child_frame_id.substr(0, str_end));
     }
-    // The auto-generated CDR types do not currently have assignment operators
-    // or helper conversion functions from the corresponding protos, so we need
-    // to explicitly copy all the fields.
-    const auto& t = ts_proto.transform();  // just to save some typing
+
+    const auto& t = ts_proto.transform();
     ts_ros->transform.translation.x = t.translation().x();
     ts_ros->transform.translation.y = t.translation().y();
     ts_ros->transform.translation.z = t.translation().z();
@@ -444,32 +479,40 @@ void WorldBridge::TfCallback(const intrinsic_proto::TFMessage& tf_proto) {
   }
   data_->tf_pub_->publish(tf_ros);
 
-  // print a timing snapshot every 500 messages
-  const rclcpp::Duration elapsed = clock.now() - t_start;
+  const rclcpp::Duration elapsed = clock.now() - now;
   LOG_EVERY_N(INFO, 500) << absl::StrFormat("tf translation time: %.3f ms",
                                             1000.0 * elapsed.seconds());
 
-  std::vector<std::string> deleted_tf_frames;
-  for (const auto& tf_frame : data_->tf_frame_names_) {
-    if (!new_tf_frame_names.contains(tf_frame)) {
-      deleted_tf_frames.push_back(tf_frame);
+  // Time-based deletion.
+  std::vector<std::string> expired_tf_frames;
+  const rclcpp::Duration timeout = rclcpp::Duration::from_seconds(5.0);
+
+  for (auto it = data_->tf_frame_last_seen_.begin(); it != data_->tf_frame_last_seen_.end(); ) {
+    if ((now - it->second) > timeout) {
+      expired_tf_frames.push_back(it->first);
+      data_->tf_frame_names_.erase(it->first);
+      data_->tf_frame_last_seen_.erase(it++); 
+    } else {
+      ++it;
     }
   }
-  if (!deleted_tf_frames.empty()) {
+
+  if (!expired_tf_frames.empty()) {
     visualization_msgs::msg::MarkerArray array_msg;
-    for (const auto& tf_frame : deleted_tf_frames) {
-      LOG(INFO) << "Removed sceneObject with frame_id " << tf_frame
-                << " in the world, updating visualization markers.";
+    for (const auto& tf_frame : expired_tf_frames) {
+      LOG(INFO) << "Frame " << tf_frame << " timed out, removing visualization marker.";
 
       visualization_msgs::msg::Marker marker_msg;
       marker_msg.ns = tf_frame;
-      marker_msg.action = visualization_msgs::msg::Marker::DELETEALL;
+      marker_msg.id = 0; 
+      marker_msg.action = visualization_msgs::msg::Marker::DELETE; 
 
       array_msg.markers.push_back(std::move(marker_msg));
     }
     data_->workcell_markers_pub_->publish(array_msg);
   }
 
+  // Signal background thread if new objects arrived.
   if (!new_object_names.empty()) {
     data_->mutex_.Lock();
     if (data_->send_object_names_.has_value()) {
@@ -480,12 +523,9 @@ void WorldBridge::TfCallback(const intrinsic_proto::TFMessage& tf_proto) {
       data_->send_object_names_ = std::vector<std::string>(
           new_object_names.begin(), new_object_names.end());
     }
-    // Signal background thread to send object visualization messages
     data_->send_new_objects_ = true;
     data_->mutex_.Unlock();
   }
-
-  data_->tf_frame_names_ = std::move(new_tf_frame_names);
 }
 
 ///=============================================================================
@@ -496,7 +536,6 @@ void WorldBridge::RobotStateCallback(
   const auto& payload = log_item.payload();
 
   switch (payload.data_case()) {
-    // At the time of writing this was the only received item in the LogItem msg
     case intrinsic_proto::data_logger::LogItem::Payload::kIconRobotStatus: {
       if (data_->robot_joint_state_topic_enabled_ ||
           data_->force_torque_topic_enabled_) {
@@ -521,7 +560,6 @@ void WorldBridge::RobotStateCallback(
     }
   }
 
-  // print the translation time every 5000 messages
   const rclcpp::Duration elapsed = clock.now() - t_start;
   LOG_EVERY_N(INFO, 5000) << absl::StrFormat(
       "Robot state translation time: %.3f ms", 1000.0 * elapsed.seconds());
@@ -530,7 +568,6 @@ void WorldBridge::RobotStateCallback(
 void WorldBridge::HandleRobotStatus(
     const intrinsic_proto::icon::RobotStatus& robot_status,
     const rclcpp::Time& time) {
-  // On first execution, cache the part names to avoid repeated map iteration
   if (!data_->robot_arm_part_name_.has_value()) {
     for (const auto& entry : robot_status.status_map()) {
       const std::string& part_name = entry.first;
@@ -553,7 +590,6 @@ void WorldBridge::HandleRobotStatus(
     }
   }
 
-  // Use cached part names for publishing
   if (data_->robot_joint_state_topic_enabled_ &&
       data_->robot_arm_part_name_.has_value()) {
     const std::string& part_name = data_->robot_arm_part_name_.value();
@@ -641,7 +677,6 @@ void WorldBridge::PublishForceTorqueSensor(
 }
 
 ///=============================================================================
-
 WorldBridge::~WorldBridge() {
   if (data_->viz_thread_ && data_->viz_thread_->joinable()) {
     data_->viz_thread_->join();
