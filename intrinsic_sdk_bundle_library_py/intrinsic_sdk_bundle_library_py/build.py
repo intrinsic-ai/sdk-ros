@@ -292,6 +292,21 @@ def build_container(args):
 
         run_command(cmd)
         print(f'Saved compressed image to {tar_path}')
+
+        if getattr(args, 'http_bazel_target', None):
+            print(f'Building HTTP container using Bazel target: {args.http_bazel_target}')
+            run_command(['bazel', 'build', args.http_bazel_target])
+            
+            bazel_out = args.http_bazel_target.replace('//', 'bazel-bin/').replace(':', '/')
+            if not os.path.exists(bazel_out):
+                print(f'Error: Could not find Bazel output at {bazel_out}')
+                sys.exit(1)
+                
+            http_tar_path = os.path.join(tar_dir, f'{name}_http_image.tar')
+            if os.path.exists(http_tar_path):
+                os.remove(http_tar_path)
+            shutil.copy2(bazel_out, http_tar_path)
+            print(f'Copied Bazel HTTP image to {http_tar_path}')
     finally:
         if not args.keep_builder:
             print(f'Stopping builder {builder_name}...')
@@ -377,7 +392,14 @@ def build_bundle(args):
     inbuild_cmd.extend([
         '--file_descriptor_set', desc_path,
         '--manifest', args.manifest_path,
-        '--oci_image', tar_path,
+        '--oci_image', tar_path
+    ])
+    
+    http_tar_path = os.path.join(bundle_dir, name, f'{name}_http_image.tar')
+    if os.path.exists(http_tar_path):
+        inbuild_cmd.extend(['--oci_image', http_tar_path])
+        
+    inbuild_cmd.extend([
         '--output', os.path.join(bundle_dir, name, f'{name}.bundle.tar')
     ])
 
@@ -416,6 +438,7 @@ def main():
         '--overlay-source',
         help='Override OVERLAY_SOURCE build arg in service.Dockerfile'
     )
+    parser_container.add_argument('--http_bazel_target', help='Bazel target to build the HTTP image (e.g. //src/...:icc_service_http_image.tar)')
 
     # Build bundle parser
     parser_bundle = subparsers.add_parser('bundle', help='Build bundle')
