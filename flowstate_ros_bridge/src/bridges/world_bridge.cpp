@@ -220,9 +220,10 @@ bool WorldBridge::initialize(ROSNodeInterfaces ros_node_interfaces,
         data->mutex_.LockWhen(absl::Condition(
             +[](bool* condn) { return *condn; }, &data->send_new_objects_));
 
-        // CRITICAL CONCURRENCY FIX: Copy data and unlock immediately
-        // so TfCallback is not blocked during heavy GLTF network downloads.
-        std::optional<std::vector<std::string>> local_object_names = data->send_object_names_;
+        // Copy data and unlock immediately so TfCallback is not blocked during
+        // heavy mesh downloading.
+        std::optional<std::vector<std::string>> local_object_names =
+            data->send_object_names_;
         if (data->send_object_names_.has_value()) {
           data->send_object_names_.value().clear();
         }
