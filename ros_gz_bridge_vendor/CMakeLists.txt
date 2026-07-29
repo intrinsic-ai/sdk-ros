@@ -20,7 +20,6 @@ ament_vendor(ros_gz_bridge_vendor
   VCS_URL https://github.com/gazebosim/ros_gz/
   VCS_VERSION 6247cb07c34d6e68e849fc97b82fca8a3a096d21 # Main at 10/02/2026, later requires a message that is not released as a binary yet
   SOURCE_SUBDIR ros_gz_bridge
-  GLOBAL_HOOK
   SATISFIED ${ros_gz_bridge_satisfied_by_system}
 )
 
