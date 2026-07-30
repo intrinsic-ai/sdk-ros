@@ -23,10 +23,15 @@ endif()
 find_package(ament_cmake REQUIRED)
 find_package(intrinsic_sdk_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
-# TEMPORARY FIXES
-find_package(ros_gz_bridge_vendor REQUIRED)
 # Bulletproof path injection since colcon shell hooks are failing to propagate the opt/ path on a Conda runner
 list(APPEND CMAKE_PREFIX_PATH "${CMAKE_INSTALL_PREFIX}/../ros_gz_bridge_vendor/opt/ros_gz_bridge_vendor")
+find_package(ros_gz_bridge_vendor REQUIRED)
+# Pre-load possible Gazebo targets to satisfy ros_gz_bridge exported targets, 
+# since its Config.cmake fails to explicitly call find_dependency() for them.
+find_package(gz-msgs12 QUIET)
+find_package(gz-transport15 QUIET)
+find_package(gz-msgs11 QUIET)
+find_package(gz-transport14 QUIET)
 find_package(ros_gz_bridge REQUIRED)
 
 if(BUILD_TESTING)

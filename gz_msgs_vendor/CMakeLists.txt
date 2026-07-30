@@ -12,11 +12,11 @@ find_package(ament_cmake_vendor_package REQUIRED)
 
 set(gz_msgs_satisfied_by_system FALSE)
 find_package(gz-msgs QUIET)
-if(gz-msgs_FOUND AND gz-msgs_VERSION VERSION_GREATER_EQUAL 12.0.0)
-  message(STATUS "Found gz-msgs 12+, skipping build.")
+if(gz-msgs_FOUND AND gz-msgs_VERSION VERSION_GREATER_EQUAL 11.0.0)
+  message(STATUS "Found gz-msgs 11+, skipping build.")
   set(gz_msgs_satisfied_by_system TRUE)
 else()
-  message(STATUS "gz-msgs 12+ not found, building.")
+  message(STATUS "gz-msgs 11+ not found, building.")
   set(gz_msgs_satisfied_by_system FALSE)
 endif()
 
@@ -30,7 +30,7 @@ endif()
 ament_vendor(gz_msgs_vendor
   VCS_URL https://github.com/gazebosim/gz-msgs
   # Target Intrinsic SDK version requires Gazebo Jetty packages.
-  VCS_VERSION gz-msgs12_12.0.1
+  VCS_VERSION gz-msgs11_11.1.0
   SATISFIED ${gz_msgs_satisfied_by_system}
   GLOBAL_HOOK
   PATCHES patches
