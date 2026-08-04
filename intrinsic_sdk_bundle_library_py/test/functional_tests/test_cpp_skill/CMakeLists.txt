@@ -38,6 +38,7 @@ intrinsic_sdk_generate_skill_main_cc(
   MANIFEST test_cpp_skill.manifest.textproto
   HEADER_FILES test_cpp_skill.h
   MAIN_FILE_OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/test_cpp_skill_main.cc"
+  FILE_DESCRIPTOR_SET "${CMAKE_CURRENT_BINARY_DIR}/test_cpp_skill.desc"
 )
 
 # Build the skill main.

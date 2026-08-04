@@ -39,7 +39,7 @@ include_guard(GLOBAL)
 #
 function(intrinsic_sdk_generate_skill_main_cc)
   set(options)
-  set(one_value_args MANIFEST_PBBIN MANIFEST MAIN_FILE_OUTPUT)
+  set(one_value_args MANIFEST_PBBIN MANIFEST MAIN_FILE_OUTPUT FILE_DESCRIPTOR_SET)
   set(multi_value_args HEADER_FILES)
 
   cmake_parse_arguments(
@@ -69,8 +69,15 @@ function(intrinsic_sdk_generate_skill_main_cc)
   endif()
   list(JOIN arg_HEADER_FILES "," joined_header_files)
 
+  if(NOT arg_FILE_DESCRIPTOR_SET)
+    set(arg_FILE_DESCRIPTOR_SET "${arg_MAIN_FILE_OUTPUT}_empty.desc")
+    file(WRITE "${arg_FILE_DESCRIPTOR_SET}" "")
+  endif()
+
   add_custom_command(
     OUTPUT ${arg_MAIN_FILE_OUTPUT}
+           ${arg_MAIN_FILE_OUTPUT}_augmented_manifest.pbbin
+           ${arg_MAIN_FILE_OUTPUT}_augmented_protos.desc
     # TODO(wjwwood): figure out why the alias does not work...
     # COMMAND intrinsic_sdk_cmake::inbuild
     COMMAND inbuild_import
@@ -79,6 +86,9 @@ function(intrinsic_sdk_generate_skill_main_cc)
       --language=cpp
       --output=${arg_MAIN_FILE_OUTPUT}
       --cc_header=${joined_header_files}
+      --file_descriptor_set=${arg_FILE_DESCRIPTOR_SET}
+      --augmented_manifest_out=${arg_MAIN_FILE_OUTPUT}_augmented_manifest.pbbin
+      --augmented_file_descriptor_set_out=${arg_MAIN_FILE_OUTPUT}_augmented_protos.desc
     DEPENDS ${manifest_textproto}
     COMMENT "Generating skill cpp main file: ${arg_MAIN_FILE_OUTPUT}"
   )
