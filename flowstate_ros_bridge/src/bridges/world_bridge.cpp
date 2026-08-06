@@ -113,12 +113,19 @@ bool WorldBridge::initialize(ROSNodeInterfaces ros_node_interfaces,
                             std::shared_ptr<GetResource::Response> response) {
         const std::string gltf_id = request->path;
         LOG(INFO) << "request resource path: " << gltf_id;
-        if (!data_->renderables_.contains(gltf_id)) {
+        
+        // Protect the read from RViz.
+        data_->mutex_.Lock();
+        bool contains = data_->renderables_.contains(gltf_id);
+        if (!contains) {
+          data_->mutex_.Unlock();
           response->status_code = GetResource::Response::ERROR;
           return;
         }
-        response->status_code = GetResource::Response::OK;
         response->body = data_->renderables_[gltf_id];
+        data_->mutex_.Unlock();
+
+        response->status_code = GetResource::Response::OK;
       },
       rclcpp::ServicesQoS(), nullptr);
 
@@ -294,9 +301,13 @@ absl::Status WorldBridge::Data::SendObjectVisualizationMessages(
               geo_ref.renderable_ref().substr(9));
 
           const auto renderable_name = std::string("/") + gltf_path;
-          auto renderables_it = renderables_.find(renderable_name);
+          
+          // Safely check if map contains the object
+          mutex_.Lock();
+          bool has_renderable = renderables_.contains(renderable_name);
+          mutex_.Unlock();
 
-          if (renderables_it == renderables_.end()) {
+          if (!has_renderable) {
             const absl::StatusOr<std::string> gltf = world_->GetGltf(
                 geo_ref.exact_geometry_ref(), geo_ref.renderable_ref());
             if (!gltf.ok()) {
@@ -311,9 +322,11 @@ absl::Status WorldBridge::Data::SendObjectVisualizationMessages(
 
             LOG(INFO) << "Fetched " << gltf->size() << " bytes for "
                       << tf_frame_name;
-            renderables_it =
-                renderables_.emplace(renderable_name, std::move(gltf_data))
-                    .first;
+                      
+            // Safely insert the newly downloaded mesh
+            mutex_.Lock();
+            renderables_.emplace(renderable_name, std::move(gltf_data));
+            mutex_.Unlock();
           }
 
           const auto& ref_t_shape = transformed_geometry.ref_t_shape();
@@ -368,7 +381,6 @@ absl::Status WorldBridge::Data::SendObjectVisualizationMessages(
           array_msg.markers.push_back(std::move(marker_msg));
         }
       }
-      // LOG(INFO) << entity.second;
     }
   }
   LOG(INFO) << "Total gltf size: " << total_gltf_size << " bytes";
@@ -400,6 +412,8 @@ std::string WorldBridge::StripTfPrefixes(
 
 ///=============================================================================
 void WorldBridge::TfCallback(const intrinsic_proto::TFMessage& tf_proto) {
+  data_->mutex_.Lock();
+  
   rclcpp::Clock clock;
   const rclcpp::Time t_start = clock.now();
 
@@ -473,7 +487,6 @@ void WorldBridge::TfCallback(const intrinsic_proto::TFMessage& tf_proto) {
   }
 
   if (!new_object_names.empty()) {
-    data_->mutex_.Lock();
     if (data_->send_object_names_.has_value()) {
       data_->send_object_names_.value().insert(
           data_->send_object_names_.value().end(), new_object_names.begin(),
@@ -484,10 +497,11 @@ void WorldBridge::TfCallback(const intrinsic_proto::TFMessage& tf_proto) {
     }
     // Signal background thread to send object visualization messages
     data_->send_new_objects_ = true;
-    data_->mutex_.Unlock();
   }
 
   data_->tf_frame_names_ = std::move(new_tf_frame_names);
+  
+  data_->mutex_.Unlock();
 }
 
 ///=============================================================================
