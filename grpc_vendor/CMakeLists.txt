@@ -27,6 +27,14 @@ if(NOT grpc_satisfied_by_system)
   find_package(re2 REQUIRED)
 endif()
 
+# The unusual CMAKE_POLICY_VERSION_MINIMUM=3.5 argument is needed in order
+# to allow grpc_vendor to build on CMake 4.2.3 (the Ubuntu 26.04 default)
+# due to the c-ares vendor dependency of grpc v1.74.0, which declares
+# CMAKE_MINIMUM_REQUIRED (VERSION 3.1.0). This causes CMake 4.2.3
+# to fail, since its default minimum CMake version is 3.5. This issue appears
+# to be resolved in newer versions of grpc, because the vendored c-ares version
+# has been updated.
+
 ament_vendor(grpc_vendor
   VCS_URL https://github.com/grpc/grpc
   VCS_VERSION v1.74.0
@@ -53,6 +61,7 @@ ament_vendor(grpc_vendor
     -DgRPC_BUILD_GRPC_PYTHON_PLUGIN=ON
     -DgRPC_PROTOBUF_PROVIDER:STRING=module
     -DPROTOBUF_ROOT_DIR=${PROTOBUF_ROOT_DIR}
+    -DCMAKE_POLICY_VERSION_MINIMUM=3.5
   GLOBAL_HOOK
 )
 
