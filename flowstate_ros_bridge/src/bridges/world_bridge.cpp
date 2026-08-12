@@ -114,17 +114,15 @@ bool WorldBridge::initialize(ROSNodeInterfaces ros_node_interfaces,
         const std::string gltf_id = request->path;
         LOG(INFO) << "request resource path: " << gltf_id;
         
-        // Protect the read from RViz.
-        data_->mutex_.Lock();
-        bool contains = data_->renderables_.contains(gltf_id);
-        if (!contains) {
-          data_->mutex_.Unlock();
-          response->status_code = GetResource::Response::ERROR;
-          return;
+        {
+          absl::MutexLock lock(&data_->mutex_);
+          auto it = data_->renderables_.find(gltf_id);
+          if (it == data_->renderables_.end()) {
+            response->status_code = GetResource::Response::ERROR;
+            return;
+          }
+          response->body = it->second;
         }
-        response->body = data_->renderables_[gltf_id];
-        data_->mutex_.Unlock();
-
         response->status_code = GetResource::Response::OK;
       },
       rclcpp::ServicesQoS(), nullptr);
@@ -302,10 +300,11 @@ absl::Status WorldBridge::Data::SendObjectVisualizationMessages(
 
           const auto renderable_name = std::string("/") + gltf_path;
           
-          // Safely check if map contains the object
-          mutex_.Lock();
-          bool has_renderable = renderables_.contains(renderable_name);
-          mutex_.Unlock();
+          bool has_renderable = false;
+          {
+            absl::MutexLock lock(&mutex_);
+            has_renderable = renderables_.contains(renderable_name);
+          }
 
           if (!has_renderable) {
             const absl::StatusOr<std::string> gltf = world_->GetGltf(
@@ -324,9 +323,8 @@ absl::Status WorldBridge::Data::SendObjectVisualizationMessages(
                       << tf_frame_name;
                       
             // Safely insert the newly downloaded mesh
-            mutex_.Lock();
+            absl::MutexLock lock(&mutex_);
             renderables_.emplace(renderable_name, std::move(gltf_data));
-            mutex_.Unlock();
           }
 
           const auto& ref_t_shape = transformed_geometry.ref_t_shape();
@@ -412,8 +410,6 @@ std::string WorldBridge::StripTfPrefixes(
 
 ///=============================================================================
 void WorldBridge::TfCallback(const intrinsic_proto::TFMessage& tf_proto) {
-  data_->mutex_.Lock();
-  
   rclcpp::Clock clock;
   const rclcpp::Time t_start = clock.now();
 
@@ -487,6 +483,7 @@ void WorldBridge::TfCallback(const intrinsic_proto::TFMessage& tf_proto) {
   }
 
   if (!new_object_names.empty()) {
+    absl::MutexLock lock(&data_->mutex_);
     if (data_->send_object_names_.has_value()) {
       data_->send_object_names_.value().insert(
           data_->send_object_names_.value().end(), new_object_names.begin(),
@@ -500,8 +497,6 @@ void WorldBridge::TfCallback(const intrinsic_proto::TFMessage& tf_proto) {
   }
 
   data_->tf_frame_names_ = std::move(new_tf_frame_names);
-  
-  data_->mutex_.Unlock();
 }
 
 ///=============================================================================

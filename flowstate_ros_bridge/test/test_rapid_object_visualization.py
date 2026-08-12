@@ -16,6 +16,7 @@
 import argparse
 from concurrent.futures import ThreadPoolExecutor
 import sys
+import threading
 import time
 import urllib.error
 import urllib.request
@@ -53,6 +54,7 @@ class MarkerMonitorNode(Node):
 
     # ThreadPool simulating RViz's concurrent mesh downloads (4 parallel workers matching Assimp/OGRE)
     self.http_executor = ThreadPoolExecutor(max_workers=4)
+    self.http_lock = threading.Lock()
 
     # QoS matching RViz setup (Transient Local + Reliable)
     qos_profile = QoSProfile(
@@ -64,7 +66,7 @@ class MarkerMonitorNode(Node):
     # Dictionary mapping (ns, id) -> (frame_id, stamp_time, frame_locked)
     self.active_markers = {}
 
-    # Track mesh HTTP fetches per marker: total, succeeded, failed
+    # Track mesh HTTP fetches per marker: total, succeeded, failed (protected by http_lock)
     self.total_mesh_requests = 0
     self.successful_mesh_requests = 0
     self.failed_mesh_requests = []
@@ -151,26 +153,31 @@ class MarkerMonitorNode(Node):
     )
 
   def _fetch_mesh_http(self, marker_ns: str, url: str):
-    """Worker function to test HTTP download matching RViz's 1.0s timeout."""
+    """Worker function to test HTTP download matching RViz's timeout."""
     if not url.startswith("http://") and not url.startswith("https://"):
       return
 
-    self.total_mesh_requests += 1
+    with self.http_lock:
+      self.total_mesh_requests += 1
+
     try:
       req = urllib.request.Request(url, method="GET")
       # RViz's resource retriever times out on slow/blocked single-threaded HTTP responses
       with urllib.request.urlopen(req, timeout=1.5) as resp:
         content = resp.read()
         if resp.status == 200 and len(content) > 0:
-          self.successful_mesh_requests += 1
+          with self.http_lock:
+            self.successful_mesh_requests += 1
         else:
           err_msg = f"HTTP status {resp.status}, size {len(content)}"
-          self.failed_mesh_requests.append((marker_ns, url, err_msg))
+          with self.http_lock:
+            self.failed_mesh_requests.append((marker_ns, url, err_msg))
           self.get_logger().error(
               f"HTTP mesh fetch failed for {marker_ns} ({url}): {err_msg}"
           )
     except Exception as e:
-      self.failed_mesh_requests.append((marker_ns, url, str(e)))
+      with self.http_lock:
+        self.failed_mesh_requests.append((marker_ns, url, str(e)))
       self.get_logger().error(
           f"HTTP mesh fetch failed for {marker_ns} ({url}): {e}"
       )
