@@ -113,12 +113,17 @@ bool WorldBridge::initialize(ROSNodeInterfaces ros_node_interfaces,
                             std::shared_ptr<GetResource::Response> response) {
         const std::string gltf_id = request->path;
         LOG(INFO) << "request resource path: " << gltf_id;
-        if (!data_->renderables_.contains(gltf_id)) {
-          response->status_code = GetResource::Response::ERROR;
-          return;
+        
+        {
+          absl::MutexLock lock(&data_->mutex_);
+          auto it = data_->renderables_.find(gltf_id);
+          if (it == data_->renderables_.end()) {
+            response->status_code = GetResource::Response::ERROR;
+            return;
+          }
+          response->body = it->second;
         }
         response->status_code = GetResource::Response::OK;
-        response->body = data_->renderables_[gltf_id];
       },
       rclcpp::ServicesQoS(), nullptr);
 
@@ -220,20 +225,22 @@ bool WorldBridge::initialize(ROSNodeInterfaces ros_node_interfaces,
         data->mutex_.LockWhen(absl::Condition(
             +[](bool* condn) { return *condn; }, &data->send_new_objects_));
 
-        const absl::Status status =
-            data->SendObjectVisualizationMessages(data->send_object_names_);
-        if (!status.ok()) {
-          LOG(ERROR) << "Unable to send object visualization messages: "
-                     << status.message();
-          continue;
-        }
+        // Copy data and unlock immediately so TfCallback is not blocked during
+        // heavy mesh downloading.
+        std::optional<std::vector<std::string>> local_object_names =
+            data->send_object_names_;
         if (data->send_object_names_.has_value()) {
-          // Clear object names if object retrival and publishing is successful
           data->send_object_names_.value().clear();
         }
         data->send_new_objects_ = false;
-
         data->mutex_.Unlock();
+
+        const absl::Status status =
+            data->SendObjectVisualizationMessages(local_object_names);
+        if (!status.ok()) {
+          LOG(ERROR) << "Unable to send object visualization messages: "
+                     << status.message();
+        }
       } else {
         LOG(ERROR) << "data has expired! Terminating thread sending "
                       "visualization objects";
@@ -292,9 +299,14 @@ absl::Status WorldBridge::Data::SendObjectVisualizationMessages(
               geo_ref.renderable_ref().substr(9));
 
           const auto renderable_name = std::string("/") + gltf_path;
-          auto renderables_it = renderables_.find(renderable_name);
+          
+          bool has_renderable = false;
+          {
+            absl::MutexLock lock(&mutex_);
+            has_renderable = renderables_.contains(renderable_name);
+          }
 
-          if (renderables_it == renderables_.end()) {
+          if (!has_renderable) {
             const absl::StatusOr<std::string> gltf = world_->GetGltf(
                 geo_ref.exact_geometry_ref(), geo_ref.renderable_ref());
             if (!gltf.ok()) {
@@ -309,9 +321,10 @@ absl::Status WorldBridge::Data::SendObjectVisualizationMessages(
 
             LOG(INFO) << "Fetched " << gltf->size() << " bytes for "
                       << tf_frame_name;
-            renderables_it =
-                renderables_.emplace(renderable_name, std::move(gltf_data))
-                    .first;
+                      
+            // Safely insert the newly downloaded mesh
+            absl::MutexLock lock(&mutex_);
+            renderables_.emplace(renderable_name, std::move(gltf_data));
           }
 
           const auto& ref_t_shape = transformed_geometry.ref_t_shape();
@@ -366,7 +379,6 @@ absl::Status WorldBridge::Data::SendObjectVisualizationMessages(
           array_msg.markers.push_back(std::move(marker_msg));
         }
       }
-      // LOG(INFO) << entity.second;
     }
   }
   LOG(INFO) << "Total gltf size: " << total_gltf_size << " bytes";
@@ -471,7 +483,7 @@ void WorldBridge::TfCallback(const intrinsic_proto::TFMessage& tf_proto) {
   }
 
   if (!new_object_names.empty()) {
-    data_->mutex_.Lock();
+    absl::MutexLock lock(&data_->mutex_);
     if (data_->send_object_names_.has_value()) {
       data_->send_object_names_.value().insert(
           data_->send_object_names_.value().end(), new_object_names.begin(),
@@ -482,7 +494,6 @@ void WorldBridge::TfCallback(const intrinsic_proto::TFMessage& tf_proto) {
     }
     // Signal background thread to send object visualization messages
     data_->send_new_objects_ = true;
-    data_->mutex_.Unlock();
   }
 
   data_->tf_frame_names_ = std::move(new_tf_frame_names);

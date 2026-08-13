@@ -81,3 +81,5 @@ With a solution open in Flowstate, the generated service bundle can be sideloade
 ## Documentation
 
 * [Flowstate Robot State and Sensor ROS Bridge:](docs/robot_state_sensor.md) Explains the translation of internal Flowstate data (joint states, force/torque) into standard ROS 2 messages, with setup and testing instructions.
+* [Rapid Object Visualization Integration Test:](test/README.md) Detailed instructions and CLI options for running the high load 3D mesh marker RViz test (`test_rapid_object_visualization.py`).
+
