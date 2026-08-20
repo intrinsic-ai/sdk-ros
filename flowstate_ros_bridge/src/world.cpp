@@ -40,9 +40,10 @@ World::World(std::shared_ptr<intrinsic::PubSub> pubsub,
 
 absl::StatusOr<std::shared_ptr<intrinsic::Subscription>>
 World::CreateTfSubscription(
-    intrinsic::SubscriptionOkCallback<intrinsic_proto::TFMessage> callback) {
-  auto sub =
-      pubsub_->CreateSubscription("tf", intrinsic::TopicConfig(), callback);
+    intrinsic::SubscriptionOkCallback<intrinsic_proto::TFMessage> callback,
+    const std::string& topic_name) {
+  auto sub = pubsub_->CreateSubscription(topic_name, intrinsic::TopicConfig(),
+                                         callback);
   if (!sub.ok()) {
     return sub.status();
   }

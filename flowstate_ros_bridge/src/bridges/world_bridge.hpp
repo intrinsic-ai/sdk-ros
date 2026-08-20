@@ -51,10 +51,13 @@ class WorldBridge : public BridgeInterface {
 
  private:
   void TfCallback(const intrinsic_proto::TFMessage&);
+  void SimTfCallback(const intrinsic_proto::TFMessage&);
 
-  static std::string StripTfPrefixes(
-      absl::string_view frame,
-      const std::vector<std::string>& prefixes);
+  tf2_msgs::msg::TFMessage ConvertTfProtoToRos(
+      const intrinsic_proto::TFMessage& tf_proto) const;
+
+  static std::string StripTfPrefixes(absl::string_view frame,
+                                     const std::vector<std::string>& prefixes);
 
   void RobotStateCallback(const intrinsic_proto::data_logger::LogItem&);
 
@@ -92,6 +95,10 @@ class WorldBridge : public BridgeInterface {
     std::shared_ptr<intrinsic::Subscription> tf_sub_;
     std::shared_ptr<rclcpp::Publisher<tf2_msgs::msg::TFMessage>> tf_pub_;
 
+    // Sim TF functionality
+    std::shared_ptr<intrinsic::Subscription> sim_tf_sub_;
+    std::shared_ptr<rclcpp::Publisher<tf2_msgs::msg::TFMessage>> sim_tf_pub_;
+
     // Robot state and force torque functionality
     std::shared_ptr<intrinsic::Subscription> robot_state_sub_;
     std::shared_ptr<rclcpp::Publisher<sensor_msgs::msg::JointState>>
@@ -120,7 +127,8 @@ class WorldBridge : public BridgeInterface {
         ABSL_GUARDED_BY(mutex_) = std::nullopt;
     bool send_new_objects_ ABSL_GUARDED_BY(mutex_) = true;
     std::shared_ptr<std::thread> viz_thread_;
-    absl::Mutex mutex_;  // protects send_object_names_, send_new_objects_, renderables_
+    absl::Mutex
+        mutex_;  // protects send_object_names_, send_new_objects_, renderables_
     std::string mesh_url_prefix_;
     ~Data();
   };
