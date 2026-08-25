@@ -45,7 +45,7 @@ class World : public std::enable_shared_from_this<World> {
 
   absl::StatusOr<std::shared_ptr<intrinsic::Subscription>> CreateTfSubscription(
       intrinsic::SubscriptionOkCallback<intrinsic_proto::TFMessage> callback,
-      const std::string& topic_name = "tf");
+      bool sim = false);
 
   // Robot States subscription
   absl::StatusOr<std::shared_ptr<intrinsic::Subscription>>

@@ -173,7 +173,7 @@ bool WorldBridge::initialize(ROSNodeInterfaces ros_node_interfaces,
       [this](const intrinsic_proto::TFMessage& msg) {
         this->SimTfCallback(msg);
       },
-      "tf_sim");
+      /*sim=*/true);
   if (!sim_tf_sub.ok()) {
     LOG(WARNING) << "Unable to create Sim TF Subscription: "
                  << sim_tf_sub.status();
@@ -544,7 +544,15 @@ void WorldBridge::SimTfCallback(const intrinsic_proto::TFMessage& tf_proto) {
   if (!data_->sim_tf_pub_) {
     return;
   }
+  rclcpp::Clock clock;
+  const rclcpp::Time t_start = clock.now();
+
   data_->sim_tf_pub_->publish(ConvertTfProtoToRos(tf_proto));
+
+  // print a timing snapshot every 500 messages
+  const rclcpp::Duration elapsed = clock.now() - t_start;
+  LOG_EVERY_N(INFO, 500) << absl::StrFormat("sim tf translation time: %.3f ms",
+                                            1000.0 * elapsed.seconds());
 }
 
 ///=============================================================================
