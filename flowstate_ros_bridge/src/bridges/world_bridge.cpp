@@ -246,9 +246,7 @@ bool WorldBridge::initialize(ROSNodeInterfaces ros_node_interfaces,
         // heavy mesh downloading.
         std::optional<std::vector<std::string>> local_object_names =
             data->send_object_names_;
-        if (data->send_object_names_.has_value()) {
-          data->send_object_names_.value().clear();
-        }
+        data->send_object_names_ = std::nullopt;
         data->send_new_objects_ = false;
         data->mutex_.Unlock();
 
@@ -303,16 +301,27 @@ absl::Status WorldBridge::Data::SendObjectVisualizationMessages(
             continue;
           }
           const auto& geo_ref = geometry.geo_ref();
-          const std::string object_name = StripTfPrefixes(
-              object.Name().value(), strip_flowstate_tf_prefixes_);
+          std::string object_name = object.Name().value();
+          if (object_name.empty()) {
+            object_name =
+                proto.name().empty() ? entity.second.name() : proto.name();
+          }
+          object_name =
+              StripTfPrefixes(object_name, strip_flowstate_tf_prefixes_);
           std::string tf_frame_name = absl::StrFormat(
               "%s%s/%s", tf_prefix_.c_str(), object_name, entity.second.name());
 
-          // Let's be smarter in the future. For now, just skip over
-          // the intcas:// prefix
-          const std::string gltf_path = absl::StrFormat(
-              "gltf/%s_%s.glb", geo_ref.exact_geometry_ref().substr(9),
-              geo_ref.renderable_ref().substr(9));
+          // Safely strip intcas:// prefix if present
+          std::string exact_geom_ref = geo_ref.exact_geometry_ref();
+          if (absl::StartsWith(exact_geom_ref, "intcas://")) {
+            exact_geom_ref = exact_geom_ref.substr(9);
+          }
+          std::string renderable_ref = geo_ref.renderable_ref();
+          if (absl::StartsWith(renderable_ref, "intcas://")) {
+            renderable_ref = renderable_ref.substr(9);
+          }
+          const std::string gltf_path =
+              absl::StrFormat("gltf/%s_%s.glb", exact_geom_ref, renderable_ref);
 
           const auto renderable_name = std::string("/") + gltf_path;
 

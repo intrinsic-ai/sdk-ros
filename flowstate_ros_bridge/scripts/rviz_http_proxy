@@ -8,6 +8,9 @@ from rclpy.executors import ExternalShutdownException
 from flowstate_interfaces.srv import GetResource
 
 
+CACHE = {}
+
+
 class RvizGetHandler(http.server.BaseHTTPRequestHandler):
     def __init__(self, node, client, *args, **kwargs):
         self.node = node
@@ -16,23 +19,31 @@ class RvizGetHandler(http.server.BaseHTTPRequestHandler):
         super().__init__(*args, **kwargs)
 
     def do_GET(self):
-        print(f'GET {self.path}')
         if not self.path.startswith('/gltf/'):
             self.send_response(404)
             self.send_header('Content-type', 'text/html')
             self.end_headers()
             self.wfile.write(b'Not found\r\n')
             return
-        request = GetResource.Request()
-        request.path = self.path
-        future = self.client.call_async(request)
-        rclpy.spin_until_future_complete(self.node, future)
-        response = future.result()
-        print(f'response payload size: {len(response.body)}')
+
+        if self.path in CACHE:
+            body = CACHE[self.path]
+        else:
+            print(f'Fetching {self.path} from world bridge service...')
+            request = GetResource.Request()
+            request.path = self.path
+            future = self.client.call_async(request)
+            rclpy.spin_until_future_complete(self.node, future)
+            response = future.result()
+            body = response.body
+            CACHE[self.path] = body
+            print(f'Cached {self.path} (size: {len(body)} bytes)')
+
         self.send_response(200)
         self.send_header('Content-type', 'model/gltf-binary')
+        self.send_header('Content-Length', str(len(body)))
         self.end_headers()
-        self.wfile.write(response.body)
+        self.wfile.write(body)
 
 
 def main(argv):
