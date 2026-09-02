@@ -72,6 +72,8 @@ class World : public std::enable_shared_from_this<World> {
   absl::StatusOr<std::string> GetGltf(const std::string& geometry_ref,
                                       const std::string& renderable_ref);
 
+  std::shared_ptr<intrinsic::PubSub> pubsub() const { return pubsub_; }
+
  private:
   std::shared_ptr<intrinsic::PubSub> pubsub_;
   std::string world_service_address_;

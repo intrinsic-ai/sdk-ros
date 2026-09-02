@@ -16,6 +16,14 @@ message SensorPublisherConfig {
   repeated string override_joint_names = 9;
 }
 
+// Configuration for bridging an ImageBuffer PubSub topic to a ROS Image topic.
+message ImageTopicBridgeConfig {
+  string pubsub_topic = 1;
+  string ros_topic = 2;
+  optional string frame_id = 3;
+  optional string encoding = 4;
+}
+
 message FlowstateRosBridgeConfig {
   string workcell_id = 1;
   string executive_service_address = 2;
@@ -30,4 +38,5 @@ message FlowstateRosBridgeConfig {
   int64 executive_update_rate_millis = 11;
   SensorPublisherConfig sensors = 12;
   repeated string strip_flowstate_tf_prefix = 13;
+  repeated ImageTopicBridgeConfig image_topics = 14;
 }

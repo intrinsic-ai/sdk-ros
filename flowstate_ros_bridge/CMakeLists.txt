@@ -26,6 +26,7 @@ find_package(ament_cmake REQUIRED)
 set(dep_pkgs
   abseil_cpp_vendor
   flowstate_interfaces
+  sensor_msgs
   std_msgs
   tf2_msgs
   visualization_msgs
@@ -106,6 +107,7 @@ target_include_directories(flowstate_ros_bridge_interface
 
 add_library(flowstate_ros_builtin_bridges SHARED
   src/bridges/executive_bridge.cpp
+  src/bridges/image_bridge.cpp
   src/bridges/world_bridge.cpp
 )
 target_include_directories(flowstate_ros_builtin_bridges
@@ -127,6 +129,7 @@ target_link_libraries(flowstate_ros_builtin_bridges
     absl::strings
     absl::log
     pluginlib::pluginlib
+    ${sensor_msgs_TARGETS}
     ${std_msgs_TARGETS}
     ${std_srvs_TARGETS}
     ${tf2_msgs_TARGETS}
@@ -162,6 +165,7 @@ target_link_libraries(flowstate_ros_bridge_component
   rclcpp_components::component
   rclcpp_lifecycle::rclcpp_lifecycle
   nlohmann_json::nlohmann_json
+  ${sensor_msgs_TARGETS}
   ${std_msgs_TARGETS}
   ${std_srvs_TARGETS}
   ${tf2_msgs_TARGETS}
