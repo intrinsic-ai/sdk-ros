@@ -374,7 +374,11 @@ absl::Status WorldBridge::Data::SendObjectVisualizationMessages(
           marker_msg.pose.position.x = affine.translation().x();
           marker_msg.pose.position.y = affine.translation().y();
           marker_msg.pose.position.z = affine.translation().z();
-          const intrinsic::eigenmath::Quaterniond quat(affine.rotation());
+          intrinsic::eigenmath::Quaterniond quat(affine.rotation());
+          // Manually rotate the mesh by 90 degrees to align with it's correct orientation
+          const double inv_sqrt_2 = 1.4142135623730951 / 2.0; // std::sqrt(2.0)/2.0
+          const intrinsic::eigenmath::Quaterniond rot_x_neg_90(inv_sqrt_2, -inv_sqrt_2, 0.0, 0.0);
+          quat = quat * rot_x_neg_90;
           marker_msg.pose.orientation.x = quat.x();
           marker_msg.pose.orientation.y = quat.y();
           marker_msg.pose.orientation.z = quat.z();
