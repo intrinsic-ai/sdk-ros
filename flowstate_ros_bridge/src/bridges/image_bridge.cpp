@@ -43,19 +43,19 @@ constexpr const char* kImageDefaultFrameIdParamName = "image_default_frame_id";
 
 ///=============================================================================
 size_t ImageBridge::BytesPerChannel(
-    intrinsic_proto::perception::DataType type) {
+    intrinsic_proto::perception::v1::DataType type) {
   switch (type) {
-    case intrinsic_proto::perception::TYPE_8U:
-    case intrinsic_proto::perception::TYPE_8S:
+    case intrinsic_proto::perception::v1::TYPE_UINT8:
+    case intrinsic_proto::perception::v1::TYPE_INT8:
       return 1;
-    case intrinsic_proto::perception::TYPE_16U:
-    case intrinsic_proto::perception::TYPE_16S:
+    case intrinsic_proto::perception::v1::TYPE_UINT16:
+    case intrinsic_proto::perception::v1::TYPE_INT16:
       return 2;
-    case intrinsic_proto::perception::TYPE_32U:
-    case intrinsic_proto::perception::TYPE_32S:
-    case intrinsic_proto::perception::TYPE_32F:
+    case intrinsic_proto::perception::v1::TYPE_UINT32:
+    case intrinsic_proto::perception::v1::TYPE_INT32:
+    case intrinsic_proto::perception::v1::TYPE_FLOAT32:
       return 4;
-    case intrinsic_proto::perception::TYPE_64F:
+    case intrinsic_proto::perception::v1::TYPE_FLOAT64:
       return 8;
     default:
       return 1;
@@ -64,81 +64,81 @@ size_t ImageBridge::BytesPerChannel(
 
 ///=============================================================================
 std::string ImageBridge::DetermineRosEncoding(
-    const intrinsic_proto::perception::ImageBuffer& proto_img) {
+    const intrinsic_proto::perception::v1::ImageBuffer& proto_img) {
   const auto pixel_type = proto_img.pixel_type();
   const auto data_type = proto_img.type();
   const int32_t channels =
       (proto_img.num_channels() > 0) ? proto_img.num_channels() : 1;
 
-  if (pixel_type == intrinsic_proto::perception::PIXEL_INTENSITY) {
+  if (pixel_type == intrinsic_proto::perception::v1::PIXEL_INTENSITY) {
     if (channels == 1) {
       switch (data_type) {
-        case intrinsic_proto::perception::TYPE_8U:
+        case intrinsic_proto::perception::v1::TYPE_UINT8:
           return sensor_msgs::image_encodings::MONO8;
-        case intrinsic_proto::perception::TYPE_16U:
+        case intrinsic_proto::perception::v1::TYPE_UINT16:
           return sensor_msgs::image_encodings::MONO16;
-        case intrinsic_proto::perception::TYPE_32F:
+        case intrinsic_proto::perception::v1::TYPE_FLOAT32:
           return sensor_msgs::image_encodings::TYPE_32FC1;
-        case intrinsic_proto::perception::TYPE_64F:
+        case intrinsic_proto::perception::v1::TYPE_FLOAT64:
           return sensor_msgs::image_encodings::TYPE_64FC1;
-        case intrinsic_proto::perception::TYPE_8S:
+        case intrinsic_proto::perception::v1::TYPE_INT8:
           return sensor_msgs::image_encodings::TYPE_8SC1;
-        case intrinsic_proto::perception::TYPE_16S:
+        case intrinsic_proto::perception::v1::TYPE_INT16:
           return sensor_msgs::image_encodings::TYPE_16SC1;
-        case intrinsic_proto::perception::TYPE_32S:
+        case intrinsic_proto::perception::v1::TYPE_INT32:
           return sensor_msgs::image_encodings::TYPE_32SC1;
         default:
           break;
       }
     } else if (channels == 3) {
       switch (data_type) {
-        case intrinsic_proto::perception::TYPE_8U:
+        case intrinsic_proto::perception::v1::TYPE_UINT8:
           return sensor_msgs::image_encodings::RGB8;
-        case intrinsic_proto::perception::TYPE_16U:
+        case intrinsic_proto::perception::v1::TYPE_UINT16:
           return sensor_msgs::image_encodings::RGB16;
-        case intrinsic_proto::perception::TYPE_32F:
+        case intrinsic_proto::perception::v1::TYPE_FLOAT32:
           return sensor_msgs::image_encodings::TYPE_32FC3;
-        case intrinsic_proto::perception::TYPE_64F:
+        case intrinsic_proto::perception::v1::TYPE_FLOAT64:
           return sensor_msgs::image_encodings::TYPE_64FC3;
-        case intrinsic_proto::perception::TYPE_8S:
+        case intrinsic_proto::perception::v1::TYPE_INT8:
           return sensor_msgs::image_encodings::TYPE_8SC3;
-        case intrinsic_proto::perception::TYPE_16S:
+        case intrinsic_proto::perception::v1::TYPE_INT16:
           return sensor_msgs::image_encodings::TYPE_16SC3;
-        case intrinsic_proto::perception::TYPE_32S:
+        case intrinsic_proto::perception::v1::TYPE_INT32:
           return sensor_msgs::image_encodings::TYPE_32SC3;
         default:
           break;
       }
     } else if (channels == 4) {
       switch (data_type) {
-        case intrinsic_proto::perception::TYPE_8U:
+        case intrinsic_proto::perception::v1::TYPE_UINT8:
           return sensor_msgs::image_encodings::RGBA8;
-        case intrinsic_proto::perception::TYPE_16U:
+        case intrinsic_proto::perception::v1::TYPE_UINT16:
           return sensor_msgs::image_encodings::RGBA16;
-        case intrinsic_proto::perception::TYPE_32F:
+        case intrinsic_proto::perception::v1::TYPE_FLOAT32:
           return sensor_msgs::image_encodings::TYPE_32FC4;
-        case intrinsic_proto::perception::TYPE_64F:
+        case intrinsic_proto::perception::v1::TYPE_FLOAT64:
           return sensor_msgs::image_encodings::TYPE_64FC4;
-        case intrinsic_proto::perception::TYPE_8S:
+        case intrinsic_proto::perception::v1::TYPE_INT8:
           return sensor_msgs::image_encodings::TYPE_8SC4;
-        case intrinsic_proto::perception::TYPE_16S:
+        case intrinsic_proto::perception::v1::TYPE_INT16:
           return sensor_msgs::image_encodings::TYPE_16SC4;
-        case intrinsic_proto::perception::TYPE_32S:
+        case intrinsic_proto::perception::v1::TYPE_INT32:
           return sensor_msgs::image_encodings::TYPE_32SC4;
         default:
           break;
       }
     }
-  } else if (pixel_type == intrinsic_proto::perception::PIXEL_DEPTH) {
+  } else if (pixel_type == intrinsic_proto::perception::v1::PIXEL_DEPTH) {
     if (channels == 1) {
       switch (data_type) {
-        case intrinsic_proto::perception::TYPE_16U:
+        case intrinsic_proto::perception::v1::TYPE_UINT16:
           return sensor_msgs::image_encodings::TYPE_16UC1;
-        case intrinsic_proto::perception::TYPE_32F:
+        case intrinsic_proto::perception::v1::TYPE_FLOAT32:
           return sensor_msgs::image_encodings::TYPE_32FC1;
-        case intrinsic_proto::perception::TYPE_64F:
+        case intrinsic_proto::perception::v1::TYPE_FLOAT64:
           return sensor_msgs::image_encodings::TYPE_64FC1;
-        case intrinsic_proto::perception::TYPE_32U:
+        case intrinsic_proto::perception::v1::TYPE_UINT32:
           return "32UC1";
         default:
           break;
@@ -148,27 +148,27 @@ std::string ImageBridge::DetermineRosEncoding(
 
   // Fallback to standard OpenCV-like types
   switch (data_type) {
-    case intrinsic_proto::perception::TYPE_8U:
+    case intrinsic_proto::perception::v1::TYPE_UINT8:
       if (channels == 1) return sensor_msgs::image_encodings::MONO8;
       if (channels == 3) return sensor_msgs::image_encodings::RGB8;
       if (channels == 4) return sensor_msgs::image_encodings::RGBA8;
       return "8UC" + std::to_string(channels);
-    case intrinsic_proto::perception::TYPE_8S:
+    case intrinsic_proto::perception::v1::TYPE_INT8:
       return "8SC" + std::to_string(channels);
-    case intrinsic_proto::perception::TYPE_16U:
+    case intrinsic_proto::perception::v1::TYPE_UINT16:
       if (channels == 1) return sensor_msgs::image_encodings::MONO16;
       if (channels == 3) return sensor_msgs::image_encodings::RGB16;
       if (channels == 4) return sensor_msgs::image_encodings::RGBA16;
       return "16UC" + std::to_string(channels);
-    case intrinsic_proto::perception::TYPE_16S:
+    case intrinsic_proto::perception::v1::TYPE_INT16:
       return "16SC" + std::to_string(channels);
-    case intrinsic_proto::perception::TYPE_32U:
+    case intrinsic_proto::perception::v1::TYPE_UINT32:
       return "32UC" + std::to_string(channels);
-    case intrinsic_proto::perception::TYPE_32S:
+    case intrinsic_proto::perception::v1::TYPE_INT32:
       return "32SC" + std::to_string(channels);
-    case intrinsic_proto::perception::TYPE_32F:
+    case intrinsic_proto::perception::v1::TYPE_FLOAT32:
       return "32FC" + std::to_string(channels);
-    case intrinsic_proto::perception::TYPE_64F:
+    case intrinsic_proto::perception::v1::TYPE_FLOAT64:
       return "64FC" + std::to_string(channels);
     default:
       if (channels == 1) return sensor_msgs::image_encodings::MONO8;
@@ -180,11 +180,12 @@ std::string ImageBridge::DetermineRosEncoding(
 
 ///=============================================================================
 bool ImageBridge::ConvertImageBufferToRosImage(
-    const intrinsic_proto::perception::ImageBuffer& proto_img,
+    const intrinsic_proto::perception::v1::ImageBuffer& proto_img,
     const std::string& encoding_override, sensor_msgs::msg::Image& ros_img) {
   if (proto_img.encoding() !=
-          intrinsic_proto::perception::ENCODING_UNSPECIFIED &&
-      proto_img.encoding() != intrinsic_proto::perception::ENCODING_YUV420P) {
+          intrinsic_proto::perception::v1::ENCODING_UNSPECIFIED &&
+      proto_img.encoding() !=
+          intrinsic_proto::perception::v1::ENCODING_YUV420P) {
     LOG(ERROR) << "Compressed ImageBuffer encoding (" << proto_img.encoding()
                << ") cannot be converted directly to uncompressed "
                   "sensor_msgs/Image";
@@ -221,7 +222,7 @@ bool ImageBridge::ConvertImageBufferToRosImage(
   if (!encoding_override.empty()) {
     ros_img.encoding = encoding_override;
   } else if (proto_img.encoding() ==
-             intrinsic_proto::perception::ENCODING_YUV420P) {
+             intrinsic_proto::perception::v1::ENCODING_YUV420P) {
     ros_img.encoding = "yuv420";
   } else {
     ros_img.encoding = DetermineRosEncoding(proto_img);
@@ -239,7 +240,7 @@ bool ImageBridge::ConvertImageBufferToRosImage(
 
   if (proto_img.has_packing_type() &&
       proto_img.packing_type() ==
-          intrinsic_proto::perception::PACKING_TYPE_PLANAR &&
+          intrinsic_proto::perception::v1::PACKING_TYPE_PLANAR &&
       num_channels > 1) {
     ros_img.data.resize(expected_size);
     const auto* src_ptr =
@@ -464,10 +465,10 @@ bool ImageBridge::initialize(ROSNodeInterfaces ros_node_interfaces,
 
     auto sub =
         data_->pubsub_
-            ->CreateSubscription<intrinsic_proto::perception::ImageBuffer>(
+            ->CreateSubscription<intrinsic_proto::perception::v1::ImageBuffer>(
                 tb.pubsub_topic, intrinsic::TopicConfig(),
                 [data = data_,
-                 i](const intrinsic_proto::perception::ImageBuffer& msg) {
+                 i](const intrinsic_proto::perception::v1::ImageBuffer& msg) {
                   data->HandleImageBuffer(i, msg);
                 });
     if (!sub.ok()) {
@@ -487,7 +488,8 @@ bool ImageBridge::initialize(ROSNodeInterfaces ros_node_interfaces,
 
 ///=============================================================================
 void ImageBridge::Data::HandleImageBuffer(
-    size_t bridge_index, const intrinsic_proto::perception::ImageBuffer& msg) {
+    size_t bridge_index,
+    const intrinsic_proto::perception::v1::ImageBuffer& msg) {
   if (bridge_index >= topic_bridges_.size()) {
     return;
   }

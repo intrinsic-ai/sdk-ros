@@ -125,6 +125,7 @@ target_link_libraries(flowstate_ros_builtin_bridges
     ${flowstate_interfaces_TARGETS}
     flowstate_ros_bridge_interface
     intrinsic_sdk_cmake::intrinsic_sdk_cmake
+    intrinsic_sdk_cmake::intrinsic_sdk_protos
     nlohmann_json::nlohmann_json
     absl::strings
     absl::log
@@ -159,6 +160,7 @@ target_link_libraries(flowstate_ros_bridge_component
   world
   flowstate_ros_bridge_interface
   intrinsic_sdk_cmake::intrinsic_sdk_cmake
+  intrinsic_sdk_cmake::intrinsic_sdk_protos
   pluginlib::pluginlib
   rclcpp::rclcpp
   rclcpp_action::rclcpp_action

@@ -21,7 +21,7 @@
 #include <vector>
 
 #include "flowstate_ros_bridge/bridge_interface.hpp"
-#include "intrinsic/perception/proto/image_buffer.pb.h"
+#include "intrinsic/perception/proto/v1/image_buffer.pb.h"
 #include "intrinsic/platform/pubsub/pubsub.h"
 #include "rclcpp/rclcpp.hpp"
 #include "sensor_msgs/msg/image.hpp"
@@ -41,18 +41,18 @@ class ImageBridge : public BridgeInterface {
                   std::shared_ptr<World> world_client,
                   std::shared_ptr<intrinsic::PubSub> pubsub) final;
 
-  /// Helper to convert an Intrinsic ImageBuffer proto to a ROS 2
+  /// Helper to convert an Intrinsic v1 ImageBuffer proto to a ROS 2
   /// sensor_msgs/Image.
   static bool ConvertImageBufferToRosImage(
-      const intrinsic_proto::perception::ImageBuffer& proto_img,
+      const intrinsic_proto::perception::v1::ImageBuffer& proto_img,
       const std::string& encoding_override, sensor_msgs::msg::Image& ros_img);
 
-  /// Helper to determine the ROS encoding string from the ImageBuffer proto.
+  /// Helper to determine the ROS encoding string from the v1 ImageBuffer proto.
   static std::string DetermineRosEncoding(
-      const intrinsic_proto::perception::ImageBuffer& proto_img);
+      const intrinsic_proto::perception::v1::ImageBuffer& proto_img);
 
-  /// Helper to get the number of bytes per channel for a given DataType.
-  static size_t BytesPerChannel(intrinsic_proto::perception::DataType type);
+  /// Helper to get the number of bytes per channel for a given v1 DataType.
+  static size_t BytesPerChannel(intrinsic_proto::perception::v1::DataType type);
 
  private:
   struct TopicBridge {
@@ -69,8 +69,9 @@ class ImageBridge : public BridgeInterface {
     std::shared_ptr<intrinsic::PubSub> pubsub_;
     std::vector<TopicBridge> topic_bridges_;
 
-    void HandleImageBuffer(size_t bridge_index,
-                           const intrinsic_proto::perception::ImageBuffer& msg);
+    void HandleImageBuffer(
+        size_t bridge_index,
+        const intrinsic_proto::perception::v1::ImageBuffer& msg);
 
     ~Data();
   };
