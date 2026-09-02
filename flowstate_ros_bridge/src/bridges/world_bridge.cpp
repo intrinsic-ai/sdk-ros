@@ -275,6 +275,9 @@ absl::Status WorldBridge::Data::SendObjectVisualizationMessages(
   const char* ros_distro = std::getenv("ROS_DISTRO");
   if (ros_distro != nullptr && std::string_view(ros_distro) == "jazzy") {
     rotate_mesh = false;
+    LOG(INFO) << "Keeping mesh orientation as-is.";
+  } else {
+    LOG(INFO) << "Adding extra rotation to correct glTF orientation.";
   }
 
   absl::StatusOr<std::vector<intrinsic::world::WorldObject>> objects =
