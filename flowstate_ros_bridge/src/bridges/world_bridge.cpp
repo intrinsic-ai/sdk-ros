@@ -14,8 +14,10 @@
 
 #include "world_bridge.hpp"
 
+#include <cstdlib>
 #include <limits>
 #include <string>
+#include <string_view>
 #include <utility>
 
 #include "absl/log/log.h"
@@ -269,6 +271,15 @@ bool WorldBridge::initialize(ROSNodeInterfaces ros_node_interfaces,
 
 absl::Status WorldBridge::Data::SendObjectVisualizationMessages(
     std::optional<std::vector<std::string>> object_names) {
+  bool rotate_mesh = true;
+  const char* ros_distro = std::getenv("ROS_DISTRO");
+  if (ros_distro != nullptr && std::string_view(ros_distro) == "jazzy") {
+    rotate_mesh = false;
+    LOG(INFO) << "Keeping mesh orientation as-is.";
+  } else {
+    LOG(INFO) << "Adding extra rotation to correct glTF orientation.";
+  }
+
   absl::StatusOr<std::vector<intrinsic::world::WorldObject>> objects =
       world_->GetObjects(std::move(object_names));
   if (!objects.ok()) {
@@ -374,7 +385,16 @@ absl::Status WorldBridge::Data::SendObjectVisualizationMessages(
           marker_msg.pose.position.x = affine.translation().x();
           marker_msg.pose.position.y = affine.translation().y();
           marker_msg.pose.position.z = affine.translation().z();
-          const intrinsic::eigenmath::Quaterniond quat(affine.rotation());
+          intrinsic::eigenmath::Quaterniond quat(affine.rotation());
+          if (rotate_mesh) {
+            // Manually rotate the mesh by 90 degrees to align with its correct
+            // orientation.
+            const double inv_sqrt_2 =
+                1.4142135623730951 / 2.0;  // std::sqrt(2.0)/2.0
+            const intrinsic::eigenmath::Quaterniond rot_x_neg_90(
+                inv_sqrt_2, -inv_sqrt_2, 0.0, 0.0);
+            quat = quat * rot_x_neg_90;
+          }
           marker_msg.pose.orientation.x = quat.x();
           marker_msg.pose.orientation.y = quat.y();
           marker_msg.pose.orientation.z = quat.z();
