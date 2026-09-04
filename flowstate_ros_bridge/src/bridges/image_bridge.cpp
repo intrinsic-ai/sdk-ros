@@ -35,10 +35,6 @@
 namespace flowstate_ros_bridge {
 
 constexpr const char* kImageTopicsParamName = "image_topics";
-constexpr const char* kImagePubSubTopicsParamName = "image_pubsub_topics";
-constexpr const char* kImageRosTopicsParamName = "image_ros_topics";
-constexpr const char* kImageFrameIdsParamName = "image_frame_ids";
-constexpr const char* kImageEncodingsParamName = "image_encodings";
 constexpr const char* kImageDefaultFrameIdParamName = "image_default_frame_id";
 
 ///=============================================================================
@@ -274,18 +270,6 @@ void ImageBridge::declare_ros_parameters(
   param_interface->declare_parameter(
       kImageTopicsParamName,
       rclcpp::ParameterValue(std::vector<std::string>{}));
-  param_interface->declare_parameter(
-      kImagePubSubTopicsParamName,
-      rclcpp::ParameterValue(std::vector<std::string>{}));
-  param_interface->declare_parameter(
-      kImageRosTopicsParamName,
-      rclcpp::ParameterValue(std::vector<std::string>{}));
-  param_interface->declare_parameter(
-      kImageFrameIdsParamName,
-      rclcpp::ParameterValue(std::vector<std::string>{}));
-  param_interface->declare_parameter(
-      kImageEncodingsParamName,
-      rclcpp::ParameterValue(std::vector<std::string>{}));
   param_interface->declare_parameter(kImageDefaultFrameIdParamName,
                                      rclcpp::ParameterValue(std::string{""}));
 }
@@ -319,7 +303,15 @@ bool ImageBridge::initialize(ROSNodeInterfaces ros_node_interfaces,
   const std::string default_frame_id =
       param_interface->get_parameter(kImageDefaultFrameIdParamName).as_string();
 
-  // 1. Process structured entries from "image_topics"
+  // The "image_topics" parameter is expected to be a list of strings like:
+  //   INPUT_PUBSUB_TOPIC->OUTPUT_ROS_TOPIC
+  //
+  // Optionally, the output frame_id can be added after a colon:
+  //   INPUT->OUTPUT:FRAME_ID
+  //
+  // The encoding can be specified manually (instead of automatic detection):
+  //   INPUT->OUTPUT:FRAME_ID:ENCODING
+
   const std::vector<std::string> topic_mappings =
       param_interface->get_parameter(kImageTopicsParamName).as_string_array();
   for (const auto& entry : topic_mappings) {
@@ -349,49 +341,6 @@ bool ImageBridge::initialize(ROSNodeInterfaces ros_node_interfaces,
       if (rhs_parts.size() > 2) {
         encoding = std::string(rhs_parts[2]);
       }
-    } else if (absl::StrContains(trimmed, ",")) {
-      std::vector<std::string_view> parts = absl::StrSplit(trimmed, ',');
-      if (!parts.empty()) {
-        pubsub_topic = std::string(parts[0]);
-      }
-      if (parts.size() > 1) {
-        ros_topic = std::string(parts[1]);
-      }
-      if (parts.size() > 2) {
-        frame_id = std::string(parts[2]);
-      }
-      if (parts.size() > 3) {
-        encoding = std::string(parts[3]);
-      }
-    } else if (absl::StrContains(trimmed, ":")) {
-      std::vector<std::string_view> parts = absl::StrSplit(trimmed, ':');
-      if (!parts.empty()) {
-        pubsub_topic = std::string(parts[0]);
-      }
-      if (parts.size() > 1) {
-        ros_topic = std::string(parts[1]);
-      }
-      if (parts.size() > 2) {
-        frame_id = std::string(parts[2]);
-      }
-      if (parts.size() > 3) {
-        encoding = std::string(parts[3]);
-      }
-    } else {
-      std::vector<std::string_view> parts = absl::StrSplit(
-          trimmed, absl::ByAnyChar(" \t"), absl::SkipWhitespace());
-      if (!parts.empty()) {
-        pubsub_topic = std::string(parts[0]);
-      }
-      if (parts.size() > 1) {
-        ros_topic = std::string(parts[1]);
-      }
-      if (parts.size() > 2) {
-        frame_id = std::string(parts[2]);
-      }
-      if (parts.size() > 3) {
-        encoding = std::string(parts[3]);
-      }
     }
 
     absl::StripAsciiWhitespace(&pubsub_topic);
@@ -411,50 +360,6 @@ bool ImageBridge::initialize(ROSNodeInterfaces ros_node_interfaces,
     tb.frame_id = frame_id;
     tb.encoding_override = encoding;
     data_->topic_bridges_.push_back(std::move(tb));
-  }
-
-  // 2. Process parallel arrays "image_pubsub_topics" and "image_ros_topics"
-  const std::vector<std::string> pubsub_topics =
-      param_interface->get_parameter(kImagePubSubTopicsParamName)
-          .as_string_array();
-  const std::vector<std::string> ros_topics =
-      param_interface->get_parameter(kImageRosTopicsParamName)
-          .as_string_array();
-  const std::vector<std::string> frame_ids =
-      param_interface->get_parameter(kImageFrameIdsParamName).as_string_array();
-  const std::vector<std::string> encodings =
-      param_interface->get_parameter(kImageEncodingsParamName)
-          .as_string_array();
-
-  if (pubsub_topics.size() != ros_topics.size()) {
-    LOG(ERROR) << "Size mismatch: " << kImagePubSubTopicsParamName << " ("
-               << pubsub_topics.size() << ") and " << kImageRosTopicsParamName
-               << " (" << ros_topics.size() << ") must have same length";
-    return false;
-  }
-
-  for (size_t i = 0; i < pubsub_topics.size(); ++i) {
-    std::string pubsub_topic = pubsub_topics[i];
-    std::string ros_topic = ros_topics[i];
-    absl::StripAsciiWhitespace(&pubsub_topic);
-    absl::StripAsciiWhitespace(&ros_topic);
-    if (pubsub_topic.empty() || ros_topic.empty()) {
-      LOG(ERROR) << "Invalid empty topic at index " << i;
-      return false;
-    }
-    TopicBridge tb;
-    tb.pubsub_topic = pubsub_topic;
-    tb.ros_topic = ros_topic;
-    tb.frame_id = (i < frame_ids.size() && !frame_ids[i].empty())
-                      ? frame_ids[i]
-                      : default_frame_id;
-    tb.encoding_override = (i < encodings.size()) ? encodings[i] : "";
-    data_->topic_bridges_.push_back(std::move(tb));
-  }
-
-  if (data_->topic_bridges_.empty()) {
-    LOG(WARNING) << "No image topics configured for ImageBridge";
-    return true;
   }
 
   for (size_t i = 0; i < data_->topic_bridges_.size(); ++i) {
