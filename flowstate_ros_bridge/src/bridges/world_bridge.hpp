@@ -22,7 +22,6 @@
 #include "absl/container/flat_hash_set.h"
 #include "absl/strings/str_split.h"
 #include "absl/synchronization/mutex.h"
-#include "flowstate_interfaces/srv/get_resource.hpp"
 #include "flowstate_ros_bridge/bridge_interface.hpp"
 #include "geometry_msgs/msg/wrench_stamped.hpp"
 #include "rclcpp/rclcpp.hpp"
@@ -40,8 +39,7 @@ class WorldBridge : public BridgeInterface {
  public:
   ~WorldBridge();
 
-  using GetResource = flowstate_interfaces::srv::GetResource;
-  using GetResourceLyrical = resource_retriever_interfaces::srv::GetResource;
+  using GetResource = resource_retriever_interfaces::srv::GetResource;
 
   /// Documentation inherited.
   void declare_ros_parameters(ROSNodeInterfaces ros_node_interfaces) final;
@@ -123,8 +121,6 @@ class WorldBridge : public BridgeInterface {
     std::string tf_prefix_;
     std::vector<std::string> strip_flowstate_tf_prefixes_;
     std::shared_ptr<rclcpp::Service<GetResource>> get_resource_srv_;
-    std::shared_ptr<rclcpp::Service<GetResourceLyrical>>
-        lyrical_get_resource_srv_;
     absl::flat_hash_map<std::string, std::vector<uint8_t>> renderables_
         ABSL_GUARDED_BY(mutex_);
     absl::flat_hash_set<std::string> tf_frame_names_;
