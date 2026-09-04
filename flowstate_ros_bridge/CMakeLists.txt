@@ -232,9 +232,4 @@ install(FILES
   DESTINATION share/${PROJECT_NAME}
 )
 
-install(PROGRAMS
-  scripts/rviz_http_proxy
-  DESTINATION lib/${PROJECT_NAME}
-)
-
 ament_package()
