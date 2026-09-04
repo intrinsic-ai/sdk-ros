@@ -119,20 +119,19 @@ int main(int argc, char* argv[]) {
       override_joint_names_proto.begin(), override_joint_names_proto.end());
   params.emplace_back("override_joint_names", override_joint_names);
 
-  std::vector<std::string> image_pubsub_topics;
-  std::vector<std::string> image_ros_topics;
-  std::vector<std::string> image_frame_ids;
-  std::vector<std::string> image_encodings;
+  std::vector<std::string> image_topics;
   for (const auto& topic_config : ros_config.image_topics()) {
-    image_pubsub_topics.push_back(topic_config.pubsub_topic());
-    image_ros_topics.push_back(topic_config.ros_topic());
-    image_frame_ids.push_back(topic_config.frame_id());
-    image_encodings.push_back(topic_config.encoding());
+    std::string combined_param = absl::StrFormat(
+        "%s->%s", topic_config.pubsub_topic(), topic_config.ros_topic());
+    if (!topic_config.frame_id().empty()) {
+      combined_param += absl::StrFormat(":%s", topic_config.frame_id());
+      if (!topic_config.encoding().empty()) {
+        combined_param += absl::StrFormat(":%s", topic_config.encoding());
+      }
+    }
+    image_topics.push_back(combined_param);
   }
-  params.emplace_back("image_pubsub_topics", image_pubsub_topics);
-  params.emplace_back("image_ros_topics", image_ros_topics);
-  params.emplace_back("image_frame_ids", image_frame_ids);
-  params.emplace_back("image_encodings", image_encodings);
+  params.emplace_back("image_topics", image_topics);
 
   options.parameter_overrides(params);
 
