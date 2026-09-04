@@ -130,6 +130,30 @@ bool WorldBridge::initialize(ROSNodeInterfaces ros_node_interfaces,
       },
       rclcpp::ServicesQoS(), nullptr);
 
+  data_->lyrical_get_resource_srv_ = rclcpp::create_service<GetResourceLyrical>(
+      data_->node_interfaces_.get<rclcpp::node_interfaces::NodeBaseInterface>(),
+      data_->node_interfaces_
+          .get<rclcpp::node_interfaces::NodeServicesInterface>(),
+      kResourceServiceName + std::string("_lyrical"),
+      [data_ = this->data_](
+          const std::shared_ptr<GetResourceLyrical::Request> request,
+          std::shared_ptr<GetResourceLyrical::Response> response) {
+        const std::string gltf_id = request->path;
+        LOG(INFO) << "request resource path: " << gltf_id;
+
+        {
+          absl::MutexLock lock(&data_->mutex_);
+          auto it = data_->renderables_.find(gltf_id);
+          if (it == data_->renderables_.end()) {
+            response->status_code = GetResourceLyrical::Response::ERROR;
+            return;
+          }
+          response->body = it->second;
+        }
+        response->status_code = GetResourceLyrical::Response::OK;
+      },
+      rclcpp::ServicesQoS(), nullptr);
+
   data_->tf_prefix_ = param_interface->get_parameter(kTfPrefixParamName)
                           .get_value<std::string>();
   data_->strip_flowstate_tf_prefixes_ =

@@ -39,6 +39,7 @@ set(dep_pkgs
   rclcpp_components
   rclcpp_lifecycle
   rclpy
+  resource_retriever_interfaces
   tf2_ros
 )
 foreach(pkg ${dep_pkgs})
@@ -129,6 +130,7 @@ target_link_libraries(flowstate_ros_builtin_bridges
     absl::strings
     absl::log
     pluginlib::pluginlib
+    ${resource_retriever_interfaces_TARGETS}
     ${sensor_msgs_TARGETS}
     ${std_msgs_TARGETS}
     ${std_srvs_TARGETS}
