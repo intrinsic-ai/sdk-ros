@@ -26,6 +26,7 @@
 #include "flowstate_ros_bridge/bridge_interface.hpp"
 #include "geometry_msgs/msg/wrench_stamped.hpp"
 #include "rclcpp/rclcpp.hpp"
+#include "resource_retriever_interfaces/srv/get_resource.hpp"
 #include "sensor_msgs/msg/joint_state.hpp"
 #include "tf2_msgs/msg/tf_message.hpp"
 #include "visualization_msgs/msg/marker_array.hpp"
@@ -40,6 +41,7 @@ class WorldBridge : public BridgeInterface {
   ~WorldBridge();
 
   using GetResource = flowstate_interfaces::srv::GetResource;
+  using GetResourceLyrical = resource_retriever_interfaces::srv::GetResource;
 
   /// Documentation inherited.
   void declare_ros_parameters(ROSNodeInterfaces ros_node_interfaces) final;
@@ -121,6 +123,8 @@ class WorldBridge : public BridgeInterface {
     std::string tf_prefix_;
     std::vector<std::string> strip_flowstate_tf_prefixes_;
     std::shared_ptr<rclcpp::Service<GetResource>> get_resource_srv_;
+    std::shared_ptr<rclcpp::Service<GetResourceLyrical>>
+        lyrical_get_resource_srv_;
     absl::flat_hash_map<std::string, std::vector<uint8_t>> renderables_
         ABSL_GUARDED_BY(mutex_);
     absl::flat_hash_set<std::string> tf_frame_names_;
