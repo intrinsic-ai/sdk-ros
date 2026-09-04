@@ -92,11 +92,13 @@ int main(int argc, char* argv[]) {
                                        bridge_plugins_proto.end());
   rclcpp::Parameter bridge_plugins_param("bridge_plugins", plugin_list);
   params.push_back(std::move(bridge_plugins_param));
-  const auto& strip_flowstate_tf_prefix_proto = ros_config.strip_flowstate_tf_prefix();
+  const auto& strip_flowstate_tf_prefix_proto =
+      ros_config.strip_flowstate_tf_prefix();
   std::vector<std::string> strip_flowstate_tf_prefix_list(
       strip_flowstate_tf_prefix_proto.begin(),
       strip_flowstate_tf_prefix_proto.end());
-  params.push_back(std::move(rclcpp::Parameter("strip_flowstate_tf_prefix", std::move(strip_flowstate_tf_prefix_list))));
+  params.push_back(std::move(rclcpp::Parameter(
+      "strip_flowstate_tf_prefix", std::move(strip_flowstate_tf_prefix_list))));
 
   const auto& s = ros_config.sensors();
   params.emplace_back("enable_robot_joint_state_topic",
@@ -116,6 +118,20 @@ int main(int argc, char* argv[]) {
   std::vector<std::string> override_joint_names(
       override_joint_names_proto.begin(), override_joint_names_proto.end());
   params.emplace_back("override_joint_names", override_joint_names);
+
+  std::vector<std::string> image_topics;
+  for (const auto& topic_config : ros_config.image_topics()) {
+    std::string combined_param = absl::StrFormat(
+        "%s->%s", topic_config.pubsub_topic(), topic_config.ros_topic());
+    if (!topic_config.frame_id().empty()) {
+      combined_param += absl::StrFormat(":%s", topic_config.frame_id());
+      if (!topic_config.encoding().empty()) {
+        combined_param += absl::StrFormat(":%s", topic_config.encoding());
+      }
+    }
+    image_topics.push_back(combined_param);
+  }
+  params.emplace_back("image_topics", image_topics);
 
   options.parameter_overrides(params);
 
