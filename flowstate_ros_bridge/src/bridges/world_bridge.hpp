@@ -25,7 +25,11 @@
 #include "flowstate_ros_bridge/bridge_interface.hpp"
 #include "geometry_msgs/msg/wrench_stamped.hpp"
 #include "rclcpp/rclcpp.hpp"
+#if defined(FLOWSTATE_ROS_BRIDGE_USE_RESOURCE_RETRIEVER_INTERFACES)
 #include "resource_retriever_interfaces/srv/get_resource.hpp"
+#else
+#include "flowstate_interfaces/srv/get_resource.hpp"
+#endif
 #include "sensor_msgs/msg/joint_state.hpp"
 #include "tf2_msgs/msg/tf_message.hpp"
 #include "visualization_msgs/msg/marker_array.hpp"
@@ -39,7 +43,11 @@ class WorldBridge : public BridgeInterface {
  public:
   ~WorldBridge();
 
+#if defined(FLOWSTATE_ROS_BRIDGE_USE_RESOURCE_RETRIEVER_INTERFACES)
   using GetResource = resource_retriever_interfaces::srv::GetResource;
+#else
+  using GetResource = flowstate_interfaces::srv::GetResource;
+#endif
 
   /// Documentation inherited.
   void declare_ros_parameters(ROSNodeInterfaces ros_node_interfaces) final;

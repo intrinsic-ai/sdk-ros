@@ -39,9 +39,19 @@ set(dep_pkgs
   rclcpp_components
   rclcpp_lifecycle
   rclpy
-  resource_retriever_interfaces
   tf2_ros
 )
+
+if(NOT DEFINED ROS_DISTRO)
+  set(ROS_DISTRO $ENV{ROS_DISTRO})
+endif()
+
+if(NOT ROS_DISTRO STREQUAL "jazzy")
+  find_package(resource_retriever_interfaces REQUIRED)
+  list(APPEND dep_pkgs resource_retriever_interfaces)
+  add_compile_definitions(FLOWSTATE_ROS_BRIDGE_USE_RESOURCE_RETRIEVER_INTERFACES)
+endif()
+
 foreach(pkg ${dep_pkgs})
   find_package(${pkg} REQUIRED)
 endforeach()
@@ -65,7 +75,6 @@ target_link_libraries(executive
   intrinsic_sdk_cmake::intrinsic_sdk_cmake
   nlohmann_json::nlohmann_json
   ${flowstate_interfaces_TARGETS}
-  ${resource_retriever_interfaces_TARGETS}
 )
 
 # create shared library for world.
@@ -85,8 +94,12 @@ target_link_libraries(world
   intrinsic_sdk_cmake::intrinsic_sdk_cmake
   nlohmann_json::nlohmann_json
   ${flowstate_interfaces_TARGETS}
-  ${resource_retriever_interfaces_TARGETS}
 )
+if(resource_retriever_interfaces_FOUND)
+  target_link_libraries(world
+    ${resource_retriever_interfaces_TARGETS}
+  )
+endif()
 
 ament_export_targets(executive HAS_LIBRARY_TARGET)
 ament_export_dependencies(${dep_pkgs})
@@ -232,6 +245,11 @@ install(TARGETS
 install(FILES
   ${CMAKE_CURRENT_BINARY_DIR}/${SERVICE_NAME}_protos.desc
   DESTINATION share/${PROJECT_NAME}
+)
+
+install(PROGRAMS
+  scripts/rviz_http_proxy
+  DESTINATION lib/${PROJECT_NAME}
 )
 
 ament_package()
