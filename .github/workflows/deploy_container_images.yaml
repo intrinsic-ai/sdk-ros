@@ -12,14 +12,15 @@ concurrency:
   # Cancel all but the latest run of this workflow, because only the latest run of this
   # workflow matters, as it overwrites the latest tag of the container images.
   cancel-in-progress: true
-env:
-  ROS_DISTRO: lyrical
 jobs:
   build-test:
     uses: ./.github/workflows/test_container_images.yaml
   push:
-    runs-on: ubuntu-26.04-8core
+    runs-on: ubuntu-24.04-8core
     needs: [build-test]
+    strategy:
+      matrix:
+        ros_distro: [lyrical, jazzy]
     permissions:
       contents: read
       packages: write
@@ -30,6 +31,7 @@ jobs:
       - run: echo "The job was automatically triggered by a ${{ github.event_name }} event."
       - run: echo "This job is now running on a ${{ runner.os }} server."
       - run: echo "The name of your branch is ${{ github.ref }} and your repository is ${{ github.repository }}."
+      - run: echo "Deploying container images for ROS_DISTRO=${{ matrix.ros_distro }}."
 
       # Extract the intrinsic sdk version being used.
       - name: Get intrinsic-ai/sdk Version
@@ -53,21 +55,21 @@ jobs:
       - name: Download intrinsic_sdk_cmake_base container image
         uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # was: actions/download-artifact@v4
         with:
-          name: intrinsic_sdk_cmake_base_image
+          name: intrinsic_sdk_cmake_base_image_${{ matrix.ros_distro }}
           path: ${{ runner.temp }}
       - name: Load intrinsic_sdk_cmake_base container image into docker
         run: docker load --input ${{ runner.temp }}/intrinsic_sdk_cmake_base.tar
       - name: Download intrinsic_sdk_cmake container image
         uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # was: actions/download-artifact@v4
         with:
-          name: intrinsic_sdk_cmake_image
+          name: intrinsic_sdk_cmake_image_${{ matrix.ros_distro }}
           path: ${{ runner.temp }}
       - name: Load intrinsic_sdk_cmake container image into docker
         run: docker load --input ${{ runner.temp }}/intrinsic_sdk_cmake.tar
       - name: Download intrinsic_sdk_cmake_run container image
         uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # was: actions/download-artifact@v4
         with:
-          name: intrinsic_sdk_cmake_run_image
+          name: intrinsic_sdk_cmake_run_image_${{ matrix.ros_distro }}
           path: ${{ runner.temp }}
       - name: Load intrinsic_sdk_cmake_run container image into docker
         run: docker load --input ${{ runner.temp }}/intrinsic_sdk_cmake_run.tar
@@ -76,48 +78,68 @@ jobs:
       #   https://github.com/docker/metadata-action#about
 
       # Tag the images and deploy them.
-      - name: Tag intrinsic_sdk_cmake_base Container Image
+      # Both distros get explicit tags with -${ROS_DISTRO} suffix.
+      # Lyrical (the default) also gets the un-suffixed tags (latest, ${VERSION}).
+      - name: Tag and deploy intrinsic_sdk_cmake_base Container Image
         run: |
           docker image tag \
-            localhost:5000/intrinsic_sdk_cmake_base:temp \
-            ghcr.io/intrinsic-ai/intrinsic_sdk_cmake_base:${{ env.INTRINSIC_AI_SDK_VERSION }}-${{ env.ROS_DISTRO }}
+            localhost:5000/intrinsic_sdk_cmake_base:temp-${{ matrix.ros_distro }} \
+            ghcr.io/intrinsic-ai/intrinsic_sdk_cmake_base:${{ env.INTRINSIC_AI_SDK_VERSION }}-${{ matrix.ros_distro }}
           docker image tag \
-            localhost:5000/intrinsic_sdk_cmake_base:temp \
-            ghcr.io/intrinsic-ai/intrinsic_sdk_cmake_base:latest
-          docker image tag \
-            localhost:5000/intrinsic_sdk_cmake_base:temp \
-            ghcr.io/intrinsic-ai/intrinsic_sdk_cmake_base:latest-${{ env.ROS_DISTRO }}
-          docker push ghcr.io/intrinsic-ai/intrinsic_sdk_cmake_base:${{ env.INTRINSIC_AI_SDK_VERSION }}-${{ env.ROS_DISTRO }}
-          docker push ghcr.io/intrinsic-ai/intrinsic_sdk_cmake_base:latest
-          docker push ghcr.io/intrinsic-ai/intrinsic_sdk_cmake_base:latest-${{ env.ROS_DISTRO }}
-      - name: Tag intrinsic_sdk_cmake Container Image
+            localhost:5000/intrinsic_sdk_cmake_base:temp-${{ matrix.ros_distro }} \
+            ghcr.io/intrinsic-ai/intrinsic_sdk_cmake_base:latest-${{ matrix.ros_distro }}
+          docker push ghcr.io/intrinsic-ai/intrinsic_sdk_cmake_base:${{ env.INTRINSIC_AI_SDK_VERSION }}-${{ matrix.ros_distro }}
+          docker push ghcr.io/intrinsic-ai/intrinsic_sdk_cmake_base:latest-${{ matrix.ros_distro }}
+          if [ "${{ matrix.ros_distro }}" = "lyrical" ]; then
+            docker image tag \
+              localhost:5000/intrinsic_sdk_cmake_base:temp-${{ matrix.ros_distro }} \
+              ghcr.io/intrinsic-ai/intrinsic_sdk_cmake_base:${{ env.INTRINSIC_AI_SDK_VERSION }}
+            docker image tag \
+              localhost:5000/intrinsic_sdk_cmake_base:temp-${{ matrix.ros_distro }} \
+              ghcr.io/intrinsic-ai/intrinsic_sdk_cmake_base:latest
+            docker push ghcr.io/intrinsic-ai/intrinsic_sdk_cmake_base:${{ env.INTRINSIC_AI_SDK_VERSION }}
+            docker push ghcr.io/intrinsic-ai/intrinsic_sdk_cmake_base:latest
+          fi
+      - name: Tag and deploy intrinsic_sdk_cmake Container Image
         run: |
           docker image tag \
-            localhost:5000/intrinsic_sdk_cmake:temp \
-            ghcr.io/intrinsic-ai/intrinsic_sdk_cmake:${{ env.INTRINSIC_AI_SDK_VERSION }}-${{ env.ROS_DISTRO }}
+            localhost:5000/intrinsic_sdk_cmake:temp-${{ matrix.ros_distro }} \
+            ghcr.io/intrinsic-ai/intrinsic_sdk_cmake:${{ env.INTRINSIC_AI_SDK_VERSION }}-${{ matrix.ros_distro }}
           docker image tag \
-            localhost:5000/intrinsic_sdk_cmake:temp \
-            ghcr.io/intrinsic-ai/intrinsic_sdk_cmake:latest
-          docker image tag \
-            localhost:5000/intrinsic_sdk_cmake:temp \
-            ghcr.io/intrinsic-ai/intrinsic_sdk_cmake:latest-${{ env.ROS_DISTRO }}
-          docker push ghcr.io/intrinsic-ai/intrinsic_sdk_cmake:${{ env.INTRINSIC_AI_SDK_VERSION }}-${{ env.ROS_DISTRO }}
-          docker push ghcr.io/intrinsic-ai/intrinsic_sdk_cmake:latest
-          docker push ghcr.io/intrinsic-ai/intrinsic_sdk_cmake:latest-${{ env.ROS_DISTRO }}
-      - name: Tag intrinsic_sdk_cmake_run Container Image
+            localhost:5000/intrinsic_sdk_cmake:temp-${{ matrix.ros_distro }} \
+            ghcr.io/intrinsic-ai/intrinsic_sdk_cmake:latest-${{ matrix.ros_distro }}
+          docker push ghcr.io/intrinsic-ai/intrinsic_sdk_cmake:${{ env.INTRINSIC_AI_SDK_VERSION }}-${{ matrix.ros_distro }}
+          docker push ghcr.io/intrinsic-ai/intrinsic_sdk_cmake:latest-${{ matrix.ros_distro }}
+          if [ "${{ matrix.ros_distro }}" = "lyrical" ]; then
+            docker image tag \
+              localhost:5000/intrinsic_sdk_cmake:temp-${{ matrix.ros_distro }} \
+              ghcr.io/intrinsic-ai/intrinsic_sdk_cmake:${{ env.INTRINSIC_AI_SDK_VERSION }}
+            docker image tag \
+              localhost:5000/intrinsic_sdk_cmake:temp-${{ matrix.ros_distro }} \
+              ghcr.io/intrinsic-ai/intrinsic_sdk_cmake:latest
+            docker push ghcr.io/intrinsic-ai/intrinsic_sdk_cmake:${{ env.INTRINSIC_AI_SDK_VERSION }}
+            docker push ghcr.io/intrinsic-ai/intrinsic_sdk_cmake:latest
+          fi
+      - name: Tag and deploy intrinsic_sdk_cmake_run Container Image
         run: |
           docker image tag \
-            localhost:5000/intrinsic_sdk_cmake_run:temp \
-            ghcr.io/intrinsic-ai/intrinsic_sdk_cmake_run:${{ env.INTRINSIC_AI_SDK_VERSION }}-${{ env.ROS_DISTRO }}
+            localhost:5000/intrinsic_sdk_cmake_run:temp-${{ matrix.ros_distro }} \
+            ghcr.io/intrinsic-ai/intrinsic_sdk_cmake_run:${{ env.INTRINSIC_AI_SDK_VERSION }}-${{ matrix.ros_distro }}
           docker image tag \
-            localhost:5000/intrinsic_sdk_cmake_run:temp \
-            ghcr.io/intrinsic-ai/intrinsic_sdk_cmake_run:latest
-          docker image tag \
-            localhost:5000/intrinsic_sdk_cmake_run:temp \
-            ghcr.io/intrinsic-ai/intrinsic_sdk_cmake_run:latest-${{ env.ROS_DISTRO }}
-          docker push ghcr.io/intrinsic-ai/intrinsic_sdk_cmake_run:${{ env.INTRINSIC_AI_SDK_VERSION }}-${{ env.ROS_DISTRO }}
-          docker push ghcr.io/intrinsic-ai/intrinsic_sdk_cmake_run:latest
-          docker push ghcr.io/intrinsic-ai/intrinsic_sdk_cmake_run:latest-${{ env.ROS_DISTRO }}
+            localhost:5000/intrinsic_sdk_cmake_run:temp-${{ matrix.ros_distro }} \
+            ghcr.io/intrinsic-ai/intrinsic_sdk_cmake_run:latest-${{ matrix.ros_distro }}
+          docker push ghcr.io/intrinsic-ai/intrinsic_sdk_cmake_run:${{ env.INTRINSIC_AI_SDK_VERSION }}-${{ matrix.ros_distro }}
+          docker push ghcr.io/intrinsic-ai/intrinsic_sdk_cmake_run:latest-${{ matrix.ros_distro }}
+          if [ "${{ matrix.ros_distro }}" = "lyrical" ]; then
+            docker image tag \
+              localhost:5000/intrinsic_sdk_cmake_run:temp-${{ matrix.ros_distro }} \
+              ghcr.io/intrinsic-ai/intrinsic_sdk_cmake_run:${{ env.INTRINSIC_AI_SDK_VERSION }}
+            docker image tag \
+              localhost:5000/intrinsic_sdk_cmake_run:temp-${{ matrix.ros_distro }} \
+              ghcr.io/intrinsic-ai/intrinsic_sdk_cmake_run:latest
+            docker push ghcr.io/intrinsic-ai/intrinsic_sdk_cmake_run:${{ env.INTRINSIC_AI_SDK_VERSION }}
+            docker push ghcr.io/intrinsic-ai/intrinsic_sdk_cmake_run:latest
+          fi
 
       # TODO(wjwwood): use actions/attest-build-provenance to write the attestation info to the
       #   container registry, see:

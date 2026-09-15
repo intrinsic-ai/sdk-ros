@@ -5,10 +5,38 @@ on:
     outputs:
       intrinsic_ai_sdk_version:
         description: "The intrinsic-ai/sdk version being used"
-        value: ${{ jobs.build-container-images.outputs.intrinsic_ai_sdk_version }}
+        value: ${{ jobs.get-sdk-version.outputs.intrinsic_ai_sdk_version }}
 jobs:
+  get-sdk-version:
+    runs-on: ubuntu-24.04-8core
+    outputs:
+      intrinsic_ai_sdk_version: ${{ steps.intrinsic_ai_sdk_version.outputs.version }}
+    steps:
+      - name: Check out repository code
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # was: actions/checkout@v4.2.2
+
+      - name: Get intrinsic-ai/sdk Version
+        id: intrinsic_ai_sdk_version
+        run: |
+          version=$(cat intrinsic_sdk_bundle_library_py/resource/sdk_version.json | jq -r '.sdk_version')
+          if [ -z "$version" ]; then
+            echo "Error: INTRINSIC_AI_SDK_VERSION is empty!" >&2
+            exit 1
+          fi
+          echo "The Intrinsic SDK version being used is $version"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
   build-container-images:
-    runs-on: ubuntu-26.04-8core
+    needs: [get-sdk-version]
+    runs-on: ubuntu-24.04-8core
+    strategy:
+      matrix:
+        ros_distro: [lyrical, jazzy]
+        include:
+          - ros_distro: lyrical
+            base_image: ghcr.io/sloretz/ros:lyrical-ros-core
+          - ros_distro: jazzy
+            base_image: ghcr.io/sloretz/ros:jazzy-ros-core-2025-06-08
     services:
       # This local container registry is used to temporarily hold intermediate
       # docker images until they can be tested without pushing to the remote
@@ -17,28 +45,15 @@ jobs:
         image: registry:3
         ports:
           - 5000:5000
-    outputs:
-      intrinsic_ai_sdk_version: ${{ steps.intrinsic_ai_sdk_version.outputs.version }}
     steps:
       - run: echo "The job was automatically triggered by a ${{ github.event_name }} event."
       - run: echo "This job is now running on a ${{ runner.os }} server."
       - run: echo "The name of your branch is ${{ github.ref }} and your repository is ${{ github.repository }}."
+      - run: echo "Building container images for ROS_DISTRO=${{ matrix.ros_distro }} with BASE_IMAGE=${{ matrix.base_image }}."
 
       # Checkout.
       - name: Check out repository code
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # was: actions/checkout@v4.2.2
-
-      # Extract the intrinsic sdk version being used.
-      - name: Get intrinsic-ai/sdk Version
-        run: echo "INTRINSIC_AI_SDK_VERSION=$(cat intrinsic_sdk_bundle_library_py/resource/sdk_version.json | jq -r '.sdk_version')" >> $GITHUB_ENV
-      - run: |
-          if [ -z "$INTRINSIC_AI_SDK_VERSION" ]; then
-            echo "Error: INTRINSIC_AI_SDK_VERSION is empty!" >&2
-            exit 1
-          fi
-      - run: echo "The Intrinsic SDK version being used is ${{ env.INTRINSIC_AI_SDK_VERSION }}"
-      - id: intrinsic_ai_sdk_version
-        run: echo "version=${{ env.INTRINSIC_AI_SDK_VERSION }}" >> "$GITHUB_OUTPUT"
 
       # Set up buildx.
       - name: Set up QEMU
@@ -56,25 +71,25 @@ jobs:
         id: cache-for-var-cache-apt
         with:
           path: var-cache-apt
-          key: buildx-cache-mount-for-var-cache-apt-${{ runner.os }}-${{ github.run_id }}
+          key: buildx-cache-mount-for-var-cache-apt-${{ runner.os }}-${{ matrix.ros_distro }}-${{ github.run_id }}
           restore-keys: |
-            buildx-cache-mount-for-var-cache-apt-${{ runner.os }}
+            buildx-cache-mount-for-var-cache-apt-${{ runner.os }}-${{ matrix.ros_distro }}
       - name: GitHub Action Cache for var-lib-apt
         uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # was: actions/cache@v4
         id: cache-for-var-lib-apt
         with:
           path: var-lib-apt
-          key: buildx-cache-mount-for-var-lib-apt-${{ runner.os }}-${{ github.run_id }}
+          key: buildx-cache-mount-for-var-lib-apt-${{ runner.os }}-${{ matrix.ros_distro }}-${{ github.run_id }}
           restore-keys: |
-            buildx-cache-mount-for-var-lib-apt-${{ runner.os }}
+            buildx-cache-mount-for-var-lib-apt-${{ runner.os }}-${{ matrix.ros_distro }}
       - name: GitHub Action Cache for ccache
         uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # was: actions/cache@v4
         id: cache-for-ccache
         with:
           path: ccache
-          key: buildx-cache-mount-for-ccache-${{ runner.os }}-${{ github.run_id }}
+          key: buildx-cache-mount-for-ccache-${{ runner.os }}-${{ matrix.ros_distro }}-${{ github.run_id }}
           restore-keys: |
-            buildx-cache-mount-for-ccache-${{ runner.os }}
+            buildx-cache-mount-for-ccache-${{ runner.os }}-${{ matrix.ros_distro }}
 
       # Set up the caching of docker cache-mount volumes which normally live
       # inside a .db file that the buildx container keeps.
@@ -103,8 +118,11 @@ jobs:
           # consider trying the registry cache type that caches to an image, see:
           # https://www.blacksmith.sh/blog/cache-is-king-a-guide-for-docker-layer-caching-in-github-actions
           outputs: type=docker,dest=${{ runner.temp }}/intrinsic_sdk_cmake_base.tar
+          build-args: |
+            ROS_DISTRO=${{ matrix.ros_distro }}
+            BASE_IMAGE=${{ matrix.base_image }}
           tags: |
-            localhost:5000/intrinsic_sdk_cmake_base:temp
+            localhost:5000/intrinsic_sdk_cmake_base:temp-${{ matrix.ros_distro }}
       - name: Build intrinsic_sdk_cmake Docker Image
         uses: docker/build-push-action@ca052bb54ab0790a636c9b5f226502c73d547a25 # was: docker/build-push-action@v5
         with:
@@ -115,9 +133,10 @@ jobs:
           build-args: |
             REPOSITORY=localhost:5000
             TAG=temp
-            BASE_IMAGE_TAG=temp
+            ROS_DISTRO=${{ matrix.ros_distro }}
+            BASE_IMAGE_TAG=temp-${{ matrix.ros_distro }}
           tags: |
-            localhost:5000/intrinsic_sdk_cmake:temp
+            localhost:5000/intrinsic_sdk_cmake:temp-${{ matrix.ros_distro }}
       - name: Build intrinsic_sdk_cmake_run Docker Image
         uses: docker/build-push-action@ca052bb54ab0790a636c9b5f226502c73d547a25 # was: docker/build-push-action@v5
         with:
@@ -129,27 +148,28 @@ jobs:
           build-args: |
             REPOSITORY=localhost:5000
             TAG=temp
-            BASE_IMAGE_TAG=temp
+            ROS_DISTRO=${{ matrix.ros_distro }}
+            BASE_IMAGE_TAG=temp-${{ matrix.ros_distro }}
           tags: |
-            localhost:5000/intrinsic_sdk_cmake_run:temp
+            localhost:5000/intrinsic_sdk_cmake_run:temp-${{ matrix.ros_distro }}
 
       # Upload images as temporary build artifacts for use in other jobs.
       - name: Upload intrinsic_sdk_cmake_base image
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # was: actions/upload-artifact@v4
         with:
-          name: intrinsic_sdk_cmake_base_image
+          name: intrinsic_sdk_cmake_base_image_${{ matrix.ros_distro }}
           path: ${{ runner.temp }}/intrinsic_sdk_cmake_base.tar
           retention-days: "1"
       - name: Upload intrinsic_sdk_cmake image
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # was: actions/upload-artifact@v4
         with:
-          name: intrinsic_sdk_cmake_image
+          name: intrinsic_sdk_cmake_image_${{ matrix.ros_distro }}
           path: ${{ runner.temp }}/intrinsic_sdk_cmake.tar
           retention-days: "1"
       - name: Upload intrinsic_sdk_cmake_run image
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # was: actions/upload-artifact@v4
         with:
-          name: intrinsic_sdk_cmake_run_image
+          name: intrinsic_sdk_cmake_run_image_${{ matrix.ros_distro }}
           path: ${{ runner.temp }}/intrinsic_sdk_cmake_run.tar
           retention-days: "1"
 

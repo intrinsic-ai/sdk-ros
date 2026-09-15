@@ -12,7 +12,7 @@ Before we can build the `flowstate_ros_bridge`, you must follow the [Getting Sta
 
 Source ROS and build the `flowstate_ros_bridge` within your workspace:
 ```bash
-source /opt/ros/jazzy/setup.bash
+source /opt/ros/lyrical/setup.bash  # Or: source /opt/ros/jazzy/setup.bash
 cd ~/intrinsic_ws/
 colcon build \
   --cmake-args -DCMAKE_BUILD_TYPE=Release \
@@ -25,7 +25,7 @@ colcon build \
 Start a zenoh router to connect to the in-cluster router of the Flowstate IPC.
 
 ```bash
-source /opt/ros/jazzy/setup.bash
+source /opt/ros/lyrical/setup.bash  # Or: source /opt/ros/jazzy/setup.bash
 # Replace $IPC_ADDRESS with the IP address of the IPC
 export ZENOH_CONFIG_OVERRIDE='connect/endpoints=["tcp/$IPC_ADDRESS:17447"]'
 ros2 run rmw_zenoh_cpp rmw_zenohd
@@ -34,7 +34,7 @@ ros2 run rmw_zenoh_cpp rmw_zenohd
 In a separate terminal, ensure `flowstate_ros_bridge` topics are being published by listing ROS 2 topics.
 
 ```bash
-source /opt/ros/jazzy/setup.bash
+source /opt/ros/lyrical/setup.bash  # Or: source /opt/ros/jazzy/setup.bash
 export RMW_IMPLEMENTATION=rmw_zenoh_cpp
 ros2 topic list --no-daemon
 ```
@@ -42,7 +42,7 @@ ros2 topic list --no-daemon
 To quickly look at the TFs being published you can export the TF tree using `tf2_tools`.
 
 ```bash
-source /opt/ros/jazzy/setup.bash
+source /opt/ros/lyrical/setup.bash  # Or: source /opt/ros/jazzy/setup.bash
 export RMW_IMPLEMENTATION=rmw_zenoh_cpp
 ros2 run tf2_tools view_frames
 ```
@@ -62,11 +62,11 @@ In the root of a colcon workspace first set up the docker engine:
 Then, create the bundle with the `build_service_bundle.sh` script. This will compile the packages in a docker container and bundle that container in a tarball.
 
 ```bash
-./src/sdk-ros/flowstate_ros_bridge/scripts/build_service_bundle.sh --ros_distro jazzy
+./src/sdk-ros/flowstate_ros_bridge/scripts/build_service_bundle.sh --ros_distro lyrical
 ```
 
 > [!NOTE]
-> Replace `jazzy` with the target ROS 2 distro for building `flowstate_ros_bridge`. 
+> Replace `lyrical` with `jazzy` if targeting ROS 2 Jazzy. 
 
 The output of this command will be a tarball inside the `images` directory of the colcon workspace which can be pushed to Flowstate as a new service.
 

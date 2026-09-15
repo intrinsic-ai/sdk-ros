@@ -15,9 +15,10 @@
 # intrinsic_sdk_cmake build base + user code built and setup to run
 ARG REPOSITORY=ghcr.io/intrinsic-ai
 ARG TAG=latest
-ARG ROS_DISTRO=jazzy
+ARG ROS_DISTRO=lyrical
+ARG BASE_IMAGE_TAG=${TAG}-${ROS_DISTRO}
 ARG SKILL_TYPE=cpp
-FROM ${REPOSITORY}/intrinsic_sdk_cmake:${TAG} AS source
+FROM ${REPOSITORY}/intrinsic_sdk_cmake:${BASE_IMAGE_TAG} AS source
 
 # The name of the skill.
 ARG SKILL_NAME
@@ -54,8 +55,8 @@ ARG SKILL_PACKAGE
 ARG SKILL_TYPE
 ARG ROS_DISTRO
 
-RUN if [ "$ROS_DISTRO" != "jazzy" ]; then \
-        echo "Error: Only ROS_DISTRO=jazzy is supported for skills currently." >&2; \
+RUN if [ "$ROS_DISTRO" != "jazzy" ] && [ "$ROS_DISTRO" != "lyrical" ]; then \
+        echo "Error: Only ROS_DISTRO=jazzy or ROS_DISTRO=lyrical is supported for skills currently." >&2; \
         exit 1; \
     fi
 
@@ -106,7 +107,7 @@ RUN mkdir -p $SKILL_WORKSPACE/bindings/pybind11_abseil \
     fi
 
 # exec_depends stage: capture just the exec depends using the source
-FROM ${REPOSITORY}/intrinsic_sdk_cmake_run:${TAG} AS exec_depends
+FROM ${REPOSITORY}/intrinsic_sdk_cmake_run:${BASE_IMAGE_TAG} AS exec_depends
 
 ARG SKILL_NAME
 ARG SKILL_TYPE
@@ -135,7 +136,7 @@ RUN \
     && dpkg --get-selections > /user_exec_apt_packages.txt
 
 # run stage: install exec dependencies + copy install artifacts from build stage
-FROM ${REPOSITORY}/intrinsic_sdk_cmake_run:${TAG} AS run
+FROM ${REPOSITORY}/intrinsic_sdk_cmake_run:${BASE_IMAGE_TAG} AS run
 
 ARG SKILL_EXECUTABLE
 ARG SKILL_CONFIG

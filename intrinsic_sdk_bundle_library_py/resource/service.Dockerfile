@@ -47,8 +47,7 @@ RUN . /opt/ros/${ROS_DISTRO}/setup.sh \
     && apt-get update \
     && rosdep update \
     && rosdep install --from-paths src --ignore-src -r -y \
-    && (ln -sf /usr/lib/x86_64-linux-gnu/libxml2.so.16 /usr/lib/x86_64-linux-gnu/libxml2.so.2 || true ) \
-    && apt install -y ros-${ROS_DISTRO}-ament-cmake-vendor-package libxml2-dev \
+    && apt install -y ros-${ROS_DISTRO}-ament-cmake-vendor-package \
     && colcon build \
         --continue-on-error \
         --cmake-args -DCMAKE_BUILD_TYPE=Release \
@@ -64,7 +63,7 @@ ARG DEPENDENCIES
 
 ARG ROS_DISTRO=lyrical
 RUN apt-get update \
-    && apt install -y ros-${ROS_DISTRO}-rmw-zenoh-cpp python3-protobuf libxml2-dev ${DEPENDENCIES} \
+    && apt install -y ros-${ROS_DISTRO}-rmw-zenoh-cpp python3-protobuf ${DEPENDENCIES} \
     && rm -rf /var/lib/apt/lists/*
 
 ARG OVERLAY_SOURCE=src
@@ -72,7 +71,12 @@ ADD ${OVERLAY_SOURCE} /opt/ros/overlay/src
 
 RUN . /opt/ros/${ROS_DISTRO}/setup.sh \
     && . /opt/ros/underlay/install/setup.sh \
+    && apt-get update \
+    && rosdep update \
     && cd /opt/ros/overlay \
+    && rosdep install --from-paths src --ignore-src -r -y --dependency-types exec \
+    && dpkg --get-selections > /service_exec_apt_packages.txt \
+    && rosdep install --from-paths src --ignore-src -r -y \
     && colcon build \
       --cmake-args -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=ON \
       --event-handlers=console_direct+ \
@@ -89,8 +93,12 @@ ARG SERVICE_NAME
 ARG DEPENDENCIES
 
 ARG ROS_DISTRO=lyrical
+COPY --from=overlay /service_exec_apt_packages.txt /service_exec_apt_packages.txt
 RUN apt-get update \
-    && apt-get install -y ros-${ROS_DISTRO}-rmw-zenoh-cpp libxml2-dev ${DEPENDENCIES} \
+    && apt-cache dumpavail | dpkg --merge-avail \
+    && dpkg --set-selections < /service_exec_apt_packages.txt \
+    && apt-get dselect-upgrade -y \
+    && apt-get install -y ros-${ROS_DISTRO}-rmw-zenoh-cpp ${DEPENDENCIES} \
     && rm -rf /var/lib/apt/lists/*
 
 COPY --from=overlay /opt/ros/underlay/install /opt/ros/underlay/install

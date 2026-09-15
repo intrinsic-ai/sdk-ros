@@ -96,6 +96,7 @@ function(intrinsic_sdk_generate_skill_container_image)
     CONTAINER_TAG_NAME
     CONTAINER_CONTEXT_DIRECTORY
     CONTAINER_IMAGE_OUTPUT
+    ROS_DISTRO
   )
   set(multi_value_args)
 
@@ -106,6 +107,14 @@ function(intrinsic_sdk_generate_skill_container_image)
     "${multi_value_args}"
     ${ARGN}
   )
+
+  if(NOT DEFINED arg_ROS_DISTRO)
+    if(DEFINED ENV{ROS_DISTRO})
+      set(arg_ROS_DISTRO $ENV{ROS_DISTRO})
+    else()
+      set(arg_ROS_DISTRO "lyrical")
+    endif()
+  endif()
 
   set(OUT_DIR ${CMAKE_CURRENT_BINARY_DIR})
 
@@ -123,6 +132,8 @@ function(intrinsic_sdk_generate_skill_container_image)
     BYPRODUCTS ${arg_CONTAINER_IMAGE_OUTPUT}
     COMMAND podman build
       -f "${DOCKERFILE_PATH}"
+      --build-arg ROS_DISTRO=${arg_ROS_DISTRO}
+      --build-arg BASE_IMAGE_TAG=latest-${arg_ROS_DISTRO}
       --build-arg SKILL_NAME=${arg_SKILL_NAME}
       --build-arg SKILL_PACKAGE=${arg_SKILL_PACKAGE}
       --build-arg SKILL_EXECUTABLE=${arg_SKILL_EXECUTABLE}
