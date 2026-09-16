@@ -41,6 +41,17 @@ set(dep_pkgs
   rclpy
   tf2_ros
 )
+
+if(NOT DEFINED ROS_DISTRO)
+  set(ROS_DISTRO $ENV{ROS_DISTRO})
+endif()
+
+if(NOT ROS_DISTRO STREQUAL "jazzy")
+  find_package(resource_retriever_interfaces REQUIRED)
+  list(APPEND dep_pkgs resource_retriever_interfaces)
+  add_compile_definitions(FLOWSTATE_ROS_BRIDGE_USE_RESOURCE_RETRIEVER_INTERFACES)
+endif()
+
 foreach(pkg ${dep_pkgs})
   find_package(${pkg} REQUIRED)
 endforeach()
@@ -84,6 +95,11 @@ target_link_libraries(world
   nlohmann_json::nlohmann_json
   ${flowstate_interfaces_TARGETS}
 )
+if(resource_retriever_interfaces_FOUND)
+  target_link_libraries(world
+    ${resource_retriever_interfaces_TARGETS}
+  )
+endif()
 
 ament_export_targets(executive HAS_LIBRARY_TARGET)
 ament_export_dependencies(${dep_pkgs})
@@ -129,6 +145,7 @@ target_link_libraries(flowstate_ros_builtin_bridges
     absl::strings
     absl::log
     pluginlib::pluginlib
+    ${resource_retriever_interfaces_TARGETS}
     ${sensor_msgs_TARGETS}
     ${std_msgs_TARGETS}
     ${std_srvs_TARGETS}
