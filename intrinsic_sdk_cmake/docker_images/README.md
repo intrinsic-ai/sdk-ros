@@ -50,7 +50,7 @@ This doesn't happen with the base image since it doesn't depend on another of ou
 
 ---
 
-Additionally, the images support selecting the ROS distro via the `ROS_DISTRO` build argument. This defaults to `jazzy`. For example:
+Additionally, the images support selecting the ROS distro via the `ROS_DISTRO` build argument. This defaults to `lyrical`. For example, to target Jazzy:
 
 ```
 --build-arg ROS_DISTRO=jazzy

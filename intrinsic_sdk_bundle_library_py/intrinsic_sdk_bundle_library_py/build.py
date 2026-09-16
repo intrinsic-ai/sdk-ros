@@ -28,8 +28,8 @@ COMMON_ARGUMENTS = {
     'ros_distro': {
         'flags': ('--ros-distro', '--ros_distro'),
         'kwargs': {
-            'default': 'jazzy',
-            'help': 'ROS distro to use (default: jazzy)'
+            'default': 'lyrical',
+            'help': 'ROS distro to use (default: lyrical)'
         }
     },
     'bundle_dir': {

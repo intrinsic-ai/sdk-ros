@@ -1,8 +1,8 @@
 # This Dockerfile provides only the source code for intrinsic_sdk_cmake.
 # It needs to be built from the root of the intrinsic_sdk_ros repository.
 
-ARG ROS_DISTRO=jazzy
-ARG BASE_IMAGE=ghcr.io/sloretz/ros:${ROS_DISTRO}-ros-core-2025-06-08
+ARG ROS_DISTRO=lyrical
+ARG BASE_IMAGE=ghcr.io/sloretz/ros:${ROS_DISTRO}-ros-core
 
 # base stage: BASE_IMAGE + configs + rmw_zenoh
 FROM ${BASE_IMAGE} AS base
@@ -32,6 +32,19 @@ RUN \
     && apt-get update \
     && apt-get dist-upgrade -y \
     && apt-get install -y --no-install-recommends ros-${ROS_DISTRO}-rmw-zenoh-cpp
+
+# TODO(wjwwood): Prebuilt LLVM/Clang toolchain binaries downloaded by Bazel (via @toolchains_llvm)
+# dynamically link against libxml2.so.2. In Ubuntu 26.04 (Lyrical), libxml2 was bumped to
+# libxml2.so.16. Upstream LLVM resolved this by statically linking libxml2 into lld
+# (see https://github.com/llvm/llvm-project/issues/113696 and https://github.com/llvm/llvm-project/pull/166867).
+# We can remove this workaround once an LLVM release containing that fix is released and
+# adopted by intrinsic-ai/sdk's @toolchains_llvm.
+RUN if [ -f /usr/lib/x86_64-linux-gnu/libxml2.so.16 ] && [ ! -f /usr/lib/x86_64-linux-gnu/libxml2.so.2 ]; then \
+        ln -s /usr/lib/x86_64-linux-gnu/libxml2.so.16 /usr/lib/x86_64-linux-gnu/libxml2.so.2; \
+    fi \
+    && if [ -f /usr/lib/aarch64-linux-gnu/libxml2.so.16 ] && [ ! -f /usr/lib/aarch64-linux-gnu/libxml2.so.2 ]; then \
+        ln -s /usr/lib/aarch64-linux-gnu/libxml2.so.16 /usr/lib/aarch64-linux-gnu/libxml2.so.2; \
+    fi
 ENV RMW_IMPLEMENTATION=rmw_zenoh_cpp
 RUN set -x \
     && sed --in-place \

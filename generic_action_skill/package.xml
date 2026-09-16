@@ -17,7 +17,8 @@
   <!-- ROS Action/Message Interfaces -->
   <depend>action_msgs</depend>
   <depend>common_interfaces</depend>
-  <depend>action_tutorials_interfaces</depend>
+  <depend condition="$ROS_DISTRO == jazzy">action_tutorials_interfaces</depend>
+  <depend condition="$ROS_DISTRO != jazzy">example_interfaces</depend>
   <depend>action_tutorials_cpp</depend>
   
   <!-- System Dependencies -->
