@@ -29,6 +29,12 @@ ENV ROS_HOME=/tmp
 ENV RMW_IMPLEMENTATION=rmw_zenoh_cpp
 
 # Compatibility symlink for prebuilt LLVM/Clang toolchain binaries that expect libxml2.so.2
+# TODO(wjwwood): Prebuilt LLVM/Clang toolchain binaries downloaded by Bazel (via @toolchains_llvm)
+# dynamically link against libxml2.so.2. In Ubuntu 26.04 (Lyrical), libxml2 was bumped to
+# libxml2.so.16. Upstream LLVM resolved this by statically linking libxml2 into lld
+# (see https://github.com/llvm/llvm-project/issues/113696 and https://github.com/llvm/llvm-project/pull/166867).
+# We can remove this workaround once an LLVM release containing that fix is released and
+# adopted by intrinsic-ai/sdk's @toolchains_llvm.
 RUN if [ -f /usr/lib/x86_64-linux-gnu/libxml2.so.16 ] && [ ! -f /usr/lib/x86_64-linux-gnu/libxml2.so.2 ]; then \
         ln -s /usr/lib/x86_64-linux-gnu/libxml2.so.16 /usr/lib/x86_64-linux-gnu/libxml2.so.2; \
     fi \
