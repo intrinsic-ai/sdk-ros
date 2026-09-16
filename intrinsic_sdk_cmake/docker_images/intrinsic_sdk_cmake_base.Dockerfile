@@ -31,7 +31,13 @@ RUN \
     && echo 'Binary::apt::APT::Keep-Downloaded-Packages "true";' >/etc/apt/apt.conf.d/keep-cache \
     && apt-get update \
     && apt-get dist-upgrade -y \
-    && apt-get install -y --no-install-recommends ros-${ROS_DISTRO}-rmw-zenoh-cpp
+    && apt-get install -y --no-install-recommends ros-${ROS_DISTRO}-rmw-zenoh-cpp \
+    && if [ -f /usr/lib/x86_64-linux-gnu/libxml2.so.16 ] && [ ! -f /usr/lib/x86_64-linux-gnu/libxml2.so.2 ]; then \
+        ln -s /usr/lib/x86_64-linux-gnu/libxml2.so.16 /usr/lib/x86_64-linux-gnu/libxml2.so.2; \
+    fi \
+    && if [ -f /usr/lib/aarch64-linux-gnu/libxml2.so.16 ] && [ ! -f /usr/lib/aarch64-linux-gnu/libxml2.so.2 ]; then \
+        ln -s /usr/lib/aarch64-linux-gnu/libxml2.so.16 /usr/lib/aarch64-linux-gnu/libxml2.so.2; \
+    fi
 ENV RMW_IMPLEMENTATION=rmw_zenoh_cpp
 RUN set -x \
     && sed --in-place \

@@ -28,6 +28,14 @@ WORKDIR /opt/ros/underlay
 ENV ROS_HOME=/tmp
 ENV RMW_IMPLEMENTATION=rmw_zenoh_cpp
 
+# Compatibility symlink for prebuilt LLVM/Clang toolchain binaries that expect libxml2.so.2
+RUN if [ -f /usr/lib/x86_64-linux-gnu/libxml2.so.16 ] && [ ! -f /usr/lib/x86_64-linux-gnu/libxml2.so.2 ]; then \
+        ln -s /usr/lib/x86_64-linux-gnu/libxml2.so.16 /usr/lib/x86_64-linux-gnu/libxml2.so.2; \
+    fi \
+    && if [ -f /usr/lib/aarch64-linux-gnu/libxml2.so.16 ] && [ ! -f /usr/lib/aarch64-linux-gnu/libxml2.so.2 ]; then \
+        ln -s /usr/lib/aarch64-linux-gnu/libxml2.so.16 /usr/lib/aarch64-linux-gnu/libxml2.so.2; \
+    fi
+
 # underlay stage: base + dependencies built
 FROM base AS underlay
 
