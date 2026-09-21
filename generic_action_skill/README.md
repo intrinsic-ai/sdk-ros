@@ -1,6 +1,6 @@
 # Generic ROS 2 Action Skill for Intrinsic
 
-This project provides a Generic Intrinsic Skill that can interface with any ROS 2 Action Server. 
+This project provides a Generic Intrinsic Skill that can interface with any ROS 2 Action Server.
 It serves as a bridge between Intrinsic Flowstate processes and the ROS 2 ecosystem using Zenoh for high-performance communication.
 
 ## 1. Architectural Overview
@@ -47,17 +47,26 @@ The manifest defines how the Intrinsic platform perceives the skill:
 
 ### Step 1: Build the Skill Bundle
 
-This command build the code, the Intrinsic SDK, and the necessary ROS dependencies into a deployable tarball.
+This command build the code, the Intrinsic SDK, and the necessary ROS dependencies into a tar image.
 
 ```bash
 ./src/sdk-ros/scripts/build_container.sh \
+  --ros_distro "jazzy" \
   --skill_package generic_action_skill \
   --skill_name generic_action_skill \
-  --manifest_path src/sdk-ros/generic_action_skill/src/generic_action_skill.manifest.textproto \
   --dependencies "ros-jazzy-common-interfaces ros-jazzy-action-tutorials-cpp ros-jazzy-action-tutorials-interfaces python3-absl python3-retrying python3-yaml"
 ```
 
 _Note: You will need to add to the `dependencies` tag the packages required for the action being used. Those will be installed during the build process._
+
+The next command then wraps the tar image with additiona Flowstate metadata (manifest and proto descriptors) to make it into a deployable tarball.
+
+```bash
+./src/sdk-ros/scripts/build_bundle.sh \
+  --skill_package generic_action_skill \
+  --skill_name generic_action_skill \
+  --manifest_path src/sdk-ros/generic_action_skill/src/generic_action_skill.manifest.textproto
+```
 
 ### Step 2: Install to the Cluster
 
@@ -71,9 +80,9 @@ inctl skill install images/generic_action_skill/generic_action_skill.bundle.tar 
 
 ### Step 3: Start the ROS 2 Action Server (e.g., Fibonacci)
 
-The skill is a Client; it needs a Server to talk to. 
-Launch a manual server pod in your cluster. 
-For this example, the [Fibonacci action](https://docs.ros.org/en/jazzy/p/action_tutorials_interfaces/action/Fibonacci.html) and [action_tutorials_cpp](https://docs.ros.org/en/jazzy/p/action_tutorials_cpp/) will be used. 
+The skill is a Client; it needs a Server to talk to.
+Launch a manual server pod in your cluster.
+For this example, the [Fibonacci action](https://docs.ros.org/en/jazzy/p/action_tutorials_interfaces/action/Fibonacci.html) and [action_tutorials_cpp](https://docs.ros.org/en/jazzy/p/action_tutorials_cpp/) will be used.
 
 For further information on how to setup `k9s`, click [here](go/intrinsic-k9s).
 
