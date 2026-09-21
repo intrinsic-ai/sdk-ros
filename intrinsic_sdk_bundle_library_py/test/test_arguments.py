@@ -43,7 +43,7 @@ class TestArguments(unittest.TestCase):
 
         # Test default
         args = parser.parse_args([])
-        self.assertEqual(args.ros_distro, 'jazzy')
+        self.assertEqual(args.ros_distro, 'lyrical')
 
         # Test dash flag
         args = parser.parse_args(['--ros-distro', 'rolling'])
