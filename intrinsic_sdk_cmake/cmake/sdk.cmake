@@ -26,49 +26,33 @@ list(FILTER intrinsic_SRCS EXCLUDE REGEX "/intrinsic/icon/interprocess/shared_me
 list(FILTER intrinsic_SRCS EXCLUDE REGEX "/intrinsic/platform/pubsub/python/")
 list(FILTER intrinsic_SRCS EXCLUDE REGEX "/intrinsic/tools")
 list(FILTER intrinsic_SRCS EXCLUDE REGEX "/intrinsic/util/proto/source_code_info_view_py.cc")
-list(FILTER intrinsic_SRCS EXCLUDE REGEX "/intrinsic/util/path_resolver/")
 list(FILTER intrinsic_SRCS EXCLUDE REGEX "/intrinsic/scene/product/")
 list(FILTER intrinsic_SRCS EXCLUDE REGEX "/incode/")
-list(FILTER intrinsic_SRCS EXCLUDE REGEX "/intrinsic/geometry/api/apply_material_properties\\.cc$")
-list(FILTER intrinsic_SRCS EXCLUDE REGEX "/intrinsic/geometry/api/apply_transform\\.cc$")
-list(FILTER intrinsic_SRCS EXCLUDE REGEX "/intrinsic/geometry/api/axis_aligned_bounding_box_3d\\.cc$")
-list(FILTER intrinsic_SRCS EXCLUDE REGEX "/intrinsic/geometry/api/compute_axis_aligned_bounding_box_3d\\.cc$")
-list(FILTER intrinsic_SRCS EXCLUDE REGEX "/intrinsic/geometry/api/exact_geometry\\.cc$")
-list(FILTER intrinsic_SRCS EXCLUDE REGEX "/intrinsic/geometry/api/geometry\\.cc$")
-list(FILTER intrinsic_SRCS EXCLUDE REGEX "/intrinsic/geometry/api/geometry_fingerprint\\.cc$")
-list(FILTER intrinsic_SRCS EXCLUDE REGEX "/intrinsic/geometry/api/io\\.cc$")
-list(FILTER intrinsic_SRCS EXCLUDE REGEX "/intrinsic/geometry/api/renderable_generation\\.cc$")
-list(FILTER intrinsic_SRCS EXCLUDE REGEX "/intrinsic/geometry/api/shapes\\.cc$")
-list(FILTER intrinsic_SRCS EXCLUDE REGEX "/intrinsic/geometry/api/validate_mesh\\.cc$")
-list(FILTER intrinsic_SRCS EXCLUDE REGEX "/intrinsic/geometry/internal/mesh/")
-list(FILTER intrinsic_SRCS EXCLUDE REGEX "/intrinsic/geometry/internal/point_cloud/get_bounding_box_from_point_cloud\\.cc$")
-list(FILTER intrinsic_SRCS EXCLUDE REGEX "/intrinsic/geometry/internal/point_cloud/point_cloud_riegeli_coder\\.cc$")
-list(FILTER intrinsic_SRCS EXCLUDE REGEX "/intrinsic/geometry/internal/point_cloud/pts_to_ai_scene\\.cc$")
-list(FILTER intrinsic_SRCS EXCLUDE REGEX "/intrinsic/geometry/internal/util/")
-list(FILTER intrinsic_SRCS EXCLUDE REGEX "/intrinsic/geometry/storage/")
-list(FILTER intrinsic_SRCS EXCLUDE REGEX "/intrinsic/marshal/riegeli_coder\\.cc$")
-list(FILTER intrinsic_SRCS EXCLUDE REGEX "/intrinsic/platform/pubsub/pubsub_ros\\.cc$")
-list(FILTER intrinsic_SRCS EXCLUDE REGEX "/intrinsic/scene/sdf/")
-list(FILTER intrinsic_SRCS EXCLUDE REGEX "/intrinsic/scene/tools/")
-list(FILTER intrinsic_SRCS EXCLUDE REGEX "/intrinsic/scene/util/scene_object_gzf\\.cc$")
-list(FILTER intrinsic_SRCS EXCLUDE REGEX "/intrinsic/scene/validate/large_mesh\\.cc$")
-list(FILTER intrinsic_SRCS EXCLUDE REGEX "/intrinsic/scene/validate/scene_object_validate_geo\\.cc$")
+list(FILTER intrinsic_SRCS EXCLUDE REGEX "/intrinsic/scene/sdf/sdf_to_scene_object\\.cc$")
+list(FILTER intrinsic_SRCS EXCLUDE REGEX "/intrinsic/scene/tools/update_scene_object\\.cc$")
 list(FILTER intrinsic_SRCS EXCLUDE REGEX "/intrinsic/util/cloud\\.cc$")
-list(FILTER intrinsic_SRCS EXCLUDE REGEX "/intrinsic/util/object_store/multi_mutex\\.cc$")
-list(FILTER intrinsic_SRCS EXCLUDE REGEX "/intrinsic/util/object_store/object_store_internal\\.cc$")
-list(FILTER intrinsic_SRCS EXCLUDE REGEX "/intrinsic/world/component/geometry_component\\.cc$")
-list(FILTER intrinsic_SRCS EXCLUDE REGEX "/intrinsic/world/conversion/sdf/")
-list(FILTER intrinsic_SRCS EXCLUDE REGEX "/intrinsic/world/gzfile/")
 
-add_library(${PROJECT_NAME} SHARED ${intrinsic_SRCS})
+add_library(${PROJECT_NAME} SHARED
+  ${intrinsic_SRCS}
+  ${riegeli_SRCS}
+  ${highwayhash_SRCS}
+  ${tinygltf_SRCS}
+  ${rules_cc_runfiles_SRCS}
+)
 add_library(${PROJECT_NAME}::${PROJECT_NAME} ALIAS ${PROJECT_NAME})
 target_include_directories(${PROJECT_NAME} PUBLIC
   "$<BUILD_INTERFACE:${intrinsic_sdk_SOURCE_DIR}>"
+  "$<BUILD_INTERFACE:${riegeli_SOURCE_DIR}>"
+  "$<BUILD_INTERFACE:${RIEGELI_PROTO_DIR}>"
+  "$<BUILD_INTERFACE:${highwayhash_SOURCE_DIR}>"
+  "$<BUILD_INTERFACE:${tinygltf_SOURCE_DIR}>"
+  "$<BUILD_INTERFACE:${RUNFILES_INCLUDE_DIR}>"
   # Add the directory where fbs headers are generated
   "$<BUILD_INTERFACE:${intrinsic_fbs_gen_dir}>"
   "$<INSTALL_INTERFACE:include/${PROJECT_NAME}>")
 target_link_libraries(${PROJECT_NAME}
   PUBLIC
+    stdc++
     absl::failure_signal_handler
     absl::symbolize
     absl::stacktrace
@@ -78,6 +62,8 @@ target_link_libraries(${PROJECT_NAME}
     absl::log
     absl::log_internal_check_op
     absl::time
+    assimp::assimp
+    BZip2::BZip2
     Eigen3::Eigen
     flatbuffers::flatbuffers
     gRPC::grpc++
@@ -85,18 +71,29 @@ target_link_libraries(${PROJECT_NAME}
     gz-transport::gz-transport
     ortools::ortools
     opencensus-cpp::stats
+    PkgConfig::BROTLI
+    PkgConfig::LIBZIP
     protobuf::libprotobuf
     pybind11::pybind11
     pybind11_abseil::absl_casters
     pybind11_abseil::import_status_module
     pybind11_protobuf::pybind11_native_proto_caster
     Python::Python
+    rclcpp::rclcpp
+    sdformat::sdformat
+    Snappy::snappy
+    TBB::tbb
     zenohc::lib
+    ZLIB::ZLIB
+    zstd::libzstd_shared
     # Local targets
     intrinsic_sdk_protos
     intrinsic_sdk_services
 )
 target_link_options(${PROJECT_NAME} PRIVATE "-Wl,--no-undefined")
+if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+  target_compile_options(${PROJECT_NAME} PRIVATE -Wno-template-body)
+endif()
 # TODO(wjwwood): figure out why this is needed
 #   I did this to fix a linker error in dependent packages, see:
 #   https://zhangboyi.gitlab.io/post/2020-09-14-resolve-dso-missing-from-command-line-error/
@@ -132,5 +129,25 @@ install(
   DESTINATION "include/${PROJECT_NAME}"
   FILES_MATCHING
   PATTERN "*.h"
+)
+install(
+  DIRECTORY "${riegeli_SOURCE_DIR}/riegeli"
+  DESTINATION "include/${PROJECT_NAME}"
+  FILES_MATCHING
+  PATTERN "*.h"
+)
+install(
+  DIRECTORY "${RIEGELI_PROTO_DIR}/riegeli"
+  DESTINATION "include/${PROJECT_NAME}"
+  FILES_MATCHING
+  PATTERN "*.h"
+)
+install(
+  FILES
+    "${tinygltf_SOURCE_DIR}/tiny_gltf.h"
+    "${tinygltf_SOURCE_DIR}/stb_image.h"
+    "${tinygltf_SOURCE_DIR}/stb_image_write.h"
+    "${tinygltf_SOURCE_DIR}/json.hpp"
+  DESTINATION "include/${PROJECT_NAME}"
 )
 
