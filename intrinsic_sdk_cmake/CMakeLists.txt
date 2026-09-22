@@ -26,6 +26,9 @@ include(cmake/sdk_protos.cmake)
 # Build flatbuffers.
 include(cmake/sdk_flatbuffers.cmake)
 
+# Fetch third-party C++ dependencies (riegeli, highwayhash, tinygltf, rules_cc).
+include(cmake/fetch_third_party.cmake)
+
 # Build the sdk C++ sources into a library.
 include(cmake/sdk.cmake)
 
