@@ -28,13 +28,18 @@
 #include <utility>
 
 #include "absl/cleanup/cleanup.h"
-#include "absl/log/log.h"
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
 #include "absl/strings/str_format.h"
+#include "absl/time/time.h"
 #include "gz/transport/Node.hh"
 #include "gz/transport/NodeOptions.hh"
 #include "gz/transport/TopicUtils.hh"
+#include "intrinsic/assets/dependencies/utils.h"
+#include "intrinsic/connect/cc/grpc/channel.h"
+#include "intrinsic/simulation/gazebo/proto/v1/gazebo_service.grpc.pb.h"
+#include "intrinsic/simulation/gazebo/proto/v1/gazebo_service.pb.h"
+#include "intrinsic/util/status/status_conversion_grpc.h"
 #include "intrinsic/util/status/status_macros.h"
 
 namespace intrinsic {
@@ -111,18 +116,52 @@ absl::StatusOr<std::shared_ptr<SimConnection>> SimConnection::Create(
   INTR_ASSIGN_OR_RETURN(gz::transport::NodeOptions node_opts,
                         DefaultNodeOptions());
 
-  auto sim_connection =
-      std::shared_ptr<SimConnection>(new SimConnection(std::move(node_opts)));
+  return std::shared_ptr<SimConnection>(
+      new SimConnection(std::move(node_opts), sim_ip));
+}
+
+absl::StatusOr<std::shared_ptr<SimConnection>>
+SimConnection::CreateFromResolvedDependency(
+    const intrinsic_proto::assets::v1::ResolvedDependency& resolved_deps,
+    absl::Duration connection_timeout) {
+  // Connect to the Gazebo service hosted by the remote server.
+  ::grpc::ClientContext ctx;
+  INTR_ASSIGN_OR_RETURN(
+      std::shared_ptr<::grpc::Channel> channel,
+      intrinsic::assets::dependencies::Connect(
+          ctx, resolved_deps,
+          /*iface=*/"grpc://intrinsic_proto.simulation.v1.GazeboService"));
+
+  // The address field is only used for error reporting as the channel already
+  // embeds the actual address.
+  INTR_RETURN_IF_ERROR(intrinsic::connect::WaitForChannelConnected(
+      "gazebo", channel, absl::Now() + connection_timeout));
+
+  std::unique_ptr<intrinsic_proto::simulation::v1::GazeboService::Stub>
+      gazebo_service_stub(
+          intrinsic_proto::simulation::v1::GazeboService::NewStub(channel));
+
+  intrinsic_proto::simulation::v1::GetIPRequest request;
+  intrinsic_proto::simulation::v1::GetIPResponse response;
+  INTR_RETURN_IF_ERROR(ToAbslStatus(
+      gazebo_service_stub->GetIPForTransportRelay(&ctx, request, &response)));
+
+  INTR_ASSIGN_OR_RETURN(gz::transport::NodeOptions node_opts,
+                        DefaultNodeOptions());
+
+  return std::shared_ptr<SimConnection>(
+      new SimConnection(std::move(node_opts), response.ip_address()));
+}
+
+SimConnection::SimConnection(gz::transport::NodeOptions node_options,
+                             const std::string& sim_ip)
+    : node_(std::make_shared<gz::transport::Node>(std::move(node_options))) {
   // By default, gz-transport does not support communication of nodes on
   // different local networks, e.g. when the sim connection client and the
   // sim server have different subnets. We need to explicitly tell the
   // gz-tranport node to relay traffic to the specified sim server ip.
-  sim_connection->node_->AddGlobalRelay(sim_ip);
-  return sim_connection;
+  node_->AddGlobalRelay(sim_ip);
 }
-
-SimConnection::SimConnection(gz::transport::NodeOptions node_options)
-    : node_(std::make_shared<gz::transport::Node>(std::move(node_options))) {}
 
 std::shared_ptr<gz::transport::Node> SimConnection::Node() { return node_; }
 
