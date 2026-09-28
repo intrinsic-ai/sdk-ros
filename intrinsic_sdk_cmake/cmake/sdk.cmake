@@ -82,7 +82,6 @@ target_link_libraries(${PROJECT_NAME}
     Python::Python
     rclcpp::rclcpp
     sdformat::sdformat
-    Snappy::snappy
     TBB::tbb
     zenohc::lib
     ZLIB::ZLIB
@@ -91,6 +90,13 @@ target_link_libraries(${PROJECT_NAME}
     intrinsic_sdk_protos
     intrinsic_sdk_services
 )
+# snappy is built from source as a static library, see fetch_third_party.cmake.
+# Its headers are put first so they win over any other snappy.h on the include
+# path (e.g. from other dependencies' include directories).
+target_include_directories(${PROJECT_NAME} BEFORE PRIVATE
+  "$<BUILD_INTERFACE:${snappy_SOURCE_DIR}>"
+  "$<BUILD_INTERFACE:${snappy_BINARY_DIR}>")
+target_link_libraries(${PROJECT_NAME} PRIVATE "$<BUILD_INTERFACE:snappy>")
 target_link_options(${PROJECT_NAME} PRIVATE "-Wl,--no-undefined")
 if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
   target_compile_options(${PROJECT_NAME} PRIVATE -Wno-template-body)
@@ -149,6 +155,11 @@ install(
   DESTINATION "include/${PROJECT_NAME}"
   FILES_MATCHING
   PATTERN "*.h"
+)
+# riegeli's public headers include snappy.h and snappy-sinksource.h.
+install(
+  FILES ${snappy_PUBLIC_HEADERS}
+  DESTINATION "include/${PROJECT_NAME}"
 )
 install(
   FILES
