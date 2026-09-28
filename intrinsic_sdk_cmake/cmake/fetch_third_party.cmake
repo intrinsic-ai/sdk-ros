@@ -48,6 +48,29 @@ list(FILTER riegeli_SRCS EXCLUDE REGEX "_benchmark\\.cc$")
 list(FILTER riegeli_SRCS EXCLUDE REGEX "/tools/")
 list(APPEND riegeli_SRCS "${RIEGELI_PROTO_PB_CC}")
 
+# 1b. Fetch brotli (matches riegeli MODULE.bazel: 1.1.0)
+# riegeli requires brotli (riegeli/brotli and riegeli/chunk_encoding), but
+# there is no rosdep key for libbrotli-dev and it is not reliably available
+# transitively (e.g. it is on Ubuntu 26.04 via libcurl4-openssl-dev, but not
+# on Ubuntu 24.04), so it is built from source into the sdk library instead.
+# Its symbols are left with default visibility because riegeli's public
+# headers call brotli functions inline.
+enable_language(C)
+FetchContent_Declare(
+  brotli
+  URL https://github.com/google/brotli/archive/refs/tags/v1.1.0.tar.gz
+  DOWNLOAD_EXTRACT_TIMESTAMP FALSE
+  SOURCE_SUBDIR non_existent_subdir
+)
+FetchContent_MakeAvailable(brotli)
+
+set(BROTLI_INCLUDE_DIR "${brotli_SOURCE_DIR}/c/include")
+file(GLOB brotli_SRCS
+  "${brotli_SOURCE_DIR}/c/common/*.c"
+  "${brotli_SOURCE_DIR}/c/dec/*.c"
+  "${brotli_SOURCE_DIR}/c/enc/*.c"
+)
+
 # 2. Fetch highwayhash (matches riegeli MODULE.bazel: 5ad3bf8)
 FetchContent_Declare(
   highwayhash

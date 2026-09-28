@@ -44,4 +44,4 @@ find_package(ZLIB REQUIRED)
 find_package(zstd CONFIG REQUIRED)
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(LIBZIP REQUIRED IMPORTED_TARGET libzip)
-pkg_check_modules(BROTLI REQUIRED IMPORTED_TARGET libbrotlidec libbrotlienc libbrotlicommon)
+# Note: brotli (needed by riegeli) is built from source, see fetch_third_party.cmake.
