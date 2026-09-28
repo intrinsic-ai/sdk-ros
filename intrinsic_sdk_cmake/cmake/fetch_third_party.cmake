@@ -48,6 +48,73 @@ list(FILTER riegeli_SRCS EXCLUDE REGEX "_benchmark\\.cc$")
 list(FILTER riegeli_SRCS EXCLUDE REGEX "/tools/")
 list(APPEND riegeli_SRCS "${RIEGELI_PROTO_PB_CC}")
 
+# 1b. Fetch brotli (matches riegeli MODULE.bazel: 1.1.0)
+# riegeli requires brotli (riegeli/brotli and riegeli/chunk_encoding), but
+# there is no rosdep key for libbrotli-dev and it is not reliably available
+# transitively (e.g. it is on Ubuntu 26.04 via libcurl4-openssl-dev, but not
+# on Ubuntu 24.04), so it is built from source into the sdk library instead.
+# Its symbols are left with default visibility because riegeli's public
+# headers call brotli functions inline.
+enable_language(C)
+FetchContent_Declare(
+  brotli
+  URL https://github.com/google/brotli/archive/refs/tags/v1.1.0.tar.gz
+  DOWNLOAD_EXTRACT_TIMESTAMP FALSE
+  SOURCE_SUBDIR non_existent_subdir
+)
+FetchContent_MakeAvailable(brotli)
+
+set(BROTLI_INCLUDE_DIR "${brotli_SOURCE_DIR}/c/include")
+file(GLOB brotli_SRCS
+  "${brotli_SOURCE_DIR}/c/common/*.c"
+  "${brotli_SOURCE_DIR}/c/dec/*.c"
+  "${brotli_SOURCE_DIR}/c/enc/*.c"
+)
+
+# 1c. Fetch snappy (matches riegeli MODULE.bazel: 1.2.0)
+# riegeli requires snappy >= 1.2.0 (snappy::CompressionOptions), but Ubuntu
+# 24.04 (jazzy) only provides 1.1.10, so it is built from source as a static,
+# position independent library and linked into the sdk library.
+# Unlike brotli, snappy needs generated headers (config.h and
+# snappy-stubs-public.h), so its own CMake build is used rather than globbing
+# its sources. This is done in a function so that the variables below, and the
+# global compiler flags which snappy's CMakeLists.txt sets
+# (e.g. -fno-exceptions, -fno-rtti), stay scoped to snappy.
+function(intrinsic_sdk_cmake_fetch_snappy)
+  FetchContent_Declare(
+    snappy
+    URL https://github.com/google/snappy/archive/refs/tags/1.2.0.tar.gz
+    DOWNLOAD_EXTRACT_TIMESTAMP FALSE
+  )
+  # Let option() in snappy's CMakeLists.txt honor the normal variables below.
+  set(CMAKE_POLICY_DEFAULT_CMP0077 NEW)
+  # snappy declares cmake_minimum_required(VERSION 3.1), which CMake >= 4.0
+  # rejects without this.
+  set(CMAKE_POLICY_VERSION_MINIMUM 3.5)
+  set(BUILD_SHARED_LIBS OFF)
+  set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+  set(SNAPPY_BUILD_TESTS OFF)
+  set(SNAPPY_BUILD_BENCHMARKS OFF)
+  set(SNAPPY_INSTALL OFF)
+  FetchContent_MakeAvailable(snappy)
+  # snappy's CMakeLists.txt unconditionally adds -fno-rtti, but riegeli
+  # subclasses snappy::Source and snappy::Sink, which requires their typeinfo.
+  # Target compile options come after CMAKE_CXX_FLAGS, so this takes precedence.
+  # (Distribution packages, e.g. Debian and conda-forge, also re-enable RTTI.)
+  target_compile_options(snappy PRIVATE -frtti)
+  set(snappy_SOURCE_DIR "${snappy_SOURCE_DIR}" PARENT_SCOPE)
+  set(snappy_BINARY_DIR "${snappy_BINARY_DIR}" PARENT_SCOPE)
+endfunction()
+intrinsic_sdk_cmake_fetch_snappy()
+# Public snappy headers, riegeli's public headers include "snappy.h" and
+# "snappy-sinksource.h", which in turn include the generated
+# "snappy-stubs-public.h".
+set(snappy_PUBLIC_HEADERS
+  "${snappy_SOURCE_DIR}/snappy.h"
+  "${snappy_SOURCE_DIR}/snappy-sinksource.h"
+  "${snappy_BINARY_DIR}/snappy-stubs-public.h"
+)
+
 # 2. Fetch highwayhash (matches riegeli MODULE.bazel: 5ad3bf8)
 FetchContent_Declare(
   highwayhash

@@ -35,6 +35,7 @@ list(FILTER intrinsic_SRCS EXCLUDE REGEX "/intrinsic/util/cloud\\.cc$")
 add_library(${PROJECT_NAME} SHARED
   ${intrinsic_SRCS}
   ${riegeli_SRCS}
+  ${brotli_SRCS}
   ${highwayhash_SRCS}
   ${tinygltf_SRCS}
   ${rules_cc_runfiles_SRCS}
@@ -44,6 +45,7 @@ target_include_directories(${PROJECT_NAME} PUBLIC
   "$<BUILD_INTERFACE:${intrinsic_sdk_SOURCE_DIR}>"
   "$<BUILD_INTERFACE:${riegeli_SOURCE_DIR}>"
   "$<BUILD_INTERFACE:${RIEGELI_PROTO_DIR}>"
+  "$<BUILD_INTERFACE:${BROTLI_INCLUDE_DIR}>"
   "$<BUILD_INTERFACE:${highwayhash_SOURCE_DIR}>"
   "$<BUILD_INTERFACE:${tinygltf_SOURCE_DIR}>"
   "$<BUILD_INTERFACE:${RUNFILES_INCLUDE_DIR}>"
@@ -71,7 +73,6 @@ target_link_libraries(${PROJECT_NAME}
     gz-transport::gz-transport
     ortools::ortools
     opencensus-cpp::stats
-    PkgConfig::BROTLI
     PkgConfig::LIBZIP
     protobuf::libprotobuf
     pybind11::pybind11
@@ -81,7 +82,6 @@ target_link_libraries(${PROJECT_NAME}
     Python::Python
     rclcpp::rclcpp
     sdformat::sdformat
-    Snappy::snappy
     TBB::tbb
     zenohc::lib
     ZLIB::ZLIB
@@ -90,6 +90,13 @@ target_link_libraries(${PROJECT_NAME}
     intrinsic_sdk_protos
     intrinsic_sdk_services
 )
+# snappy is built from source as a static library, see fetch_third_party.cmake.
+# Its headers are put first so they win over any other snappy.h on the include
+# path (e.g. from other dependencies' include directories).
+target_include_directories(${PROJECT_NAME} BEFORE PRIVATE
+  "$<BUILD_INTERFACE:${snappy_SOURCE_DIR}>"
+  "$<BUILD_INTERFACE:${snappy_BINARY_DIR}>")
+target_link_libraries(${PROJECT_NAME} PRIVATE "$<BUILD_INTERFACE:snappy>")
 target_link_options(${PROJECT_NAME} PRIVATE "-Wl,--no-undefined")
 if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
   target_compile_options(${PROJECT_NAME} PRIVATE -Wno-template-body)
@@ -141,6 +148,18 @@ install(
   DESTINATION "include/${PROJECT_NAME}"
   FILES_MATCHING
   PATTERN "*.h"
+)
+# riegeli's public headers include brotli/*.h.
+install(
+  DIRECTORY "${BROTLI_INCLUDE_DIR}/brotli"
+  DESTINATION "include/${PROJECT_NAME}"
+  FILES_MATCHING
+  PATTERN "*.h"
+)
+# riegeli's public headers include snappy.h and snappy-sinksource.h.
+install(
+  FILES ${snappy_PUBLIC_HEADERS}
+  DESTINATION "include/${PROJECT_NAME}"
 )
 install(
   FILES

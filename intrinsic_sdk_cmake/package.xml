@@ -43,7 +43,6 @@
   <depend>pybind11_protobuf_vendor</depend>
   <depend>python3-retrying</depend>
   <depend>rclcpp</depend>
-  <depend>snappy</depend>
   <depend>tbb</depend>
   <depend>zenoh_cpp_vendor</depend>
 
