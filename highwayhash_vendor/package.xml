@@ -3,10 +3,10 @@
   href="http://download.ros.org/schema/package_format2.xsd"
   schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="2">
-  <name>gz_sdformat_vendor</name>
+  <name>highwayhash_vendor</name>
   <version>0.1.0</version>
   <description>
-    Wrapper around sdformat.
+    Wrapper around highwayhash, providing it for riegeli_vendor.
   </description>
 
   <maintainer email="wjwwood@intrinsic.ai">William Woodall</maintainer>
@@ -18,18 +18,12 @@
   <buildtool_depend>ament_cmake</buildtool_depend>
   <buildtool_depend>ament_cmake_vendor_package</buildtool_depend>
 
-  <build_depend>ruby</build_depend>
-
   <!--
-    TODO(wjwwood): The Intrinsic SDK requires Gazebo Jetty (sdformat16 >= 16.0.0),
-    whereas ROS Jazzy and Lyrical ship Gazebo Harmonic (sdformat14). Once supported
-    ROS distros provide sdformat16 via rosdep, this vendor package can be retired.
+    TODO(wjwwood): highwayhash is required by riegeli (riegeli_vendor). Upstream
+    highwayhash does not ship a CMake build and there is no upstream rosdep key
+    for libhighwayhash-dev. Once a rosdep key exists (with CMake/pkg-config support)
+    or SDK C++ targets are extracted from Bazel, this vendor package can be retired.
   -->
-  <depend>gz_cmake_vendor</depend>
-  <depend>gz_math_vendor</depend>
-  <depend>gz_utils_vendor</depend>
-  <depend>liburdfdom-dev</depend>
-  <depend>tinyxml2</depend>
 
   <export>
     <build_type>ament_cmake</build_type>

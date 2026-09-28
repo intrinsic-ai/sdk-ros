@@ -22,6 +22,13 @@
 
   <depend>abseil_cpp_vendor</depend>
   <depend>assimp-dev</depend>
+  <!--
+    TODO(wjwwood): brotli_vendor, highwayhash_vendor, riegeli_vendor, snappy_vendor,
+    and tinygltf_vendor are vendored because either upstream rosdep keys do not yet
+    exist or Ubuntu 24.04 (Jazzy) ships an older version (e.g. snappy 1.1.10 < 1.2.0).
+    See the TODOs in each *_vendor package for when they can be retired.
+  -->
+  <depend>brotli_vendor</depend>
   <depend>eigen_vendor</depend>
   <depend>flatbuffers_vendor</depend>
   <depend>grpc_vendor</depend>
@@ -31,6 +38,7 @@
   <depend>gz_sdformat_vendor</depend>
   <depend>gz_transport_vendor</depend>
   <depend>gz_utils_vendor</depend>
+  <depend>highwayhash_vendor</depend>
   <depend>intrinsic_pybind11_vendor</depend>
   <depend>intrinsic_sdk_bundle_library_py</depend>
   <depend>libxml2</depend>
@@ -42,7 +50,10 @@
   <depend>pybind11_protobuf_vendor</depend>
   <depend>python3-retrying</depend>
   <depend>rclcpp</depend>
+  <depend>riegeli_vendor</depend>
+  <depend>snappy_vendor</depend>
   <depend>tbb</depend>
+  <depend>tinygltf_vendor</depend>
   <depend>zenoh_cpp_vendor</depend>
 
   <export>

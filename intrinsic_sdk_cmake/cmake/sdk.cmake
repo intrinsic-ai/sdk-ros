@@ -1,5 +1,3 @@
-
-
 # Glob the source files and then exclude files that don't make sense to be in the glob.
 # Note(wjwwood): we know this isn't the "right" way to do this, but it helps us catch
 # additions to the sdk when it is upgraded until we have a more structured approach
@@ -34,20 +32,19 @@ list(FILTER intrinsic_SRCS EXCLUDE REGEX "/intrinsic/util/cloud\\.cc$")
 
 add_library(${PROJECT_NAME} SHARED
   ${intrinsic_SRCS}
-  ${riegeli_SRCS}
-  ${brotli_SRCS}
-  ${highwayhash_SRCS}
-  ${tinygltf_SRCS}
   ${rules_cc_runfiles_SRCS}
 )
 add_library(${PROJECT_NAME}::${PROJECT_NAME} ALIAS ${PROJECT_NAME})
+
+# Ensure Snappy >= 1.2.0 headers from snappy_vendor take precedence over any
+# older system snappy.h that might be in /usr/include on Ubuntu 24.04.
+get_target_property(_snappy_include_dirs Snappy::snappy INTERFACE_INCLUDE_DIRECTORIES)
+if(_snappy_include_dirs)
+  target_include_directories(${PROJECT_NAME} BEFORE PUBLIC ${_snappy_include_dirs})
+endif()
+
 target_include_directories(${PROJECT_NAME} PUBLIC
   "$<BUILD_INTERFACE:${intrinsic_sdk_SOURCE_DIR}>"
-  "$<BUILD_INTERFACE:${riegeli_SOURCE_DIR}>"
-  "$<BUILD_INTERFACE:${RIEGELI_PROTO_DIR}>"
-  "$<BUILD_INTERFACE:${BROTLI_INCLUDE_DIR}>"
-  "$<BUILD_INTERFACE:${highwayhash_SOURCE_DIR}>"
-  "$<BUILD_INTERFACE:${tinygltf_SOURCE_DIR}>"
   "$<BUILD_INTERFACE:${RUNFILES_INCLUDE_DIR}>"
   # Add the directory where fbs headers are generated
   "$<BUILD_INTERFACE:${intrinsic_fbs_gen_dir}>"
@@ -81,8 +78,10 @@ target_link_libraries(${PROJECT_NAME}
     pybind11_protobuf::pybind11_native_proto_caster
     Python::Python
     rclcpp::rclcpp
+    riegeli::riegeli
     sdformat::sdformat
     TBB::tbb
+    tinygltf::tinygltf
     zenohc::lib
     ZLIB::ZLIB
     zstd::libzstd_shared
@@ -90,13 +89,6 @@ target_link_libraries(${PROJECT_NAME}
     intrinsic_sdk_protos
     intrinsic_sdk_services
 )
-# snappy is built from source as a static library, see fetch_third_party.cmake.
-# Its headers are put first so they win over any other snappy.h on the include
-# path (e.g. from other dependencies' include directories).
-target_include_directories(${PROJECT_NAME} BEFORE PRIVATE
-  "$<BUILD_INTERFACE:${snappy_SOURCE_DIR}>"
-  "$<BUILD_INTERFACE:${snappy_BINARY_DIR}>")
-target_link_libraries(${PROJECT_NAME} PRIVATE "$<BUILD_INTERFACE:snappy>")
 target_link_options(${PROJECT_NAME} PRIVATE "-Wl,--no-undefined")
 if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
   target_compile_options(${PROJECT_NAME} PRIVATE -Wno-template-body)
@@ -137,36 +129,3 @@ install(
   FILES_MATCHING
   PATTERN "*.h"
 )
-install(
-  DIRECTORY "${riegeli_SOURCE_DIR}/riegeli"
-  DESTINATION "include/${PROJECT_NAME}"
-  FILES_MATCHING
-  PATTERN "*.h"
-)
-install(
-  DIRECTORY "${RIEGELI_PROTO_DIR}/riegeli"
-  DESTINATION "include/${PROJECT_NAME}"
-  FILES_MATCHING
-  PATTERN "*.h"
-)
-# riegeli's public headers include brotli/*.h.
-install(
-  DIRECTORY "${BROTLI_INCLUDE_DIR}/brotli"
-  DESTINATION "include/${PROJECT_NAME}"
-  FILES_MATCHING
-  PATTERN "*.h"
-)
-# riegeli's public headers include snappy.h and snappy-sinksource.h.
-install(
-  FILES ${snappy_PUBLIC_HEADERS}
-  DESTINATION "include/${PROJECT_NAME}"
-)
-install(
-  FILES
-    "${tinygltf_SOURCE_DIR}/tiny_gltf.h"
-    "${tinygltf_SOURCE_DIR}/stb_image.h"
-    "${tinygltf_SOURCE_DIR}/stb_image_write.h"
-    "${tinygltf_SOURCE_DIR}/json.hpp"
-  DESTINATION "include/${PROJECT_NAME}"
-)
-

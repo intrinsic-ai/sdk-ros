@@ -10,6 +10,9 @@ endif()
 find_package(ament_cmake REQUIRED)
 find_package(ament_cmake_vendor_package REQUIRED)
 
+# TODO(wjwwood): The Intrinsic SDK requires Gazebo Jetty (sdformat16 >= 16.0.0),
+# whereas ROS Jazzy and Lyrical ship Gazebo Harmonic (sdformat14). Once supported
+# ROS distros provide sdformat16 via rosdep, this vendor package can be retired.
 set(gz_sdformat_satisfied_by_system FALSE)
 find_package(sdformat QUIET)
 if(sdformat_FOUND AND sdformat_VERSION VERSION_GREATER_EQUAL 16.0.0)
