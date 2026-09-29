@@ -26,7 +26,6 @@ FROM ros:${ROS_DISTRO} AS base
 WORKDIR /opt/ros/underlay
 
 ENV ROS_HOME=/tmp
-ENV RMW_IMPLEMENTATION=rmw_zenoh_cpp
 
 # Compatibility symlink for prebuilt LLVM/Clang toolchain binaries that expect libxml2.so.2
 # TODO(wjwwood): Prebuilt LLVM/Clang toolchain binaries downloaded by Bazel (via @toolchains_llvm)
@@ -114,6 +113,7 @@ RUN apt-get update \
     && apt-get dselect-upgrade -y \
     && apt-get install -y ros-${ROS_DISTRO}-rmw-zenoh-cpp ${DEPENDENCIES} \
     && rm -rf /var/lib/apt/lists/*
+ENV RMW_IMPLEMENTATION=rmw_zenoh_cpp
 
 COPY --from=overlay /opt/ros/underlay/install /opt/ros/underlay/install
 COPY --from=overlay /opt/ros/overlay/install /opt/ros/overlay/install
