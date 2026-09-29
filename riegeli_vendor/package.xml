@@ -1,0 +1,42 @@
+<?xml version="1.0"?>
+<?xml-model
+  href="http://download.ros.org/schema/package_format2.xsd"
+  schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="2">
+  <name>riegeli_vendor</name>
+  <version>0.1.0</version>
+  <description>
+    Wrapper around riegeli, providing it for intrinsic_sdk_cmake.
+  </description>
+
+  <maintainer email="wjwwood@intrinsic.ai">William Woodall</maintainer>
+
+  <license>Apache-2.0</license>
+
+  <author email="wjwwood@intrinsic.ai">William Woodall</author>
+
+  <buildtool_depend>ament_cmake</buildtool_depend>
+  <buildtool_depend>ament_cmake_vendor_package</buildtool_depend>
+  <buildtool_depend>pkg-config</buildtool_depend>
+
+  <!--
+    TODO(wjwwood): riegeli (along with its leaf vendor dependencies brotli_vendor,
+    snappy_vendor, and highwayhash_vendor) is required to build the Intrinsic SDK
+    C++ sources in intrinsic_sdk_cmake. Upstream google/riegeli only provides a
+    Bazel build and is not packaged in Ubuntu/rosdep. This vendor package can be
+    retired if riegeli is packaged upstream or once SDK C++ targets are extracted
+    directly from Bazel.
+  -->
+  <depend>abseil_cpp_vendor</depend>
+  <depend>brotli_vendor</depend>
+  <depend>bzip2</depend>
+  <depend>grpc_vendor</depend>
+  <depend>highwayhash_vendor</depend>
+  <depend>libzstd-dev</depend>
+  <depend>snappy_vendor</depend>
+  <depend>zlib</depend>
+
+  <export>
+    <build_type>ament_cmake</build_type>
+  </export>
+</package>
