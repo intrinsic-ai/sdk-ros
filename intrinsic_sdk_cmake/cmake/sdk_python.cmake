@@ -177,6 +177,7 @@ setup(
     DESTINATION "${ARG_DESTINATION}/${package_name}"
     PATTERN "*.pyc" EXCLUDE
     PATTERN "__pycache__" EXCLUDE
+    PATTERN "*.so" EXCLUDE
   )
 
   if(NOT ARG_SKIP_COMPILE)
@@ -221,3 +222,17 @@ foreach(python_package_to_install ${python_packages_to_install})
     DEPENDS fix_imports_before_install_${python_package_to_install}
   )
 endforeach()
+
+find_package(Python3 REQUIRED COMPONENTS Interpreter Development Development.Module)
+# Build the python pubsub extension module.
+pybind11_add_module(pubsub_python MODULE
+  "${intrinsic_sdk_SOURCE_DIR}/intrinsic/platform/pubsub/python/pubsub.cc"
+)
+set_target_properties(pubsub_python PROPERTIES OUTPUT_NAME "pubsub")
+target_link_libraries(pubsub_python PRIVATE ${PROJECT_NAME})
+add_dependencies(fix_imports_before_install_intrinsic pubsub_python)
+
+install(
+  TARGETS pubsub_python
+  DESTINATION "${PYTHON_INSTALL_DIR}/intrinsic/platform/pubsub/python"
+)

@@ -4,7 +4,7 @@ if [ ! -d "src/sdk-ros" ]; then
   exit
 fi
 
-ROS_DISTRO="jazzy"
+ROS_DISTRO="lyrical"
 
 show_help() {
   echo "Usage: $(basename "$0") [OPTIONS]"
@@ -13,7 +13,7 @@ show_help() {
   echo ""
   echo "Options:"
   echo "  -h, --help           Show this help message and exit"
-  echo "  --ros_distro ROS_DISTRO  Name of the ROS distro (default: jazzy)"
+  echo "  --ros_distro ROS_DISTRO  Name of the ROS distro (default: lyrical)"
   echo ""
 }
 
@@ -40,8 +40,7 @@ set -o verbose
 src/sdk-ros/scripts/build_container.sh \
   --ros_distro "$ROS_DISTRO" \
   --service_name flowstate_ros_bridge \
-  --service_package flowstate_ros_bridge \
-  --dependencies nlohmann-json3-dev
+  --service_package flowstate_ros_bridge
 src/sdk-ros/scripts/build_bundle.sh \
   --service_name flowstate_ros_bridge \
   --service_package flowstate_ros_bridge \

@@ -14,13 +14,16 @@
 
 #include "world_bridge.hpp"
 
+#include <cstdlib>
 #include <limits>
 #include <string>
+#include <string_view>
 #include <utility>
 
 #include "absl/log/log.h"
 #include "absl/status/status.h"
 #include "absl/strings/str_format.h"
+#include "absl/strings/strip.h"
 #include "intrinsic/eigenmath/types.h"
 #include "intrinsic/math/proto_conversion.h"
 #include "intrinsic/util/eigen.h"
@@ -29,6 +32,8 @@
 namespace flowstate_ros_bridge {
 
 constexpr const char* kTfPrefixParamName = "world_tf_prefix";
+constexpr const char* kStripFlowstateTfPrefixParamName =
+    "strip_flowstate_tf_prefix";
 constexpr const char* kResourceServiceName = "flowstate_get_resource";
 constexpr const char* kMeshUrlPrefixParamName = "mesh_url_prefix";
 constexpr const char* kEnableRobotJointStateTopicParamName =
@@ -57,8 +62,17 @@ void WorldBridge::declare_ros_parameters(
   param_interface->declare_parameter(kTfPrefixParamName,
                                      rclcpp::ParameterValue{""});
   param_interface->declare_parameter(
+      kStripFlowstateTfPrefixParamName,
+      rclcpp::ParameterValue(std::vector<std::string>{}));
+#if defined(FLOWSTATE_ROS_BRIDGE_USE_RESOURCE_RETRIEVER_INTERFACES)
+  param_interface->declare_parameter(
+      kMeshUrlPrefixParamName,
+      rclcpp::ParameterValue{"service:///flowstate_get_resource:/"});
+#else
+  param_interface->declare_parameter(
       kMeshUrlPrefixParamName,
       rclcpp::ParameterValue{"http://localhost:8123/"});
+#endif
   param_interface->declare_parameter(kEnableRobotJointStateTopicParamName,
                                      rclcpp::ParameterValue(true));
   param_interface->declare_parameter(kEnableForceTorqueTopicParamName,
@@ -88,7 +102,8 @@ void WorldBridge::declare_ros_parameters(
 ///=============================================================================
 bool WorldBridge::initialize(ROSNodeInterfaces ros_node_interfaces,
                              std::shared_ptr<Executive> /*executive_client*/,
-                             std::shared_ptr<World> world_client) {
+                             std::shared_ptr<World> world_client,
+                             std::shared_ptr<intrinsic::PubSub> /*pubsub*/) {
   data_ = std::make_shared<Data>();
   data_->node_interfaces_ = std::move(ros_node_interfaces);
   data_->world_ = std::move(world_client);
@@ -107,17 +122,25 @@ bool WorldBridge::initialize(ROSNodeInterfaces ros_node_interfaces,
                             std::shared_ptr<GetResource::Response> response) {
         const std::string gltf_id = request->path;
         LOG(INFO) << "request resource path: " << gltf_id;
-        if (!data_->renderables_.contains(gltf_id)) {
-          response->status_code = GetResource::Response::ERROR;
-          return;
+
+        {
+          absl::MutexLock lock(&data_->mutex_);
+          auto it = data_->renderables_.find(gltf_id);
+          if (it == data_->renderables_.end()) {
+            response->status_code = GetResource::Response::ERROR;
+            return;
+          }
+          response->body = it->second;
         }
         response->status_code = GetResource::Response::OK;
-        response->body = data_->renderables_[gltf_id];
       },
       rclcpp::ServicesQoS(), nullptr);
 
   data_->tf_prefix_ = param_interface->get_parameter(kTfPrefixParamName)
                           .get_value<std::string>();
+  data_->strip_flowstate_tf_prefixes_ =
+      param_interface->get_parameter(kStripFlowstateTfPrefixParamName)
+          .as_string_array();
 
   std::shared_ptr<rclcpp::node_interfaces::NodeTopicsInterface>
       topics_interface =
@@ -126,6 +149,10 @@ bool WorldBridge::initialize(ROSNodeInterfaces ros_node_interfaces,
 
   data_->tf_pub_ = rclcpp::create_publisher<tf2_msgs::msg::TFMessage>(
       param_interface, topics_interface, "tf",
+      tf2_ros::DynamicBroadcasterQoS());
+
+  data_->sim_tf_pub_ = rclcpp::create_publisher<tf2_msgs::msg::TFMessage>(
+      param_interface, topics_interface, "tf_sim",
       tf2_ros::DynamicBroadcasterQoS());
 
   const rclcpp::QoS markers_qos =
@@ -150,6 +177,19 @@ bool WorldBridge::initialize(ROSNodeInterfaces ros_node_interfaces,
   }
   LOG(INFO) << "Subscribed to Flowstate TF topic";
   data_->tf_sub_ = std::move(*tf_sub_);
+
+  auto sim_tf_sub = data_->world_->CreateTfSubscription(
+      [this](const intrinsic_proto::TFMessage& msg) {
+        this->SimTfCallback(msg);
+      },
+      /*sim=*/true);
+  if (!sim_tf_sub.ok()) {
+    LOG(WARNING) << "Unable to create Sim TF Subscription: "
+                 << sim_tf_sub.status();
+  } else {
+    LOG(INFO) << "Subscribed to Flowstate Sim TF topic";
+    data_->sim_tf_sub_ = std::move(*sim_tf_sub);
+  }
 
   // Robot States Bridge
   data_->robot_joint_state_topic_enabled_ =
@@ -211,20 +251,20 @@ bool WorldBridge::initialize(ROSNodeInterfaces ros_node_interfaces,
         data->mutex_.LockWhen(absl::Condition(
             +[](bool* condn) { return *condn; }, &data->send_new_objects_));
 
+        // Copy data and unlock immediately so TfCallback is not blocked during
+        // heavy mesh downloading.
+        std::optional<std::vector<std::string>> local_object_names =
+            data->send_object_names_;
+        data->send_object_names_ = std::nullopt;
+        data->send_new_objects_ = false;
+        data->mutex_.Unlock();
+
         const absl::Status status =
-            data->SendObjectVisualizationMessages(data->send_object_names_);
+            data->SendObjectVisualizationMessages(local_object_names);
         if (!status.ok()) {
           LOG(ERROR) << "Unable to send object visualization messages: "
                      << status.message();
-          continue;
         }
-        if (data->send_object_names_.has_value()) {
-          // Clear object names if object retrival and publishing is successful
-          data->send_object_names_.value().clear();
-        }
-        data->send_new_objects_ = false;
-
-        data->mutex_.Unlock();
       } else {
         LOG(ERROR) << "data has expired! Terminating thread sending "
                       "visualization objects";
@@ -238,6 +278,15 @@ bool WorldBridge::initialize(ROSNodeInterfaces ros_node_interfaces,
 
 absl::Status WorldBridge::Data::SendObjectVisualizationMessages(
     std::optional<std::vector<std::string>> object_names) {
+  bool rotate_mesh = true;
+  const char* ros_distro = std::getenv("ROS_DISTRO");
+  if (ros_distro != nullptr && std::string_view(ros_distro) == "jazzy") {
+    rotate_mesh = false;
+    LOG(INFO) << "Keeping mesh orientation as-is.";
+  } else {
+    LOG(INFO) << "Adding extra rotation to correct glTF orientation.";
+  }
+
   absl::StatusOr<std::vector<intrinsic::world::WorldObject>> objects =
       world_->GetObjects(std::move(object_names));
   if (!objects.ok()) {
@@ -270,27 +319,37 @@ absl::Status WorldBridge::Data::SendObjectVisualizationMessages(
             continue;
           }
           const auto& geo_ref = geometry.geo_ref();
-          const std::string object_name = object.Name().value();
-          const std::vector<absl::string_view> parts =
-              absl::StrSplit(object_name, '/');
-          const absl::string_view short_name = parts.back();
+          std::string object_name = object.Name().value();
+          if (object_name.empty()) {
+            object_name =
+                proto.name().empty() ? entity.second.name() : proto.name();
+          }
+          object_name =
+              StripTfPrefixes(object_name, strip_flowstate_tf_prefixes_);
+          std::string tf_frame_name = absl::StrFormat(
+              "%s%s/%s", tf_prefix_.c_str(), object_name, entity.second.name());
 
-          // In V1 SDK, the Flowstate TF stream appends the short object name
-          // again between the full path and the entity name.
-          std::string tf_frame_name =
-              absl::StrFormat("%s%s/%s/%s", tf_prefix_.c_str(), object_name,
-                              short_name, entity.second.name());
-
-          // Let's be smarter in the future. For now, just skip over
-          // the intcas:// prefix
-          const std::string gltf_path = absl::StrFormat(
-              "gltf/%s_%s.glb", geo_ref.exact_geometry_ref().substr(9),
-              geo_ref.renderable_ref().substr(9));
+          // Safely strip intcas:// prefix if present
+          std::string exact_geom_ref = geo_ref.exact_geometry_ref();
+          if (absl::StartsWith(exact_geom_ref, "intcas://")) {
+            exact_geom_ref = exact_geom_ref.substr(9);
+          }
+          std::string renderable_ref = geo_ref.renderable_ref();
+          if (absl::StartsWith(renderable_ref, "intcas://")) {
+            renderable_ref = renderable_ref.substr(9);
+          }
+          const std::string gltf_path =
+              absl::StrFormat("gltf/%s_%s.glb", exact_geom_ref, renderable_ref);
 
           const auto renderable_name = std::string("/") + gltf_path;
-          auto renderables_it = renderables_.find(renderable_name);
 
-          if (renderables_it == renderables_.end()) {
+          bool has_renderable = false;
+          {
+            absl::MutexLock lock(&mutex_);
+            has_renderable = renderables_.contains(renderable_name);
+          }
+
+          if (!has_renderable) {
             const absl::StatusOr<std::string> gltf = world_->GetGltf(
                 geo_ref.exact_geometry_ref(), geo_ref.renderable_ref());
             if (!gltf.ok()) {
@@ -305,9 +364,10 @@ absl::Status WorldBridge::Data::SendObjectVisualizationMessages(
 
             LOG(INFO) << "Fetched " << gltf->size() << " bytes for "
                       << tf_frame_name;
-            renderables_it =
-                renderables_.emplace(renderable_name, std::move(gltf_data))
-                    .first;
+
+            // Safely insert the newly downloaded mesh
+            absl::MutexLock lock(&mutex_);
+            renderables_.emplace(renderable_name, std::move(gltf_data));
           }
 
           const auto& ref_t_shape = transformed_geometry.ref_t_shape();
@@ -332,7 +392,16 @@ absl::Status WorldBridge::Data::SendObjectVisualizationMessages(
           marker_msg.pose.position.x = affine.translation().x();
           marker_msg.pose.position.y = affine.translation().y();
           marker_msg.pose.position.z = affine.translation().z();
-          const intrinsic::eigenmath::Quaterniond quat(affine.rotation());
+          intrinsic::eigenmath::Quaterniond quat(affine.rotation());
+          if (rotate_mesh) {
+            // Manually rotate the mesh by 90 degrees to align with its correct
+            // orientation.
+            const double inv_sqrt_2 =
+                1.4142135623730951 / 2.0;  // std::sqrt(2.0)/2.0
+            const intrinsic::eigenmath::Quaterniond rot_x_neg_90(
+                inv_sqrt_2, -inv_sqrt_2, 0.0, 0.0);
+            quat = quat * rot_x_neg_90;
+          }
           marker_msg.pose.orientation.x = quat.x();
           marker_msg.pose.orientation.y = quat.y();
           marker_msg.pose.orientation.z = quat.z();
@@ -362,7 +431,6 @@ absl::Status WorldBridge::Data::SendObjectVisualizationMessages(
           array_msg.markers.push_back(std::move(marker_msg));
         }
       }
-      // LOG(INFO) << entity.second;
     }
   }
   LOG(INFO) << "Total gltf size: " << total_gltf_size << " bytes";
@@ -377,13 +445,23 @@ absl::Status WorldBridge::Data::SendObjectVisualizationMessages(
 ///=============================================================================
 WorldBridge::Data::~Data() {}
 
-void WorldBridge::TfCallback(const intrinsic_proto::TFMessage& tf_proto) {
-  rclcpp::Clock clock;
-  const rclcpp::Time t_start = clock.now();
+///=============================================================================
+std::string WorldBridge::StripTfPrefixes(
+    absl::string_view frame, const std::vector<std::string>& prefixes) {
+  absl::string_view stripped = frame;
+  for (const auto& prefix : prefixes) {
+    // Add check to only strip the prefix once per frame
+    if (!prefix.empty() && absl::StartsWith(stripped, prefix)) {
+      stripped = absl::StripPrefix(stripped, prefix);
+      break;
+    }
+  }
+  return std::string(stripped);
+}
 
-  absl::flat_hash_set<std::string> new_tf_frame_names;
-  absl::flat_hash_set<std::string> new_object_names;
-
+///=============================================================================
+tf2_msgs::msg::TFMessage WorldBridge::ConvertTfProtoToRos(
+    const intrinsic_proto::TFMessage& tf_proto) const {
   tf2_msgs::msg::TFMessage tf_ros;
   tf_ros.transforms = std::vector<geometry_msgs::msg::TransformStamped>(
       tf_proto.transforms_size());
@@ -392,16 +470,17 @@ void WorldBridge::TfCallback(const intrinsic_proto::TFMessage& tf_proto) {
     geometry_msgs::msg::TransformStamped* ts_ros = &tf_ros.transforms[tf_idx++];
     ts_ros->header.stamp.sec = ts_proto.header().stamp().seconds();
     ts_ros->header.stamp.nanosec = ts_proto.header().stamp().nanos();
-    ts_ros->header.frame_id = data_->tf_prefix_ + ts_proto.header().frame_id();
-    ts_ros->child_frame_id = data_->tf_prefix_ + ts_proto.child_frame_id();
 
-    new_tf_frame_names.insert(ts_ros->child_frame_id);
-    if (!data_->tf_frame_names_.contains(ts_ros->child_frame_id)) {
-      // We parse the "OBJECT_NAME/ENTITY_NAME" string to get the OBJECT_NAME
-      LOG(INFO) << "new child_frame_id: " << ts_ros->child_frame_id;
-      const std::size_t str_end = ts_proto.child_frame_id().find('/');
-      new_object_names.insert(ts_proto.child_frame_id().substr(0, str_end));
-    }
+    // Strip away Flowstate TF prefixes
+    const std::string frame_id = StripTfPrefixes(
+        ts_proto.header().frame_id(), data_->strip_flowstate_tf_prefixes_);
+
+    const std::string child_frame_id = StripTfPrefixes(
+        ts_proto.child_frame_id(), data_->strip_flowstate_tf_prefixes_);
+
+    ts_ros->header.frame_id = data_->tf_prefix_ + frame_id;
+    ts_ros->child_frame_id = data_->tf_prefix_ + child_frame_id;
+
     // The auto-generated CDR types do not currently have assignment operators
     // or helper conversion functions from the corresponding protos, so we need
     // to explicitly copy all the fields.
@@ -414,12 +493,40 @@ void WorldBridge::TfCallback(const intrinsic_proto::TFMessage& tf_proto) {
     ts_ros->transform.rotation.z = t.rotation().z();
     ts_ros->transform.rotation.w = t.rotation().w();
   }
+  return tf_ros;
+}
+
+///=============================================================================
+void WorldBridge::TfCallback(const intrinsic_proto::TFMessage& tf_proto) {
+  rclcpp::Clock clock;
+  const rclcpp::Time t_start = clock.now();
+
+  tf2_msgs::msg::TFMessage tf_ros = ConvertTfProtoToRos(tf_proto);
   data_->tf_pub_->publish(tf_ros);
 
   // print a timing snapshot every 500 messages
   const rclcpp::Duration elapsed = clock.now() - t_start;
   LOG_EVERY_N(INFO, 500) << absl::StrFormat("tf translation time: %.3f ms",
                                             1000.0 * elapsed.seconds());
+
+  absl::flat_hash_set<std::string> new_tf_frame_names;
+  absl::flat_hash_set<std::string> new_object_names;
+  for (const auto& ts_ros : tf_ros.transforms) {
+    new_tf_frame_names.insert(ts_ros.child_frame_id);
+    if (!data_->tf_frame_names_.contains(ts_ros.child_frame_id)) {
+      LOG(INFO) << "new child_frame_id: " << ts_ros.child_frame_id;
+      absl::string_view child_frame = ts_ros.child_frame_id;
+      // Strip ROS tf_prefix if present to retrieve the original Flowstate
+      // object name.
+      if (!data_->tf_prefix_.empty() &&
+          absl::StartsWith(child_frame, data_->tf_prefix_)) {
+        child_frame = absl::StripPrefix(child_frame, data_->tf_prefix_);
+      }
+      // We parse the "OBJECT_NAME/ENTITY_NAME" string to get the OBJECT_NAME
+      const std::size_t str_end = child_frame.find('/');
+      new_object_names.insert(std::string(child_frame.substr(0, str_end)));
+    }
+  }
 
   std::vector<std::string> deleted_tf_frames;
   for (const auto& tf_frame : data_->tf_frame_names_) {
@@ -443,7 +550,7 @@ void WorldBridge::TfCallback(const intrinsic_proto::TFMessage& tf_proto) {
   }
 
   if (!new_object_names.empty()) {
-    data_->mutex_.Lock();
+    absl::MutexLock lock(&data_->mutex_);
     if (data_->send_object_names_.has_value()) {
       data_->send_object_names_.value().insert(
           data_->send_object_names_.value().end(), new_object_names.begin(),
@@ -454,10 +561,25 @@ void WorldBridge::TfCallback(const intrinsic_proto::TFMessage& tf_proto) {
     }
     // Signal background thread to send object visualization messages
     data_->send_new_objects_ = true;
-    data_->mutex_.Unlock();
   }
 
   data_->tf_frame_names_ = std::move(new_tf_frame_names);
+}
+
+///=============================================================================
+void WorldBridge::SimTfCallback(const intrinsic_proto::TFMessage& tf_proto) {
+  if (!data_->sim_tf_pub_) {
+    return;
+  }
+  rclcpp::Clock clock;
+  const rclcpp::Time t_start = clock.now();
+
+  data_->sim_tf_pub_->publish(ConvertTfProtoToRos(tf_proto));
+
+  // print a timing snapshot every 500 messages
+  const rclcpp::Duration elapsed = clock.now() - t_start;
+  LOG_EVERY_N(INFO, 500) << absl::StrFormat("sim tf translation time: %.3f ms",
+                                            1000.0 * elapsed.seconds());
 }
 
 ///=============================================================================

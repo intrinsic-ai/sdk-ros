@@ -1,0 +1,33 @@
+<?xml version="1.0"?>
+<?xml-model
+  href="http://download.ros.org/schema/package_format2.xsd"
+  schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="2">
+  <name>snappy_vendor</name>
+  <version>0.1.0</version>
+  <description>
+    Wrapper around snappy, providing snappy &gt;= 1.2.0 if not found on the system.
+  </description>
+
+  <maintainer email="wjwwood@intrinsic.ai">William Woodall</maintainer>
+
+  <license>Apache-2.0</license>
+
+  <author email="wjwwood@intrinsic.ai">William Woodall</author>
+
+  <buildtool_depend>ament_cmake</buildtool_depend>
+  <buildtool_depend>ament_cmake_vendor_package</buildtool_depend>
+
+  <!--
+    TODO(wjwwood): riegeli requires snappy >= 1.2.0 (for snappy::CompressionOptions).
+    Ubuntu 26.04 (Lyrical) provides snappy 1.2.2, which satisfies this requirement,
+    whereas Ubuntu 24.04 (Jazzy) only provides snappy 1.1.10. Once Ubuntu 24.04 (Jazzy)
+    is no longer supported, snappy_vendor can be retired in favor of the standard
+    'snappy' rosdep key.
+  -->
+  <depend>snappy</depend>
+
+  <export>
+    <build_type>ament_cmake</build_type>
+  </export>
+</package>

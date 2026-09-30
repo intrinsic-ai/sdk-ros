@@ -1,0 +1,16 @@
+diff --git a/ortools/math_opt/CMakeLists.txt b/ortools/math_opt/CMakeLists.txt
+--- a/ortools/math_opt/CMakeLists.txt
++++ b/ortools/math_opt/CMakeLists.txt
+@@ -30,3 +30,3 @@ set(NAME ${PROJECT_NAME}_math_opt)
+ add_library(${NAME} OBJECT)
+-target_sources(${NAME} PUBLIC
++target_sources(${NAME} PRIVATE
+   $<TARGET_OBJECTS:${NAME}_core>
+diff --git a/ortools/math_opt/constraints/CMakeLists.txt b/ortools/math_opt/constraints/CMakeLists.txt
+--- a/ortools/math_opt/constraints/CMakeLists.txt
++++ b/ortools/math_opt/constraints/CMakeLists.txt
+@@ -22,3 +22,3 @@ set(NAME ${PROJECT_NAME}_math_opt_constraints)
+ add_library(${NAME} OBJECT)
+-target_sources(${NAME} PUBLIC
++target_sources(${NAME} PRIVATE
+   $<TARGET_OBJECTS:${NAME}_indicator>
