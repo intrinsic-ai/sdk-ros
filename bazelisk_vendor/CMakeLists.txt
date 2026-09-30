@@ -19,9 +19,11 @@ function(download_and_install BINARY_NAME)
   )
 endfunction()
 
-# Download the binaries for bazelisk.
+# Download the binaries for bazelisk if bazel is not found in path.
+message(STATUS "Forcing bazelisk download to satisfy intrinsic_sdk_cmake expectations.")
 download_and_install(bazelisk-linux-amd64)
 download_and_install(bazelisk-linux-arm64)
+
 
 function(extract_version_from_xml_tag VERSION_STRING XML_FILE)
   file(READ ${XML_FILE} XML_CONTENT)
@@ -64,6 +66,7 @@ install(FILES
 install(CODE "
   file(MAKE_DIRECTORY ${CMAKE_INSTALL_PREFIX}/share/ament_index/resource_index/packages)
   file(TOUCH ${CMAKE_INSTALL_PREFIX}/share/ament_index/resource_index/packages/${PROJECT_NAME})
+  file(MAKE_DIRECTORY ${CMAKE_INSTALL_PREFIX}/${LIBEXEC_DIR})
 ")
 install(FILES
   package.xml

@@ -1,0 +1,11 @@
+syntax = "proto3";
+
+package com.example;
+
+message TestCppSkillParams {
+  // Message to print/check
+  string message = 1;
+}
+
+message TestCppSkillResult {
+}

@@ -5,6 +5,11 @@
       "matchDatasources": ["docker"],
       "matchPackageNames": ["ghcr.io/sloretz/ros"],
       "versioning": "regex:^(?<compatibility>.*)-(?<major>\\d{4})-(?<minor>\\d{2})-(?<patch>\\d{2})$"
+    },
+    {
+      "matchPaths": ["resources/pip_requirements/requirements.txt"],
+      "groupName": "python-skill-dependencies",
+      "groupDisplayName": "Python dependencies for Skill Dockerfiles"
     }
   ]
 }

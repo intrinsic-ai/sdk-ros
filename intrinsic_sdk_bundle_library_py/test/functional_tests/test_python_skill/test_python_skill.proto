@@ -1,0 +1,11 @@
+syntax = "proto3";
+
+package test_python_skill;
+
+message TestPythonSkillParams {
+  string input_data = 1;
+}
+
+message TestPythonSkillResult {
+  string message = 1;
+}

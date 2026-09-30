@@ -77,9 +77,16 @@ function(intrinsic_sdk_generate_skill_config)
     # COMMAND intrinsic_sdk_cmake::inbuild
     COMMAND inbuild_import
     ARGS
-      skill generate config
+      skill manifest
       --manifest=${manifest_textproto}
-      --file_descriptor_set=${arg_PROTO_DESCRIPTOR_FILE}
+      --file_descriptor_sets=${arg_PROTO_DESCRIPTOR_FILE}
+      --output=${CMAKE_CURRENT_BINARY_DIR}/${arg_TARGET}_augmented_manifest.pbbin
+      --file_descriptor_set_out=${CMAKE_CURRENT_BINARY_DIR}/${arg_TARGET}_augmented_protos.desc
+    COMMAND inbuild_import
+    ARGS
+      skill generate config
+      --augmented_manifest=${CMAKE_CURRENT_BINARY_DIR}/${arg_TARGET}_augmented_manifest.pbbin
+      --augmented_file_descriptor_set=${CMAKE_CURRENT_BINARY_DIR}/${arg_TARGET}_augmented_protos.desc
       --output=${arg_SKILL_CONFIG_FILE_OUTPUT}
     COMMENT "Generating skill config for ${arg_SKILL_NAME}"
     DEPENDS

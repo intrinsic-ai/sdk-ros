@@ -44,7 +44,8 @@ class World : public std::enable_shared_from_this<World> {
         std::size_t deadline_seconds = 10);
 
   absl::StatusOr<std::shared_ptr<intrinsic::Subscription>> CreateTfSubscription(
-      intrinsic::SubscriptionOkCallback<intrinsic_proto::TFMessage> callback);
+      intrinsic::SubscriptionOkCallback<intrinsic_proto::TFMessage> callback,
+      bool sim = false);
 
   // Robot States subscription
   absl::StatusOr<std::shared_ptr<intrinsic::Subscription>>
@@ -70,6 +71,8 @@ class World : public std::enable_shared_from_this<World> {
 
   absl::StatusOr<std::string> GetGltf(const std::string& geometry_ref,
                                       const std::string& renderable_ref);
+
+  std::shared_ptr<intrinsic::PubSub> pubsub() const { return pubsub_; }
 
  private:
   std::shared_ptr<intrinsic::PubSub> pubsub_;

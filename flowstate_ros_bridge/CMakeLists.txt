@@ -3,9 +3,16 @@ project(flowstate_ros_bridge)
 
 include(GNUInstallDirs)
 
-# Default to C++17
+# Find lttng-ust using PkgConfig to avoid hardcoding paths
+find_package(PkgConfig REQUIRED)
+pkg_check_modules(LTTNG_UST REQUIRED lttng-ust IMPORTED_TARGET)
+
+# Add library path found by PkgConfig to linker search path for targets that might not inherit it
+link_directories(${LTTNG_UST_LIBRARY_DIRS})
+
+# Default to C++20
 if(NOT CMAKE_CXX_STANDARD)
-  set(CMAKE_CXX_STANDARD 17)
+  set(CMAKE_CXX_STANDARD 20)
   set(CMAKE_CXX_STANDARD_REQUIRED ON)
 endif()
 if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
@@ -19,6 +26,7 @@ find_package(ament_cmake REQUIRED)
 set(dep_pkgs
   abseil_cpp_vendor
   flowstate_interfaces
+  sensor_msgs
   std_msgs
   tf2_msgs
   visualization_msgs
@@ -33,6 +41,17 @@ set(dep_pkgs
   rclpy
   tf2_ros
 )
+
+if(NOT DEFINED ROS_DISTRO)
+  set(ROS_DISTRO $ENV{ROS_DISTRO})
+endif()
+
+if(NOT ROS_DISTRO STREQUAL "jazzy")
+  find_package(resource_retriever_interfaces REQUIRED)
+  list(APPEND dep_pkgs resource_retriever_interfaces)
+  add_compile_definitions(FLOWSTATE_ROS_BRIDGE_USE_RESOURCE_RETRIEVER_INTERFACES)
+endif()
+
 foreach(pkg ${dep_pkgs})
   find_package(${pkg} REQUIRED)
 endforeach()
@@ -76,6 +95,11 @@ target_link_libraries(world
   nlohmann_json::nlohmann_json
   ${flowstate_interfaces_TARGETS}
 )
+if(resource_retriever_interfaces_FOUND)
+  target_link_libraries(world
+    ${resource_retriever_interfaces_TARGETS}
+  )
+endif()
 
 ament_export_targets(executive HAS_LIBRARY_TARGET)
 ament_export_dependencies(${dep_pkgs})
@@ -99,6 +123,7 @@ target_include_directories(flowstate_ros_bridge_interface
 
 add_library(flowstate_ros_builtin_bridges SHARED
   src/bridges/executive_bridge.cpp
+  src/bridges/image_bridge.cpp
   src/bridges/world_bridge.cpp
 )
 target_include_directories(flowstate_ros_builtin_bridges
@@ -120,6 +145,8 @@ target_link_libraries(flowstate_ros_builtin_bridges
     absl::strings
     absl::log
     pluginlib::pluginlib
+    ${resource_retriever_interfaces_TARGETS}
+    ${sensor_msgs_TARGETS}
     ${std_msgs_TARGETS}
     ${std_srvs_TARGETS}
     ${tf2_msgs_TARGETS}
@@ -155,11 +182,13 @@ target_link_libraries(flowstate_ros_bridge_component
   rclcpp_components::component
   rclcpp_lifecycle::rclcpp_lifecycle
   nlohmann_json::nlohmann_json
+  ${sensor_msgs_TARGETS}
   ${std_msgs_TARGETS}
   ${std_srvs_TARGETS}
   ${tf2_msgs_TARGETS}
   tf2_ros::tf2_ros
   ${visualization_msgs_TARGETS}
+  PkgConfig::LTTNG_UST
 )
 target_compile_features(flowstate_ros_bridge_component PUBLIC cxx_std_17)
 set_property(TARGET flowstate_ros_bridge_component PROPERTY POSITION_INDEPENDENT_CODE ON)

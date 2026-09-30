@@ -8,7 +8,7 @@ execute_process(
       --experimental_convenience_symlinks=ignore
       bazel-bin
   WORKING_DIRECTORY
-    "${intrinsic_sdk_SOURCE_DIR}/intrinsic"
+    "${intrinsic_sdk_SOURCE_DIR}"
   OUTPUT_VARIABLE
     intrinsic_sdk_BAZEL_BIN_DIR
   OUTPUT_STRIP_TRAILING_WHITESPACE

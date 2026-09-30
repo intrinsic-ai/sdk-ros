@@ -3,6 +3,18 @@ project(flowstate_ros_gz_bridge)
 
 set(SERVICE_NAME "flowstate_ros_gz_bridge")
 
+# Find lttng-ust using PkgConfig to avoid hardcoding paths
+find_package(PkgConfig REQUIRED)
+pkg_check_modules(LTTNG_UST REQUIRED lttng-ust IMPORTED_TARGET)
+
+# Add library path found by PkgConfig to linker search path for targets that might not inherit it
+link_directories(${LTTNG_UST_LIBRARY_DIRS})
+
+# Default to C++20
+if(NOT CMAKE_CXX_STANDARD)
+  set(CMAKE_CXX_STANDARD 20)
+  set(CMAKE_CXX_STANDARD_REQUIRED ON)
+endif()
 if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
   add_compile_options(-Wall -Wextra -Wpedantic)
 endif()
@@ -11,6 +23,15 @@ endif()
 find_package(ament_cmake REQUIRED)
 find_package(intrinsic_sdk_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
+# Bulletproof path injection since colcon shell hooks are failing to propagate the opt/ path on a Conda runner
+list(APPEND CMAKE_PREFIX_PATH "${CMAKE_INSTALL_PREFIX}/../ros_gz_bridge_vendor/opt/ros_gz_bridge_vendor")
+find_package(ros_gz_bridge_vendor REQUIRED)
+# Pre-load possible Gazebo targets to satisfy ros_gz_bridge exported targets, 
+# since its Config.cmake fails to explicitly call find_dependency() for them.
+find_package(gz-msgs12 QUIET)
+find_package(gz-transport15 QUIET)
+find_package(gz-msgs11 QUIET)
+find_package(gz-transport14 QUIET)
 find_package(ros_gz_bridge REQUIRED)
 
 if(BUILD_TESTING)

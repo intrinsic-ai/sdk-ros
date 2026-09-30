@@ -1,0 +1,54 @@
+diff --git a/intrinsic/scene/sdf/single_element_loaders.h b/intrinsic/scene/sdf/single_element_loaders.h
+--- a/intrinsic/scene/sdf/single_element_loaders.h
++++ b/intrinsic/scene/sdf/single_element_loaders.h
+@@ -38,7 +38,7 @@ absl::StatusOr<::sdf::ElementPtr> SdfElementFromString(
+ 
+ template <typename T>
+ struct SdfTypeToSchemaFile {
+-  static constexpr absl::string_view kSchemaFile;
++  static const absl::string_view kSchemaFile;
+ };
+ template <>
+ constexpr absl::string_view SdfTypeToSchemaFile<::sdf::Contact>::kSchemaFile =
+diff --git a/intrinsic/geometry/api/apply_transform.cc b/intrinsic/geometry/api/apply_transform.cc
+--- a/intrinsic/geometry/api/apply_transform.cc
++++ b/intrinsic/geometry/api/apply_transform.cc
+@@ -56,7 +56,6 @@ class ApplyTransformFunctor {
+         "ApplyTransformFunctor does not support argument type.");
+   }
+ 
+-  template <>
+   absl::StatusOr<ObjectRef<Mesh>> operator()(const ObjectRef<Mesh>& geo) const {
+     Mesh mesh = geo.Value().Clone();
+     mesh.Transform(ref_t_geo_);
+diff --git a/intrinsic/geometry/api/compute_axis_aligned_bounding_box_3d.cc b/intrinsic/geometry/api/compute_axis_aligned_bounding_box_3d.cc
+--- a/intrinsic/geometry/api/compute_axis_aligned_bounding_box_3d.cc
++++ b/intrinsic/geometry/api/compute_axis_aligned_bounding_box_3d.cc
+@@ -45,7 +45,6 @@ class ComputeAxisAlignedBoundingBox3dFunctor {
+         "type.");
+   }
+ 
+-  template <>
+   absl::StatusOr<AxisAlignedBoundingBox3d> operator()(
+       const ObjectRef<Mesh>& geo) const {
+     AxisAlignedBoundingBox3d result;
+@@ -55,7 +54,6 @@ class ComputeAxisAlignedBoundingBox3dFunctor {
+     return result;
+   }
+ 
+-  template <>
+   absl::StatusOr<AxisAlignedBoundingBox3d> operator()(
+       const ObjectRef<PointCloud>& geo) const {
+     return GetBoundingBoxFromPointCloud(geo.Value());
+diff --git a/intrinsic/geometry/internal/mesh/io/ai_scene_to_mesh.cc b/intrinsic/geometry/internal/mesh/io/ai_scene_to_mesh.cc
+--- a/intrinsic/geometry/internal/mesh/io/ai_scene_to_mesh.cc
++++ b/intrinsic/geometry/internal/mesh/io/ai_scene_to_mesh.cc
+@@ -47,7 +47,7 @@ absl::StatusOr<Mesh> AiSceneToMesh(const aiScene& ai_scene) {
+     // Add new rows to the vertex matrix and fill them in.
+     for (int vdx = 0; vdx < ai_scene_mesh->mNumVertices; vdx++) {
+       const aiVector3D& p = ai_scene_mesh->mVertices[vdx];
+-      if (!(isfinite(p.x) && isfinite(p.y) && isfinite(p.z))) {
++      if (!(std::isfinite(p.x) && std::isfinite(p.y) && std::isfinite(p.z))) {
+         return absl::InvalidArgumentError("Mesh contains invalid vertices.");
+       }
+       vertices.emplace_back(p.x, p.y, p.z);

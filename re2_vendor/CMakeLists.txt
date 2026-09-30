@@ -9,19 +9,31 @@ endif()
 
 find_package(ament_cmake REQUIRED)
 find_package(ament_cmake_vendor_package REQUIRED)
-find_package(abseil_cpp_vendor REQUIRED)
+
+set(re2_satisfied_by_system FALSE)
+find_package(re2 QUIET)
+if(re2_FOUND)
+  message(STATUS "Found re2, skipping build.")
+  set(re2_satisfied_by_system TRUE)
+else()
+  message(STATUS "re2 not found, building.")
+  set(re2_satisfied_by_system FALSE)
+endif()
+
+if(NOT re2_satisfied_by_system)
+  find_package(abseil_cpp_vendor REQUIRED)
+endif()
 
 ament_vendor(re2_vendor
   VCS_URL https://github.com/google/re2
   VCS_VERSION 2024-07-02
-  # TODO(wjwwood): try to upstream patches, specifically the one about the
-  #   include directory not being part of the library target's public api, see:
-  #     https://github.com/intrinsic-dev/intrinsic_sdk_ros/pull/22#issue-2990048932
   PATCHES patches
   CMAKE_ARGS
     -DCMAKE_CXX_STANDARD=20
     -DRE2_BUILD_TESTING:BOOL=OFF
+  SATISFIED ${re2_satisfied_by_system}
   GLOBAL_HOOK
 )
+
 
 ament_package()

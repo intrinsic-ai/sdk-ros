@@ -1,0 +1,33 @@
+diff --git a/ortools/linear_solver/CMakeLists.txt b/ortools/linear_solver/CMakeLists.txt
+index 1111111..2222222 100644
+--- a/ortools/linear_solver/CMakeLists.txt
++++ b/ortools/linear_solver/CMakeLists.txt
+@@ -60,5 +60,5 @@
+   $<BUILD_INTERFACE:${PROJECT_BINARY_DIR}>
+ )
+ target_compile_features(solve PRIVATE cxx_std_17)
+-target_link_libraries(solve PRIVATE ${PROJECT_NAMESPACE}::ortools)
++target_link_libraries(solve PRIVATE ${PROJECT_NAMESPACE}::ortools ${ABSL_DEPS})
+ 
+diff --git a/ortools/packing/CMakeLists.txt b/ortools/packing/CMakeLists.txt
+index 3333333..4444444 100644
+--- a/ortools/packing/CMakeLists.txt
++++ b/ortools/packing/CMakeLists.txt
+@@ -36,5 +36,5 @@
+ target_sources(vector_bin_packing PRIVATE "vector_bin_packing_main.cc")
+ target_include_directories(vector_bin_packing PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
+ target_compile_features(vector_bin_packing PRIVATE cxx_std_17)
+-target_link_libraries(vector_bin_packing PRIVATE ${PROJECT_NAMESPACE}::ortools)
++target_link_libraries(vector_bin_packing PRIVATE ${PROJECT_NAMESPACE}::ortools ${ABSL_DEPS})
+ 
+diff --git a/ortools/sat/CMakeLists.txt b/ortools/sat/CMakeLists.txt
+index 5555555..6666666 100644
+--- a/ortools/sat/CMakeLists.txt
++++ b/ortools/sat/CMakeLists.txt
+@@ -64,5 +64,5 @@
+ target_sources(sat_runner PRIVATE "sat_runner.cc")
+ target_include_directories(sat_runner PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
+ target_compile_features(sat_runner PRIVATE cxx_std_17)
+-target_link_libraries(sat_runner PRIVATE ${PROJECT_NAMESPACE}::ortools)
++target_link_libraries(sat_runner PRIVATE ${PROJECT_NAMESPACE}::ortools ${ABSL_DEPS})
+ 

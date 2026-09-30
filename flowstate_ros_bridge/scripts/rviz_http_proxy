@@ -5,7 +5,10 @@ import socketserver
 import sys
 import rclpy
 from rclpy.executors import ExternalShutdownException
-from flowstate_interfaces.srv import GetResource
+try:
+    from resource_retriever_interfaces.srv import GetResource
+except ImportError:
+    from flowstate_interfaces.srv import GetResource
 
 
 class RvizGetHandler(http.server.BaseHTTPRequestHandler):

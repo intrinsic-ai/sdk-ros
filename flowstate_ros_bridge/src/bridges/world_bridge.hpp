@@ -22,10 +22,14 @@
 #include "absl/container/flat_hash_set.h"
 #include "absl/strings/str_split.h"
 #include "absl/synchronization/mutex.h"
-#include "flowstate_interfaces/srv/get_resource.hpp"
 #include "flowstate_ros_bridge/bridge_interface.hpp"
 #include "geometry_msgs/msg/wrench_stamped.hpp"
 #include "rclcpp/rclcpp.hpp"
+#if defined(FLOWSTATE_ROS_BRIDGE_USE_RESOURCE_RETRIEVER_INTERFACES)
+#include "resource_retriever_interfaces/srv/get_resource.hpp"
+#else
+#include "flowstate_interfaces/srv/get_resource.hpp"
+#endif
 #include "sensor_msgs/msg/joint_state.hpp"
 #include "tf2_msgs/msg/tf_message.hpp"
 #include "visualization_msgs/msg/marker_array.hpp"
@@ -39,7 +43,11 @@ class WorldBridge : public BridgeInterface {
  public:
   ~WorldBridge();
 
+#if defined(FLOWSTATE_ROS_BRIDGE_USE_RESOURCE_RETRIEVER_INTERFACES)
+  using GetResource = resource_retriever_interfaces::srv::GetResource;
+#else
   using GetResource = flowstate_interfaces::srv::GetResource;
+#endif
 
   /// Documentation inherited.
   void declare_ros_parameters(ROSNodeInterfaces ros_node_interfaces) final;
@@ -47,10 +55,18 @@ class WorldBridge : public BridgeInterface {
   /// Documentation inherited.
   bool initialize(ROSNodeInterfaces ros_node_interfaces,
                   std::shared_ptr<Executive> executive_client,
-                  std::shared_ptr<World> world_client) final;
+                  std::shared_ptr<World> world_client,
+                  std::shared_ptr<intrinsic::PubSub> pubsub) final;
 
  private:
   void TfCallback(const intrinsic_proto::TFMessage&);
+  void SimTfCallback(const intrinsic_proto::TFMessage&);
+
+  tf2_msgs::msg::TFMessage ConvertTfProtoToRos(
+      const intrinsic_proto::TFMessage& tf_proto) const;
+
+  static std::string StripTfPrefixes(absl::string_view frame,
+                                     const std::vector<std::string>& prefixes);
 
   void RobotStateCallback(const intrinsic_proto::data_logger::LogItem&);
 
@@ -88,6 +104,10 @@ class WorldBridge : public BridgeInterface {
     std::shared_ptr<intrinsic::Subscription> tf_sub_;
     std::shared_ptr<rclcpp::Publisher<tf2_msgs::msg::TFMessage>> tf_pub_;
 
+    // Sim TF functionality
+    std::shared_ptr<intrinsic::Subscription> sim_tf_sub_;
+    std::shared_ptr<rclcpp::Publisher<tf2_msgs::msg::TFMessage>> sim_tf_pub_;
+
     // Robot state and force torque functionality
     std::shared_ptr<intrinsic::Subscription> robot_state_sub_;
     std::shared_ptr<rclcpp::Publisher<sensor_msgs::msg::JointState>>
@@ -107,14 +127,17 @@ class WorldBridge : public BridgeInterface {
     std::shared_ptr<rclcpp::Publisher<visualization_msgs::msg::MarkerArray>>
         workcell_markers_pub_;
     std::string tf_prefix_;
+    std::vector<std::string> strip_flowstate_tf_prefixes_;
     std::shared_ptr<rclcpp::Service<GetResource>> get_resource_srv_;
-    absl::flat_hash_map<std::string, std::vector<uint8_t>> renderables_;
+    absl::flat_hash_map<std::string, std::vector<uint8_t>> renderables_
+        ABSL_GUARDED_BY(mutex_);
     absl::flat_hash_set<std::string> tf_frame_names_;
     std::optional<std::vector<std::string>> send_object_names_
         ABSL_GUARDED_BY(mutex_) = std::nullopt;
     bool send_new_objects_ ABSL_GUARDED_BY(mutex_) = true;
     std::shared_ptr<std::thread> viz_thread_;
-    absl::Mutex mutex_;  // protects send_object_names_, send_new_objects_
+    absl::Mutex
+        mutex_;  // protects send_object_names_, send_new_objects_, renderables_
     std::string mesh_url_prefix_;
     ~Data();
   };
