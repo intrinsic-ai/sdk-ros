@@ -230,11 +230,15 @@ foreach(sdk_proto ${sdk_protos})
   if(NOT _suitable_include_found)
     message(FATAL_ERROR "Error: could not find any correct proto include directory: ${_proto}")
   endif()
+  set(_rel_dir_maybe_hyphens ${_rel_dir})
+  set(_base_name_maybe_hyphens ${_basename})
+  string(REPLACE "-" "_" _py_rel_dir "${_rel_dir_maybe_hyphens}")
+  string(REPLACE "-" "_" _py_basename "${_base_name_maybe_hyphens}")
   set(_proto_generated_files)
   list(APPEND _proto_generated_files
-    "${CMAKE_CURRENT_BINARY_DIR}/protos_gen_py/${_rel_dir}/${_basename}_pb2.py")
+    "${CMAKE_CURRENT_BINARY_DIR}/protos_gen_py/${_py_rel_dir}/${_py_basename}_pb2.py")
   list(APPEND _proto_generated_files
-    "${CMAKE_CURRENT_BINARY_DIR}/protos_gen_py/${_rel_dir}/${_basename}_pb2_grpc.py")
+    "${CMAKE_CURRENT_BINARY_DIR}/protos_gen_py/${_py_rel_dir}/${_py_basename}_pb2_grpc.py")
   list(APPEND protoc_generated_files ${_proto_generated_files})
   add_custom_command(
     OUTPUT ${_proto_generated_files}
