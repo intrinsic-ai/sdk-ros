@@ -187,7 +187,7 @@ else()
     endif()
 
     execute_process(
-      COMMAND "${venv_dir}/bin/pip" install -U grpcio-tools==1.74
+      COMMAND "${venv_dir}/bin/pip" install -U grpcio-tools==1.75.1
       WORKING_DIRECTORY "${venv_dir}"
       RESULT_VARIABLE PIP_INSTALL_RESULT
       OUTPUT_VARIABLE PIP_INSTALL_OUTPUT
