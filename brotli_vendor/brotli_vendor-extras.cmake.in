@@ -1,0 +1,3 @@
+if(EXISTS "${CMAKE_CURRENT_LIST_DIR}/../../../opt/@PROJECT_NAME@/lib/pkgconfig")
+  set(ENV{PKG_CONFIG_PATH} "${CMAKE_CURRENT_LIST_DIR}/../../../opt/@PROJECT_NAME@/lib/pkgconfig:$ENV{PKG_CONFIG_PATH}")
+endif()

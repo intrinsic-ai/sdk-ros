@@ -1,0 +1,26 @@
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index 4cbb6c6..c825852 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -27,8 +27,8 @@
+ # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+ # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ 
+-cmake_minimum_required(VERSION 3.1)
+-project(Snappy VERSION 1.1.10 LANGUAGES C CXX)
++cmake_minimum_required(VERSION 3.10)
++project(Snappy VERSION 1.2.0 LANGUAGES C CXX)
+ 
+ # C++ standard can be overridden when this is used as a sub-project.
+ if(NOT CMAKE_CXX_STANDARD)
+@@ -82,10 +82,6 @@ else(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
+   # Disable C++ exceptions.
+   string(REGEX REPLACE "-fexceptions" "" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
+   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-exceptions")
+-
+-  # Disable RTTI.
+-  string(REGEX REPLACE "-frtti" "" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
+-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-rtti")
+ endif(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
+ 
+ # BUILD_SHARED_LIBS is a standard CMake variable, but we declare it here to make
