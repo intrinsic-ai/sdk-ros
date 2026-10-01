@@ -7,6 +7,7 @@ This node helps bridge Flowstate Gazebo simulation to ROS. It needs to be built 
 Building and sideloading the bridge is similar to how other services are installed, from the root of your colcon workspace. Follow the instructions [to build the Intrinsic SDK Bundle Library](https://github.com/intrinsic-ai/sdk-ros/tree/main/intrinsic_sdk_bundle_library_py), then: 
 
 ```bash
+# This step could take up to 40 minutes
 colcon intrinsic_bundle --packages-select flowstate_ros_gz_bridge --ros-distro $ROS_DISTRO --default-config src/sdk-ros/flowstate_ros_gz_bridge/flowstate_ros_gz_bridge_service_default_config.pbtxt
 
 # Replace with your organization and cluster
