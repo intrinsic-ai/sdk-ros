@@ -227,6 +227,7 @@ find_package(Python3 REQUIRED COMPONENTS Interpreter Development Development.Mod
 # Build the python pubsub extension module.
 pybind11_add_module(pubsub_python MODULE
   "${intrinsic_sdk_SOURCE_DIR}/intrinsic/platform/pubsub/python/pubsub.cc"
+  "${intrinsic_sdk_SOURCE_DIR}/intrinsic/platform/pubsub/python/gil_aware_pubsub.cc"
 )
 set_target_properties(pubsub_python PROPERTIES OUTPUT_NAME "pubsub")
 target_link_libraries(pubsub_python PRIVATE ${PROJECT_NAME})
