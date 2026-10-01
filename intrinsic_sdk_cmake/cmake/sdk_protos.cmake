@@ -186,8 +186,10 @@ else()
       message(FATAL_ERROR "Failed to create virtual environment: ${VENV_CREATE_ERROR}")
     endif()
 
+    # grpcio-tools 1.75.1 is the first release with prebuilt cp314 wheels for
+    # Python 3.14 on Ubuntu 26.04 while keeping the same protobuf 6.31.1 pin.
     execute_process(
-      COMMAND "${venv_dir}/bin/pip" install -U grpcio-tools==1.74
+      COMMAND "${venv_dir}/bin/pip" install -U grpcio-tools==1.75.1
       WORKING_DIRECTORY "${venv_dir}"
       RESULT_VARIABLE PIP_INSTALL_RESULT
       OUTPUT_VARIABLE PIP_INSTALL_OUTPUT

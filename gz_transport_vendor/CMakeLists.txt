@@ -9,21 +9,24 @@ endif()
 
 find_package(ament_cmake REQUIRED)
 find_package(ament_cmake_vendor_package REQUIRED)
+find_package(grpc_vendor REQUIRED)  # Provides protobuf
+find_package(gz_msgs_vendor REQUIRED)
+
 set(gz_transport_satisfied_by_system FALSE)
-find_package(gz-transport QUIET)
+if(NOT grpc_vendor_BUILT_FROM_SOURCE AND NOT gz_msgs_vendor_BUILT_FROM_SOURCE)
+  find_package(gz-transport QUIET)
+endif()
 if(gz-transport_FOUND AND gz-transport_VERSION VERSION_GREATER_EQUAL 15.0.0)
   message(STATUS "Found gz-transport 15+, skipping build.")
   set(gz_transport_satisfied_by_system TRUE)
 else()
-  message(STATUS "gz-transport 15+ not found, building.")
+  message(STATUS "gz-transport 15+ not found or dependencies built from source, building.")
   set(gz_transport_satisfied_by_system FALSE)
 endif()
 
 if(NOT gz_transport_satisfied_by_system)
-  find_package(grpc_vendor REQUIRED)  # Provides protobuf
   find_package(gz_cmake_vendor REQUIRED)
   find_package(gz_math_vendor REQUIRED)
-  find_package(gz_msgs_vendor REQUIRED)
   find_package(gz_utils_vendor REQUIRED)
 endif()
 
@@ -36,4 +39,12 @@ ament_vendor(gz_transport_vendor
   GLOBAL_HOOK
 )
 
-ament_package()
+if(TARGET gz_transport_vendor)
+  set(BUILT_FROM_SOURCE TRUE)
+else()
+  set(BUILT_FROM_SOURCE FALSE)
+endif()
+
+ament_package(
+  CONFIG_EXTRAS gz_transport_vendor-extras.cmake.in
+)
