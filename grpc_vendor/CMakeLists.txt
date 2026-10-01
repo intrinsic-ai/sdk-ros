@@ -10,13 +10,18 @@ endif()
 find_package(ament_cmake REQUIRED)
 find_package(ament_cmake_vendor_package REQUIRED)
 
+# Match the vendored gRPC version so that older system packages (such as
+# Ubuntu's apt libgrpc++-dev 1.51.x, which links against system Protobuf 3.21.x)
+# do not satisfy this vendor package, while still allowing Conda/Pixi
+# environments with a matching gRPC to skip building from source.
+set(GRPC_TARGET_VERSION 1.74.0)
 set(grpc_satisfied_by_system FALSE)
 find_package(gRPC QUIET)
-if(gRPC_FOUND AND gRPC_VERSION VERSION_GREATER_EQUAL 1.74.0)
-  message(STATUS "Found gRPC 1.74+, skipping build.")
+if(gRPC_FOUND AND gRPC_VERSION VERSION_GREATER_EQUAL ${GRPC_TARGET_VERSION})
+  message(STATUS "Found gRPC ${GRPC_TARGET_VERSION}+, skipping build.")
   set(grpc_satisfied_by_system TRUE)
 else()
-  message(STATUS "gRPC 1.74+ not found, building.")
+  message(STATUS "gRPC ${GRPC_TARGET_VERSION}+ not found, building.")
   set(grpc_satisfied_by_system FALSE)
 endif()
 
@@ -37,7 +42,7 @@ endif()
 
 ament_vendor(grpc_vendor
   VCS_URL https://github.com/grpc/grpc
-  VCS_VERSION v1.74.0
+  VCS_VERSION v${GRPC_TARGET_VERSION}
   SATISFIED ${grpc_satisfied_by_system}
   CMAKE_ARGS
 
@@ -66,6 +71,7 @@ ament_vendor(grpc_vendor
 )
 
 if (TARGET grpc_vendor)
+  set(BUILT_FROM_SOURCE TRUE)
   # Install the gRPC proto definitions so that we can use them elsewhere
   ExternalProject_Get_Property(grpc_vendor SOURCE_DIR)
   install(DIRECTORY "${SOURCE_DIR}/src/proto/grpc" # source directory
@@ -73,6 +79,8 @@ if (TARGET grpc_vendor)
           FILES_MATCHING # install only matched files
           PATTERN "*.proto" # select header files
   )
+else()
+  set(BUILT_FROM_SOURCE FALSE)
 endif()
 
 ament_export_dependencies(
@@ -80,4 +88,6 @@ ament_export_dependencies(
   re2_vendor
 )
 
-ament_package()
+ament_package(
+  CONFIG_EXTRAS grpc_vendor-extras.cmake.in
+)

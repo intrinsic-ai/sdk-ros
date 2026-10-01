@@ -11,18 +11,9 @@ find_package(ament_cmake REQUIRED)
 find_package(ament_cmake_vendor_package REQUIRED)
 find_package(grpc_vendor REQUIRED)  # Provides protobuf
 find_package(gz_msgs_vendor REQUIRED)
-set(deps_vendored FALSE)
-if(EXISTS "${grpc_vendor_DIR}/../../../opt/grpc_vendor")
-  list(PREPEND CMAKE_PREFIX_PATH "${grpc_vendor_DIR}/../../../opt/grpc_vendor")
-  set(deps_vendored TRUE)
-endif()
-if(EXISTS "${gz_msgs_vendor_DIR}/../../../opt/gz_msgs_vendor")
-  list(PREPEND CMAKE_PREFIX_PATH "${gz_msgs_vendor_DIR}/../../../opt/gz_msgs_vendor")
-  set(deps_vendored TRUE)
-endif()
 
 set(gz_transport_satisfied_by_system FALSE)
-if(NOT deps_vendored)
+if(NOT grpc_vendor_BUILT_FROM_SOURCE AND NOT gz_msgs_vendor_BUILT_FROM_SOURCE)
   find_package(gz-transport QUIET)
 endif()
 if(gz-transport_FOUND AND gz-transport_VERSION VERSION_GREATER_EQUAL 15.0.0)
@@ -48,4 +39,12 @@ ament_vendor(gz_transport_vendor
   GLOBAL_HOOK
 )
 
-ament_package()
+if(TARGET gz_transport_vendor)
+  set(BUILT_FROM_SOURCE TRUE)
+else()
+  set(BUILT_FROM_SOURCE FALSE)
+endif()
+
+ament_package(
+  CONFIG_EXTRAS gz_transport_vendor-extras.cmake.in
+)

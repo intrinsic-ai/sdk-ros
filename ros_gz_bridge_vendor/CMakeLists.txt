@@ -9,25 +9,14 @@ endif()
 find_package(ament_cmake REQUIRED)
 find_package(ament_cmake_vendor_package REQUIRED)
 
-find_package(grpc_vendor QUIET)
+find_package(grpc_vendor REQUIRED)
 find_package(gz_msgs_vendor REQUIRED)
 find_package(gz_transport_vendor REQUIRED)
-set(deps_vendored FALSE)
-if(grpc_vendor_FOUND AND EXISTS "${grpc_vendor_DIR}/../../../opt/grpc_vendor")
-  list(PREPEND CMAKE_PREFIX_PATH "${grpc_vendor_DIR}/../../../opt/grpc_vendor")
-  set(deps_vendored TRUE)
-endif()
-if(EXISTS "${gz_msgs_vendor_DIR}/../../../opt/gz_msgs_vendor")
-  list(PREPEND CMAKE_PREFIX_PATH "${gz_msgs_vendor_DIR}/../../../opt/gz_msgs_vendor")
-  set(deps_vendored TRUE)
-endif()
-if(EXISTS "${gz_transport_vendor_DIR}/../../../opt/gz_transport_vendor")
-  list(PREPEND CMAKE_PREFIX_PATH "${gz_transport_vendor_DIR}/../../../opt/gz_transport_vendor")
-  set(deps_vendored TRUE)
-endif()
 
 set(ros_gz_bridge_satisfied_by_system FALSE)
-if(NOT deps_vendored)
+if(NOT grpc_vendor_BUILT_FROM_SOURCE
+   AND NOT gz_msgs_vendor_BUILT_FROM_SOURCE
+   AND NOT gz_transport_vendor_BUILT_FROM_SOURCE)
   find_package(ros_gz_bridge QUIET)
 endif()
 if(ros_gz_bridge_FOUND)
@@ -42,9 +31,17 @@ ament_vendor(ros_gz_bridge_vendor
   SATISFIED ${ros_gz_bridge_satisfied_by_system}
 )
 
+if(TARGET ros_gz_bridge_vendor)
+  set(BUILT_FROM_SOURCE TRUE)
+else()
+  set(BUILT_FROM_SOURCE FALSE)
+endif()
+
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)
   ament_lint_auto_find_test_dependencies()
 endif()
 
-ament_package()
+ament_package(
+  CONFIG_EXTRAS ros_gz_bridge_vendor-extras.cmake.in
+)

@@ -21,15 +21,6 @@ endif()
 
 # find dependencies
 find_package(ament_cmake REQUIRED)
-# Bulletproof path injection since colcon shell hooks are failing to propagate the opt/ path on a Conda runner,
-# and to ensure workspace-vendored packages take precedence over system ROS packages.
-foreach(_vendor_pkg grpc_vendor gz_msgs_vendor gz_transport_vendor ros_gz_bridge_vendor)
-  if(EXISTS "${CMAKE_INSTALL_PREFIX}/../${_vendor_pkg}/opt/${_vendor_pkg}")
-    list(PREPEND CMAKE_PREFIX_PATH "${CMAKE_INSTALL_PREFIX}/../${_vendor_pkg}/opt/${_vendor_pkg}")
-  elseif(EXISTS "${CMAKE_INSTALL_PREFIX}/opt/${_vendor_pkg}")
-    list(PREPEND CMAKE_PREFIX_PATH "${CMAKE_INSTALL_PREFIX}/opt/${_vendor_pkg}")
-  endif()
-endforeach()
 find_package(intrinsic_sdk_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(ros_gz_bridge_vendor REQUIRED)
