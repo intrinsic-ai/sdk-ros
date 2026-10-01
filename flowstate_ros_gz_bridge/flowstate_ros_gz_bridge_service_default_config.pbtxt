@@ -1,6 +1,9 @@
 # proto-file: google/protobuf/any.proto
 # proto-message: Any
 [type.googleapis.com/flowstate.RosGzBridgeServiceConfig] {
+  gazebo_simulator {
+    name: "gazebo_simulator"
+  }
   ros_gz_bridge_config {
     bridges {
       ros_topic_name: "/clock"

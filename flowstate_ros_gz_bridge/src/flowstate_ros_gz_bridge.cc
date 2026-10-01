@@ -18,31 +18,33 @@
 #include <fstream>
 #include <optional>
 #include <memory>
+#include <string>
+#include <utility>
+#include <vector>
 
 #include "google/protobuf/util/json_util.h"
 
+#include "flowstate_ros_gz_bridge_config.pb.h"
 #include "intrinsic/assets/proto/v1/resolved_dependency.pb.h"
 #include "intrinsic/resources/proto/runtime_context.pb.h"
+#include "intrinsic/simulation/gazebo/client/gazebo_client.h"
 #include "rclcpp/rclcpp.hpp"
-#include "flowstate_ros_gz_bridge_config.pb.h"
 #include "ros_gz_bridge/ros_gz_bridge.hpp"
-#include "rclcpp/rclcpp.hpp"
 
-#include "sim_connection.h"
-
-using SimConnection = intrinsic::simulation::SimConnection;
+using GazeboClient = intrinsic::simulation::GazeboClient;
 
 class FlowstateRosGzBridge : public ros_gz_bridge::RosGzBridge {
  public:
   // Constructor
   explicit FlowstateRosGzBridge(
-      std::shared_ptr<SimConnection> sim_conn,
+      std::shared_ptr<GazeboClient> gazebo_client,
       const rclcpp::NodeOptions& options = rclcpp::NodeOptions())
-    : ros_gz_bridge::RosGzBridge(options), sim_conn_(std::move(sim_conn)) {
-      this->gz_node_ = this->sim_conn_->Node();
+    : ros_gz_bridge::RosGzBridge(options), gazebo_client_(std::move(gazebo_client)) {
+      this->gz_node_ = std::shared_ptr<gz::transport::Node>(
+          this->gazebo_client_, &this->gazebo_client_->Node());
     }
  private:
-  std::shared_ptr<SimConnection> sim_conn_;
+  std::shared_ptr<GazeboClient> gazebo_client_;
 };
 
 flowstate::RosGzBridgeConfig MakeTestConfig() {
@@ -116,27 +118,27 @@ int main(int , char**) {
   // Get ROS arguments
   std::vector<const char *> ros_argv = {"--ros-args", "-p", config_file_param.c_str()};
 
-  std::shared_ptr<SimConnection> sim_conn;
+  std::shared_ptr<GazeboClient> gazebo_client;
   if (service_config.has_gazebo_simulator()) {
-    auto res = SimConnection::CreateFromResolvedDependency(service_config.gazebo_simulator());
+    auto res = GazeboClient::CreateFromResolvedDependency(service_config.gazebo_simulator());
     if (!res.ok()) {
-      std::cerr << "Failed initializing SimConnection from resolved dep: "
+      std::cerr << "Failed initializing GazeboClient from resolved dep: "
                 << res.status() << std::endl;
       return EXIT_FAILURE;
     }
-    sim_conn = *res;
+    gazebo_client = *res;
   } else {
-    auto res = SimConnection::Create(runtime_context.simulation_server_address());
+    auto res = GazeboClient::Create(runtime_context.simulation_server_address());
     if (!res.ok()) {
-      std::cerr << "Failed initializing SimConnection from simulation server address: "
+      std::cerr << "Failed initializing GazeboClient from simulation server address: "
                 << res.status() << std::endl;
       return EXIT_FAILURE;
     }
-    sim_conn = *res;
+    gazebo_client = *res;
   }
 
   rclcpp::init(ros_argv.size(), ros_argv.data());
-  rclcpp::spin(std::make_shared<FlowstateRosGzBridge>(std::move(sim_conn)));
+  rclcpp::spin(std::make_shared<FlowstateRosGzBridge>(std::move(gazebo_client)));
   rclcpp::shutdown();
   return EXIT_SUCCESS;
 }

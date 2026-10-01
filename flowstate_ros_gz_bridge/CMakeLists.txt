@@ -50,7 +50,6 @@ intrinsic_sdk_generate_service_manifest(
 
 add_executable(${SERVICE_NAME}_service_main
   src/${SERVICE_NAME}.cc
-  src/sim_connection.cc
 )
 
 target_link_libraries(
