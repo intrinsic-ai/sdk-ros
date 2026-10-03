@@ -39,4 +39,5 @@ message FlowstateRosBridgeConfig {
   SensorPublisherConfig sensors = 12;
   repeated string strip_flowstate_tf_prefix = 13;
   repeated ImageTopicBridgeConfig image_topics = 14;
+  optional string get_resource_service_name = 15;
 }
