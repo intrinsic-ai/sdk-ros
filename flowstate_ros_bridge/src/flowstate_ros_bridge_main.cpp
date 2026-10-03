@@ -99,6 +99,12 @@ int main(int argc, char* argv[]) {
       strip_flowstate_tf_prefix_proto.end());
   params.push_back(std::move(rclcpp::Parameter(
       "strip_flowstate_tf_prefix", std::move(strip_flowstate_tf_prefix_list))));
+  // Only override WorldBridge's default ("flowstate_get_resource") when set:
+  // configs without this field would pass "", which isn't a valid service name.
+  if (!ros_config.get_resource_service_name().empty()) {
+    params.emplace_back("get_resource_service_name",
+                        ros_config.get_resource_service_name());
+  }
 
   const auto& s = ros_config.sensors();
   params.emplace_back("enable_robot_joint_state_topic",
