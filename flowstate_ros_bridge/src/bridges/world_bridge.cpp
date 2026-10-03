@@ -34,8 +34,10 @@ namespace flowstate_ros_bridge {
 constexpr const char* kTfPrefixParamName = "world_tf_prefix";
 constexpr const char* kStripFlowstateTfPrefixParamName =
     "strip_flowstate_tf_prefix";
-constexpr const char* kResourceServiceName = "flowstate_get_resource";
+constexpr const char* kResourceServiceName = "get_resource_service_name";
+#if !defined(FLOWSTATE_ROS_BRIDGE_USE_RESOURCE_RETRIEVER_INTERFACES)
 constexpr const char* kMeshUrlPrefixParamName = "mesh_url_prefix";
+#endif
 constexpr const char* kEnableRobotJointStateTopicParamName =
     "enable_robot_joint_state_topic";
 constexpr const char* kEnableForceTorqueTopicParamName =
@@ -64,11 +66,12 @@ void WorldBridge::declare_ros_parameters(
   param_interface->declare_parameter(
       kStripFlowstateTfPrefixParamName,
       rclcpp::ParameterValue(std::vector<std::string>{}));
-#if defined(FLOWSTATE_ROS_BRIDGE_USE_RESOURCE_RETRIEVER_INTERFACES)
   param_interface->declare_parameter(
-      kMeshUrlPrefixParamName,
-      rclcpp::ParameterValue{"service:///flowstate_get_resource:/"});
-#else
+      kResourceServiceName, rclcpp::ParameterValue{"flowstate_get_resource"});
+  // With resource_retriever_interfaces, initialize() derives the mesh URL
+  // prefix from the resolved GetResource service name instead, so the
+  // parameter only exists for the HTTP proxy setup.
+#if !defined(FLOWSTATE_ROS_BRIDGE_USE_RESOURCE_RETRIEVER_INTERFACES)
   param_interface->declare_parameter(
       kMeshUrlPrefixParamName,
       rclcpp::ParameterValue{"http://localhost:8123/"});
@@ -113,11 +116,15 @@ bool WorldBridge::initialize(ROSNodeInterfaces ros_node_interfaces,
           data_->node_interfaces_
               .get<rclcpp::node_interfaces::NodeParametersInterface>();
 
+  const std::string resource_service_name =
+      param_interface->get_parameter(kResourceServiceName)
+          .get_value<std::string>();
+
   data_->get_resource_srv_ = rclcpp::create_service<GetResource>(
       data_->node_interfaces_.get<rclcpp::node_interfaces::NodeBaseInterface>(),
       data_->node_interfaces_
           .get<rclcpp::node_interfaces::NodeServicesInterface>(),
-      kResourceServiceName,
+      resource_service_name,
       [data_ = this->data_](const std::shared_ptr<GetResource::Request> request,
                             std::shared_ptr<GetResource::Response> response) {
         const std::string gltf_id = request->path;
@@ -161,9 +168,16 @@ bool WorldBridge::initialize(ROSNodeInterfaces ros_node_interfaces,
       rclcpp::create_publisher<visualization_msgs::msg::MarkerArray>(
           param_interface, topics_interface, "workcell_markers", markers_qos);
 
+#if defined(FLOWSTATE_ROS_BRIDGE_USE_RESOURCE_RETRIEVER_INTERFACES)
+  // Build mesh URIs in the `service://<service_name>:<path>` format used by
+  // resource_retriever.
+  data_->mesh_url_prefix_ = absl::StrFormat(
+      "service://%s:/", data_->get_resource_srv_->get_service_name());
+#else
   data_->mesh_url_prefix_ =
       param_interface->get_parameter(kMeshUrlPrefixParamName)
           .get_value<std::string>();
+#endif
 
   data_->override_joint_names_ =
       param_interface->get_parameter(kOverrideJointNamesParamName)
