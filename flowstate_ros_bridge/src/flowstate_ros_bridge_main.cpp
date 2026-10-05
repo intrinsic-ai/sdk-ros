@@ -105,6 +105,10 @@ int main(int argc, char* argv[]) {
     params.emplace_back("get_resource_service_name",
                         ros_config.get_resource_service_name());
   }
+  // Only override WorldBridge's default (no prefix) when set.
+  if (!ros_config.world_tf_prefix().empty()) {
+    params.emplace_back("world_tf_prefix", ros_config.world_tf_prefix());
+  }
 
   const auto& s = ros_config.sensors();
   params.emplace_back("enable_robot_joint_state_topic",
