@@ -252,4 +252,10 @@ install(PROGRAMS
   DESTINATION lib/${PROJECT_NAME}
 )
 
+if(BUILD_TESTING)
+  find_package(ament_cmake_gtest REQUIRED)
+  ament_add_gtest(test_ros_name_utils test/test_ros_name_utils.cpp)
+  target_include_directories(test_ros_name_utils PRIVATE include)
+endif()
+
 ament_package()

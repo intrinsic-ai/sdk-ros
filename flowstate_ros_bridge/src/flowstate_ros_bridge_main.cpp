@@ -18,6 +18,7 @@
 #include "absl/log/log.h"
 #include "class_loader/class_loader.hpp"
 #include "flowstate_ros_bridge.pb.h"
+#include "flowstate_ros_bridge/ros_name_utils.hpp"
 #include "intrinsic/resources/proto/runtime_context.pb.h"
 #include "rclcpp/experimental/executors/events_executor/events_executor.hpp"
 #include "rclcpp/rclcpp.hpp"
@@ -99,12 +100,6 @@ int main(int argc, char* argv[]) {
       strip_flowstate_tf_prefix_proto.end());
   params.push_back(std::move(rclcpp::Parameter(
       "strip_flowstate_tf_prefix", std::move(strip_flowstate_tf_prefix_list))));
-  // Only override WorldBridge's default ("flowstate_get_resource") when set:
-  // configs without this field would pass "", which isn't a valid service name.
-  if (!ros_config.get_resource_service_name().empty()) {
-    params.emplace_back("get_resource_service_name",
-                        ros_config.get_resource_service_name());
-  }
   // Only override WorldBridge's default (no prefix) when set.
   if (!ros_config.world_tf_prefix().empty()) {
     params.emplace_back("world_tf_prefix", ros_config.world_tf_prefix());
@@ -145,12 +140,14 @@ int main(int argc, char* argv[]) {
 
   options.parameter_overrides(params);
 
-  // Get namespace from config
+  // Get namespace from config, ignoring leading/trailing slashes.
+  const std::string workcell_id(
+      flowstate_ros_bridge::TrimSlashes(ros_config.workcell_id()));
   std::vector<std::string> remap_rules;
   remap_rules.push_back("--ros-args");
-  if (ros_config.workcell_id() != "") {
+  if (!workcell_id.empty()) {
     remap_rules.push_back("-r");
-    remap_rules.push_back("__ns:=/" + ros_config.workcell_id());
+    remap_rules.push_back("__ns:=/" + workcell_id);
   }
   options.arguments(remap_rules);
 

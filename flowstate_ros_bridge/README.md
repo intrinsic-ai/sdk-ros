@@ -66,7 +66,7 @@ Then, create the bundle with the `build_service_bundle.sh` script. This will com
 ```
 
 > [!NOTE]
-> Replace `lyrical` with `jazzy` if targeting ROS 2 Jazzy. 
+> Replace `lyrical` with `jazzy` if targeting ROS 2 Jazzy.
 
 The output of this command will be a tarball inside the `images` directory of the colcon workspace which can be pushed to Flowstate as a new service.
 
@@ -77,6 +77,23 @@ With a solution open in Flowstate, the generated service bundle can be sideloade
 ```bash
 ./inctl service install images/flowstate_ros_bridge/flowstate_ros_bridge.bundle.tar --org $ORG --cluster $CLUSTER # replace with your org and cluster
 ```
+
+## ROS names and `workcell_id`
+
+When deployed as a service, `workcell_id` is used as the bridge node's ROS namespace.
+Relative names resolve under it; for `workcell_id: "wc1"`:
+
+| Name | Resolved |
+| :--- | :--- |
+| TF | `/wc1/tf`, `/wc1/tf_sim` |
+| Workcell markers | `/wc1/workcell_markers` |
+| GetResource service | `/wc1/flowstate_get_resource` |
+| Mesh URIs in markers | `service:///wc1/flowstate_get_resource:/<path>` |
+| Joint states (default) | `/wc1/joint_states` |
+| Force/torque (default) | `/wc1/fts_broadcaster/wrench` |
+
+* Leading and trailing slashes in `workcell_id` and `world_tf_prefix` are ignored, e.g. `"/wc1/"` behaves like `"wc1"`.
+* With an empty `workcell_id`, everything stays at the root (`/tf`, `/flowstate_get_resource`, ...).
 
 ## Documentation
 

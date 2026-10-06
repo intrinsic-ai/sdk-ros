@@ -24,6 +24,7 @@
 #include "absl/status/status.h"
 #include "absl/strings/str_format.h"
 #include "absl/strings/strip.h"
+#include "flowstate_ros_bridge/ros_name_utils.hpp"
 #include "intrinsic/eigenmath/types.h"
 #include "intrinsic/math/proto_conversion.h"
 #include "intrinsic/util/eigen.h"
@@ -34,10 +35,8 @@ namespace flowstate_ros_bridge {
 constexpr const char* kTfPrefixParamName = "world_tf_prefix";
 constexpr const char* kStripFlowstateTfPrefixParamName =
     "strip_flowstate_tf_prefix";
-constexpr const char* kResourceServiceName = "get_resource_service_name";
-#if !defined(FLOWSTATE_ROS_BRIDGE_USE_RESOURCE_RETRIEVER_INTERFACES)
+constexpr const char* kResourceServiceName = "flowstate_get_resource";
 constexpr const char* kMeshUrlPrefixParamName = "mesh_url_prefix";
-#endif
 constexpr const char* kEnableRobotJointStateTopicParamName =
     "enable_robot_joint_state_topic";
 constexpr const char* kEnableForceTorqueTopicParamName =
@@ -66,11 +65,6 @@ void WorldBridge::declare_ros_parameters(
   param_interface->declare_parameter(
       kStripFlowstateTfPrefixParamName,
       rclcpp::ParameterValue(std::vector<std::string>{}));
-  param_interface->declare_parameter(
-      kResourceServiceName, rclcpp::ParameterValue{"flowstate_get_resource"});
-  // With resource_retriever_interfaces, initialize() derives the mesh URL
-  // prefix from the resolved GetResource service name instead, so the
-  // parameter only exists for the HTTP proxy setup.
 #if !defined(FLOWSTATE_ROS_BRIDGE_USE_RESOURCE_RETRIEVER_INTERFACES)
   param_interface->declare_parameter(
       kMeshUrlPrefixParamName,
@@ -81,10 +75,10 @@ void WorldBridge::declare_ros_parameters(
   param_interface->declare_parameter(kEnableForceTorqueTopicParamName,
                                      rclcpp::ParameterValue(true));
   param_interface->declare_parameter(kRobotJointStateTopicParamName,
-                                     rclcpp::ParameterValue("/joint_states"));
+                                     rclcpp::ParameterValue("joint_states"));
   param_interface->declare_parameter(
       kForceTorqueTopicParamName,
-      rclcpp::ParameterValue("/fts_broadcaster/wrench"));
+      rclcpp::ParameterValue("fts_broadcaster/wrench"));
   param_interface->declare_parameter(
       kForceTorqueSensorFrameIDParamName,
       rclcpp::ParameterValue(
@@ -116,15 +110,11 @@ bool WorldBridge::initialize(ROSNodeInterfaces ros_node_interfaces,
           data_->node_interfaces_
               .get<rclcpp::node_interfaces::NodeParametersInterface>();
 
-  const std::string resource_service_name =
-      param_interface->get_parameter(kResourceServiceName)
-          .get_value<std::string>();
-
   data_->get_resource_srv_ = rclcpp::create_service<GetResource>(
       data_->node_interfaces_.get<rclcpp::node_interfaces::NodeBaseInterface>(),
       data_->node_interfaces_
           .get<rclcpp::node_interfaces::NodeServicesInterface>(),
-      resource_service_name,
+      kResourceServiceName,
       [data_ = this->data_](const std::shared_ptr<GetResource::Request> request,
                             std::shared_ptr<GetResource::Response> response) {
         const std::string gltf_id = request->path;
@@ -143,8 +133,16 @@ bool WorldBridge::initialize(ROSNodeInterfaces ros_node_interfaces,
       },
       rclcpp::ServicesQoS(), nullptr);
 
-  data_->tf_prefix_ = param_interface->get_parameter(kTfPrefixParamName)
-                          .get_value<std::string>();
+  const std::string raw_tf_prefix =
+      param_interface->get_parameter(kTfPrefixParamName)
+          .get_value<std::string>();
+  // tf2 rejects frame IDs with a leading slash, and duplicate slashes would
+  // produce malformed frame IDs, so normalize to "" or "<prefix>/".
+  data_->tf_prefix_ = NormalizeTfPrefix(raw_tf_prefix);
+  if (data_->tf_prefix_ != raw_tf_prefix) {
+    LOG(WARNING) << "Normalized " << kTfPrefixParamName << " from '"
+              << raw_tf_prefix << "' to '" << data_->tf_prefix_ << "'";
+  }
   data_->strip_flowstate_tf_prefixes_ =
       param_interface->get_parameter(kStripFlowstateTfPrefixParamName)
           .as_string_array();
@@ -169,8 +167,6 @@ bool WorldBridge::initialize(ROSNodeInterfaces ros_node_interfaces,
           param_interface, topics_interface, "workcell_markers", markers_qos);
 
 #if defined(FLOWSTATE_ROS_BRIDGE_USE_RESOURCE_RETRIEVER_INTERFACES)
-  // Build mesh URIs in the `service://<service_name>:<path>` format used by
-  // resource_retriever.
   data_->mesh_url_prefix_ = absl::StrFormat(
       "service://%s:/", data_->get_resource_srv_->get_service_name());
 #else
