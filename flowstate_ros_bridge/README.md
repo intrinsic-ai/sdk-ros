@@ -85,15 +85,15 @@ Relative names resolve under it; for `workcell_id: "wc1"`:
 
 | Name | Resolved |
 | :--- | :--- |
-| TF | `/wc1/tf`, `/wc1/tf_sim` |
 | Workcell markers | `/wc1/workcell_markers` |
 | GetResource service | `/wc1/flowstate_get_resource` |
 | Mesh URIs in markers | `service:///wc1/flowstate_get_resource:/<path>` |
 | Joint states (default) | `/wc1/joint_states` |
 | Force/torque (default) | `/wc1/fts_broadcaster/wrench` |
 
-* Leading and trailing slashes in `workcell_id` and `world_tf_prefix` are ignored, e.g. `"/wc1/"` behaves like `"wc1"`.
-* With an empty `workcell_id`, everything stays at the root (`/tf`, `/flowstate_get_resource`, ...).
+* Leading and trailing slashes in `workcell_id` are ignored, e.g. `"/wc1/"` behaves like `"wc1"`.
+* With an empty `workcell_id`, everything stays at the root (`/flowstate_get_resource`, ...).
+* The `/tf` and `/tf_static` topics stay at the root namespace, regardless of `workcell_id`.
 
 ## Documentation
 

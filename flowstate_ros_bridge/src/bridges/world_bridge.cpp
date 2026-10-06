@@ -152,12 +152,14 @@ bool WorldBridge::initialize(ROSNodeInterfaces ros_node_interfaces,
           data_->node_interfaces_
               .get<rclcpp::node_interfaces::NodeTopicsInterface>();
 
+  // Absolute, so TF stays on the global /tf and /tf_sim regardless of the node
+  // namespace (workcell_id). Frames are namespaced by world_tf_prefix instead.
   data_->tf_pub_ = rclcpp::create_publisher<tf2_msgs::msg::TFMessage>(
-      param_interface, topics_interface, "tf",
+      param_interface, topics_interface, "/tf",
       tf2_ros::DynamicBroadcasterQoS());
 
   data_->sim_tf_pub_ = rclcpp::create_publisher<tf2_msgs::msg::TFMessage>(
-      param_interface, topics_interface, "tf_sim",
+      param_interface, topics_interface, "/tf_sim",
       tf2_ros::DynamicBroadcasterQoS());
 
   const rclcpp::QoS markers_qos =

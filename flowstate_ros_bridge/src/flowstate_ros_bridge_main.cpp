@@ -100,9 +100,12 @@ int main(int argc, char* argv[]) {
       strip_flowstate_tf_prefix_proto.end());
   params.push_back(std::move(rclcpp::Parameter(
       "strip_flowstate_tf_prefix", std::move(strip_flowstate_tf_prefix_list))));
-  // Only override WorldBridge's default (no prefix) when set.
-  if (!ros_config.world_tf_prefix().empty()) {
-    params.emplace_back("world_tf_prefix", ros_config.world_tf_prefix());
+  // Workcell ID without leading/trailing slashes. It's used as the node
+  // namespace and as the TF frame prefix ("<workcell_id>/").
+  const std::string workcell_id(
+      flowstate_ros_bridge::TrimSlashes(ros_config.workcell_id()));
+  if (!workcell_id.empty()) {
+    params.emplace_back("world_tf_prefix", workcell_id + "/");
   }
 
   const auto& s = ros_config.sensors();
@@ -140,9 +143,7 @@ int main(int argc, char* argv[]) {
 
   options.parameter_overrides(params);
 
-  // Get namespace from config, ignoring leading/trailing slashes.
-  const std::string workcell_id(
-      flowstate_ros_bridge::TrimSlashes(ros_config.workcell_id()));
+  // Get namespace from config
   std::vector<std::string> remap_rules;
   remap_rules.push_back("--ros-args");
   if (!workcell_id.empty()) {
