@@ -32,18 +32,16 @@ if(INTRINSIC_SDK_CMAKE_BUILD_INBUILD)
   )
 else()
   # Download the inbuild binary released alongside the pinned SDK version (sdk_version, from fetch_sdk.cmake).
-  if(CMAKE_HOST_SYSTEM_PROCESSOR MATCHES "^(x86_64|AMD64|amd64)$")
-    set(_inbuild_arch amd64)
-  elseif(CMAKE_HOST_SYSTEM_PROCESSOR MATCHES "^(aarch64|arm64|ARM64)$")
-    set(_inbuild_arch arm64)
+  # Upstream SDK releases currently publish only inbuild-linux-amd64.
+  if(CMAKE_HOST_SYSTEM_NAME STREQUAL "Linux" AND CMAKE_HOST_SYSTEM_PROCESSOR MATCHES "^(x86_64|AMD64|amd64)$")
+    set(_inbuild_url
+      "https://github.com/intrinsic-ai/sdk/releases/download/${sdk_version}/inbuild-linux-amd64")
   else()
     message(FATAL_ERROR
-      "No released inbuild binary for processor '${CMAKE_HOST_SYSTEM_PROCESSOR}'. "
-      "Set INTRINSIC_SDK_CMAKE_BUILD_INBUILD=ON to build it from source.")
+      "No released inbuild binary for ${CMAKE_HOST_SYSTEM_NAME}/${CMAKE_HOST_SYSTEM_PROCESSOR} "
+      "(only linux-amd64 is published in intrinsic-ai/sdk releases). "
+      "Set -DINTRINSIC_SDK_CMAKE_BUILD_INBUILD=ON to build it from source.")
   endif()
-  string(TOLOWER "${CMAKE_HOST_SYSTEM_NAME}" _inbuild_system)
-  set(_inbuild_url
-    "https://github.com/intrinsic-ai/sdk/releases/download/${sdk_version}/inbuild-${_inbuild_system}-${_inbuild_arch}")
   # Stamp the downloaded binary with its SDK version so a version bump re-downloads it in existing build trees.
   set(_inbuild_version_file "${sdk_bins_DIR}/inbuild.version")
   set(_inbuild_cached_version "")
