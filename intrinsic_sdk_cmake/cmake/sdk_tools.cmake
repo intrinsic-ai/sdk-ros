@@ -9,26 +9,67 @@
 set(sdk_bins_DIR "${CMAKE_CURRENT_BINARY_DIR}/sdk_bins")
 file(MAKE_DIRECTORY "${sdk_bins_DIR}")
 
-# Build inbuild
-add_custom_command(
-  OUTPUT "${sdk_bins_DIR}/inbuild"
-  WORKING_DIRECTORY "${intrinsic_sdk_SOURCE_DIR}/intrinsic"
-  COMMAND
-    ${bazelisk_vendor_EXECUTABLE}
-      --nohome_rc
-      --quiet
-      run
-        --experimental_convenience_symlinks=ignore
-        --run_under=cp
-        //intrinsic/tools/inbuild
-        "${sdk_bins_DIR}/inbuild"
-  VERBATIM
-)
-add_custom_target(inbuild
-  ALL
-  DEPENDS
-    "${sdk_bins_DIR}/inbuild"
-)
+if(INTRINSIC_SDK_CMAKE_BUILD_INBUILD)
+  # Build inbuild
+  add_custom_command(
+    OUTPUT "${sdk_bins_DIR}/inbuild"
+    WORKING_DIRECTORY "${intrinsic_sdk_SOURCE_DIR}/intrinsic"
+    COMMAND
+      ${bazelisk_vendor_EXECUTABLE}
+        --nohome_rc
+        --quiet
+        run
+          --experimental_convenience_symlinks=ignore
+          --run_under=cp
+          //intrinsic/tools/inbuild
+          "${sdk_bins_DIR}/inbuild"
+    VERBATIM
+  )
+  add_custom_target(inbuild
+    ALL
+    DEPENDS
+      "${sdk_bins_DIR}/inbuild"
+  )
+else()
+  # Download the inbuild binary released alongside the pinned SDK version (sdk_version, from fetch_sdk.cmake).
+  if(CMAKE_HOST_SYSTEM_PROCESSOR MATCHES "^(x86_64|AMD64|amd64)$")
+    set(_inbuild_arch amd64)
+  elseif(CMAKE_HOST_SYSTEM_PROCESSOR MATCHES "^(aarch64|arm64|ARM64)$")
+    set(_inbuild_arch arm64)
+  else()
+    message(FATAL_ERROR
+      "No released inbuild binary for processor '${CMAKE_HOST_SYSTEM_PROCESSOR}'. "
+      "Set INTRINSIC_SDK_CMAKE_BUILD_INBUILD=ON to build it from source.")
+  endif()
+  string(TOLOWER "${CMAKE_HOST_SYSTEM_NAME}" _inbuild_system)
+  set(_inbuild_url
+    "https://github.com/intrinsic-ai/sdk/releases/download/${sdk_version}/inbuild-${_inbuild_system}-${_inbuild_arch}")
+  # Stamp the downloaded binary with its SDK version so a version bump re-downloads it in existing build trees.
+  set(_inbuild_version_file "${sdk_bins_DIR}/inbuild.version")
+  set(_inbuild_cached_version "")
+  if(EXISTS "${_inbuild_version_file}")
+    file(READ "${_inbuild_version_file}" _inbuild_cached_version)
+  endif()
+  if(NOT EXISTS "${sdk_bins_DIR}/inbuild" OR NOT _inbuild_cached_version STREQUAL sdk_version)
+    message(STATUS "Downloading inbuild from ${_inbuild_url}")
+    # Download to a temporary name so a failed or interrupted download is never mistaken for a complete one.
+    file(DOWNLOAD "${_inbuild_url}" "${sdk_bins_DIR}/inbuild.part" STATUS _inbuild_status INACTIVITY_TIMEOUT 60)
+    list(GET _inbuild_status 0 _inbuild_code)
+    if(NOT _inbuild_code EQUAL 0)
+      list(GET _inbuild_status 1 _inbuild_msg)
+      file(REMOVE "${sdk_bins_DIR}/inbuild.part")
+      message(FATAL_ERROR
+        "Failed to download inbuild from ${_inbuild_url}: ${_inbuild_msg}. "
+        "Set INTRINSIC_SDK_CMAKE_BUILD_INBUILD=ON to build it from source.")
+    endif()
+    file(CHMOD "${sdk_bins_DIR}/inbuild.part"
+      PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE)
+    file(RENAME "${sdk_bins_DIR}/inbuild.part" "${sdk_bins_DIR}/inbuild")
+    file(WRITE "${_inbuild_version_file}" "${sdk_version}")
+  endif()
+  # Keep the target so add_dependencies() below works the same in both modes.
+  add_custom_target(inbuild)
+endif()
 install(
   PROGRAMS
     "${sdk_bins_DIR}/inbuild"

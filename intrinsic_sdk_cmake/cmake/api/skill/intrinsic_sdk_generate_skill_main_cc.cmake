@@ -89,7 +89,7 @@ function(intrinsic_sdk_generate_skill_main_cc)
       --file_descriptor_set=${arg_FILE_DESCRIPTOR_SET}
       --augmented_manifest_out=${arg_MAIN_FILE_OUTPUT}_augmented_manifest.pbbin
       --augmented_file_descriptor_set_out=${arg_MAIN_FILE_OUTPUT}_augmented_protos.desc
-    DEPENDS ${manifest_textproto}
+    DEPENDS ${manifest_textproto} ${arg_FILE_DESCRIPTOR_SET}
     COMMENT "Generating skill cpp main file: ${arg_MAIN_FILE_OUTPUT}"
   )
 endfunction()
