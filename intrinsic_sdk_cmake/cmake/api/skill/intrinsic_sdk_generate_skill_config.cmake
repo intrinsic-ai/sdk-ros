@@ -98,7 +98,4 @@ function(intrinsic_sdk_generate_skill_config)
     DEPENDS
       ${arg_SKILL_CONFIG_FILE_OUTPUT}
   )
-  if(TARGET intrinsic_proto_desc)
-    add_dependencies(${arg_TARGET} intrinsic_proto_desc)
-  endif()
 endfunction()
