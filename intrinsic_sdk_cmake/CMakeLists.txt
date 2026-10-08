@@ -13,8 +13,14 @@ include(cmake/fetch_sdk.cmake)
 # Find dependencies.
 include(cmake/dependencies.cmake)
 
-# Set important bazel related variables like intrinsic_sdk_BAZEL_BIN_DIR.
-include(cmake/bazel_setup.cmake)
+option(INTRINSIC_SDK_CMAKE_BUILD_INBUILD
+  "Build inbuild from source with bazel. When OFF, download the released binary for the pinned SDK version instead."
+  OFF)
+
+if(INTRINSIC_SDK_CMAKE_BUILD_INBUILD)
+  # Set important bazel related variables like intrinsic_sdk_BAZEL_BIN_DIR.
+  include(cmake/bazel_setup.cmake)
+endif()
 
 # Bring in additional googleapis necessary to build Intrinsic proto files.
 # Note that googleapis_SOURCE_DIR and grpc_gateway_SOURCE_DIR come from here.
@@ -35,7 +41,7 @@ include(cmake/sdk.cmake)
 # Collect and install the sdk Python sources.
 include(cmake/sdk_python.cmake)
 
-# Extract tool binaries from bazel build of sdk.
+# Provide inbuild: built with bazel (INTRINSIC_SDK_CMAKE_BUILD_INBUILD=ON) or downloaded from the SDK release.
 include(cmake/sdk_tools.cmake)
 
 # Install cmake helper functions.
