@@ -41,5 +41,31 @@ TEST(NormalizeTfPrefixTest, ProducesSingleTrailingSlash) {
   EXPECT_EQ(NormalizeTfPrefix("a/b"), "a/b/");
 }
 
+TEST(PrefixFrameIdTest, PrependsPrefixAndDropsLeadingSlashes) {
+  EXPECT_EQ(PrefixFrameId("", ""), "");
+  EXPECT_EQ(PrefixFrameId("wc1/", ""), "");
+  EXPECT_EQ(PrefixFrameId("wc1/", "/"), "");
+  EXPECT_EQ(PrefixFrameId("", "robot/base_link"), "robot/base_link");
+  EXPECT_EQ(PrefixFrameId("", "/robot/base_link"), "robot/base_link");
+  EXPECT_EQ(PrefixFrameId("wc1/", "robot/base_link"), "wc1/robot/base_link");
+  EXPECT_EQ(PrefixFrameId("wc1/", "/robot/base_link"), "wc1/robot/base_link");
+  EXPECT_EQ(PrefixFrameId("wc1/", "//robot/base_link"), "wc1/robot/base_link");
+}
+
+TEST(ValidateWorkcellIdTest, AcceptsValidNamespaces) {
+  EXPECT_EQ(ValidateWorkcellId(""), "");
+  EXPECT_EQ(ValidateWorkcellId("wc1"), "");
+  EXPECT_EQ(ValidateWorkcellId("cell_a"), "");
+  EXPECT_EQ(ValidateWorkcellId("cell_a/arm"), "");
+}
+
+TEST(ValidateWorkcellIdTest, RejectsInvalidNamespaces) {
+  EXPECT_NE(ValidateWorkcellId("wc-1"), "");
+  EXPECT_NE(ValidateWorkcellId("wc 1"), "");
+  EXPECT_NE(ValidateWorkcellId("a//b"), "");
+  EXPECT_NE(ValidateWorkcellId("1wc"), "");
+  EXPECT_NE(ValidateWorkcellId("a/1b"), "");
+}
+
 }  // namespace
 }  // namespace flowstate_ros_bridge

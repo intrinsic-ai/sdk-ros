@@ -19,6 +19,10 @@
 #include <string>
 #include <string_view>
 
+#include "rmw/error_handling.h"
+#include "rmw/types.h"
+#include "rmw/validate_namespace.h"
+
 namespace flowstate_ros_bridge {
 
 /// Strips leading and trailing slashes: "/wc1/" -> "wc1".
@@ -40,6 +44,41 @@ inline std::string NormalizeTfPrefix(std::string_view prefix) {
   std::string normalized(trimmed);
   normalized += '/';
   return normalized;
+}
+
+/// Prepends a normalized TF prefix ("" or "<prefix>/") to a frame ID:
+/// ("wc1/", "/base_link") -> "wc1/base_link". Leading slashes are dropped
+/// since tf2 rejects them, and an empty frame ID stays empty.
+inline std::string PrefixFrameId(std::string_view tf_prefix,
+                                 std::string_view frame_id) {
+  const std::size_t begin = frame_id.find_first_not_of('/');
+  if (begin == std::string_view::npos) {
+    return {};
+  }
+  std::string prefixed(tf_prefix);
+  prefixed.append(frame_id.substr(begin));
+  return prefixed;
+}
+
+/// Checks that "/<workcell_id>" is a valid ROS namespace, e.g. "wc1" or
+/// "cell_a/arm". Returns an empty string if it is valid (an empty workcell_id
+/// is the root namespace), otherwise the reason it is invalid.
+inline std::string ValidateWorkcellId(std::string_view workcell_id) {
+  const std::string ns = "/" + std::string(workcell_id);
+  int validation_result = RMW_NAMESPACE_VALID;
+  std::size_t invalid_index = 0;
+  if (rmw_validate_namespace(ns.c_str(), &validation_result,
+                             &invalid_index) != RMW_RET_OK) {
+    rmw_reset_error();
+    return "unable to validate namespace '" + ns + "'";
+  }
+  if (validation_result == RMW_NAMESPACE_VALID) {
+    return {};
+  }
+  const char* reason =
+      rmw_namespace_validation_result_string(validation_result);
+  return std::string(reason != nullptr ? reason : "invalid namespace") +
+         ", at index " + std::to_string(invalid_index) + " of '" + ns + "'";
 }
 
 }  // namespace flowstate_ros_bridge

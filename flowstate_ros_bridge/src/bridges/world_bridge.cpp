@@ -60,8 +60,11 @@ void WorldBridge::declare_ros_parameters(
       ros_node_interfaces
           .get<rclcpp::node_interfaces::NodeParametersInterface>();
 
-  param_interface->declare_parameter(kTfPrefixParamName,
-                                     rclcpp::ParameterValue{""});
+  // ImageBridge also declares this parameter, so we check again before declaring
+  if (!param_interface->has_parameter(kTfPrefixParamName)) {
+    param_interface->declare_parameter(kTfPrefixParamName,
+                                       rclcpp::ParameterValue{""});
+  }
   param_interface->declare_parameter(
       kStripFlowstateTfPrefixParamName,
       rclcpp::ParameterValue(std::vector<std::string>{}));
@@ -141,7 +144,7 @@ bool WorldBridge::initialize(ROSNodeInterfaces ros_node_interfaces,
   data_->tf_prefix_ = NormalizeTfPrefix(raw_tf_prefix);
   if (data_->tf_prefix_ != raw_tf_prefix) {
     LOG(WARNING) << "Normalized " << kTfPrefixParamName << " from '"
-              << raw_tf_prefix << "' to '" << data_->tf_prefix_ << "'";
+                 << raw_tf_prefix << "' to '" << data_->tf_prefix_ << "'";
   }
   data_->strip_flowstate_tf_prefixes_ =
       param_interface->get_parameter(kStripFlowstateTfPrefixParamName)
@@ -248,11 +251,16 @@ bool WorldBridge::initialize(ROSNodeInterfaces ros_node_interfaces,
   LOG(INFO) << "Subscribed to Flowstate Robot State topic";
   data_->robot_state_sub_ = std::move(*robot_state_sub);
 
-  data_->ft_sensor_frame_id_ =
+  data_->ft_sensor_frame_id_ = PrefixFrameId(
+      data_->tf_prefix_,
       param_interface->get_parameter(kForceTorqueSensorFrameIDParamName)
-          .as_string();
-  data_->robot_base_frame_id_ =
-      param_interface->get_parameter(kRobotBaseFrameIDParamName).as_string();
+          .as_string());
+  data_->robot_base_frame_id_ = PrefixFrameId(
+      data_->tf_prefix_,
+      param_interface->get_parameter(kRobotBaseFrameIDParamName).as_string());
+  LOG(INFO) << "Robot base frame ID: '" << data_->robot_base_frame_id_
+            << "', force torque sensor frame ID: '"
+            << data_->ft_sensor_frame_id_ << "'";
 
   // Start a thread to publish sceneObject visualization messages whenever a new
   // object arrives

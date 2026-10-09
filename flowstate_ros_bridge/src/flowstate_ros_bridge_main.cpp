@@ -46,6 +46,16 @@ int main(int argc, char* argv[]) {
                     "config file... Passing empty ros args to node";
   }
 
+  const std::string workcell_id(
+      flowstate_ros_bridge::TrimSlashes(ros_config.workcell_id()));
+  const std::string workcell_id_error =
+      flowstate_ros_bridge::ValidateWorkcellId(workcell_id);
+  if (!workcell_id_error.empty()) {
+    LOG(ERROR) << "Invalid workcell_id '" << ros_config.workcell_id()
+               << "': " << workcell_id_error;
+    return 1;
+  }
+
   // Handle optional external router address
   std::string external_router_address;
   if (!ros_config.external_zenoh_router_address().empty()) {
@@ -100,11 +110,8 @@ int main(int argc, char* argv[]) {
       strip_flowstate_tf_prefix_proto.end());
   params.push_back(std::move(rclcpp::Parameter(
       "strip_flowstate_tf_prefix", std::move(strip_flowstate_tf_prefix_list))));
-  // Workcell ID without leading/trailing slashes. It's used as the node
-  // namespace and as the TF frame prefix ("<workcell_id>/").
-  const std::string workcell_id(
-      flowstate_ros_bridge::TrimSlashes(ros_config.workcell_id()));
-  if (!workcell_id.empty()) {
+  // The 'world_tf_prefix' param value is set to 'workcell_id' param value if it is non-empty
+      if (!workcell_id.empty()) {
     params.emplace_back("world_tf_prefix", workcell_id + "/");
   }
 

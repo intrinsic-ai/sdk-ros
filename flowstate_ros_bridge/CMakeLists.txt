@@ -39,6 +39,7 @@ set(dep_pkgs
   rclcpp_components
   rclcpp_lifecycle
   rclpy
+  rmw
   tf2_ros
 )
 
@@ -220,6 +221,7 @@ target_include_directories(${SERVICE_NAME}_main PUBLIC
 target_link_libraries(${SERVICE_NAME}_main
   ${SERVICE_NAME}_component
   ${SERVICE_NAME}_protos
+  rmw::rmw
 )
 
 # installs
@@ -256,6 +258,7 @@ if(BUILD_TESTING)
   find_package(ament_cmake_gtest REQUIRED)
   ament_add_gtest(test_ros_name_utils test/test_ros_name_utils.cpp)
   target_include_directories(test_ros_name_utils PRIVATE include)
+  target_link_libraries(test_ros_name_utils rmw::rmw)
 endif()
 
 ament_package()
