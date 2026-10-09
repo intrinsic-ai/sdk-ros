@@ -27,6 +27,7 @@
 #include "absl/strings/ascii.h"
 #include "absl/strings/match.h"
 #include "absl/strings/str_split.h"
+#include "flowstate_ros_bridge/ros_name_utils.hpp"
 #include "pluginlib/class_list_macros.hpp"
 #include "rclcpp/rclcpp.hpp"
 #include "sensor_msgs/image_encodings.hpp"
@@ -36,6 +37,8 @@ namespace flowstate_ros_bridge {
 
 constexpr const char* kImageTopicsParamName = "image_topics";
 constexpr const char* kImageDefaultFrameIdParamName = "image_default_frame_id";
+// Also declared by WorldBridge.
+constexpr const char* kTfPrefixParamName = "world_tf_prefix";
 
 ///=============================================================================
 size_t ImageBridge::BytesPerChannel(
@@ -272,6 +275,11 @@ void ImageBridge::declare_ros_parameters(
       rclcpp::ParameterValue(std::vector<std::string>{}));
   param_interface->declare_parameter(kImageDefaultFrameIdParamName,
                                      rclcpp::ParameterValue(std::string{""}));
+  // WorldBridge also declares this parameter, and declaring it twice throws.
+  if (!param_interface->has_parameter(kTfPrefixParamName)) {
+    param_interface->declare_parameter(kTfPrefixParamName,
+                                       rclcpp::ParameterValue{""});
+  }
 }
 
 ///=============================================================================
@@ -302,6 +310,10 @@ bool ImageBridge::initialize(ROSNodeInterfaces ros_node_interfaces,
 
   const std::string default_frame_id =
       param_interface->get_parameter(kImageDefaultFrameIdParamName).as_string();
+  // Prefix the frame IDs like WorldBridge prefixes the TF frames, so that they
+  // match in RViz and tf2 lookups.
+  const std::string tf_prefix = NormalizeTfPrefix(
+      param_interface->get_parameter(kTfPrefixParamName).as_string());
 
   // The "image_topics" parameter is expected to be a list of strings like:
   //   INPUT_PUBSUB_TOPIC->OUTPUT_ROS_TOPIC
@@ -357,7 +369,7 @@ bool ImageBridge::initialize(ROSNodeInterfaces ros_node_interfaces,
     TopicBridge tb;
     tb.pubsub_topic = pubsub_topic;
     tb.ros_topic = ros_topic;
-    tb.frame_id = frame_id;
+    tb.frame_id = PrefixFrameId(tf_prefix, frame_id);
     tb.encoding_override = encoding;
     data_->topic_bridges_.push_back(std::move(tb));
   }

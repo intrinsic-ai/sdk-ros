@@ -66,7 +66,7 @@ Then, create the bundle with the `build_service_bundle.sh` script. This will com
 ```
 
 > [!NOTE]
-> Replace `lyrical` with `jazzy` if targeting ROS 2 Jazzy. 
+> Replace `lyrical` with `jazzy` if targeting ROS 2 Jazzy.
 
 The output of this command will be a tarball inside the `images` directory of the colcon workspace which can be pushed to Flowstate as a new service.
 
@@ -76,6 +76,36 @@ With a solution open in Flowstate, the generated service bundle can be sideloade
 
 ```bash
 ./inctl service install images/flowstate_ros_bridge/flowstate_ros_bridge.bundle.tar --org $ORG --cluster $CLUSTER # replace with your org and cluster
+```
+
+## ROS names and `workcell_id`
+
+When deployed as a service, `workcell_id` is used as the bridge node's ROS namespace, and `world_tf_prefix` is set to `<workcell_id>/`.
+Relative names resolve under the namespace and frame IDs get the prefix; for `workcell_id: "wc1"`:
+
+| Name | Resolved |
+| :--- | :--- |
+| Workcell markers | `/wc1/workcell_markers` |
+| GetResource service | `/wc1/flowstate_get_resource` |
+| Mesh URIs in markers | `service:///wc1/flowstate_get_resource:/<path>` |
+| Joint states (default) | `/wc1/joint_states` |
+| Force/torque (default) | `/wc1/fts_broadcaster/wrench` |
+| TF frames on `/tf` and `/tf_sim` | `wc1/<frame>`, e.g. `wc1/root` |
+| `header.frame_id` of markers, joint states, force/torque and images | `wc1/<frame_id>` |
+
+* Leading and trailing slashes in `workcell_id` are ignored, e.g. `"/wc1/"` behaves like `"wc1"`.
+* Otherwise, `workcell_id` must be a valid ROS namespace: alphanumerics and `_`, separated by single `/`, with no part starting with a digit. If it isn't, the bridge exits with an error.
+* With an empty `workcell_id`, everything stays at the root (`/flowstate_get_resource`, ...) and frame IDs are not prefixed.
+* The `/tf` and `/tf_sim` topics stay at the root namespace, regardless of `workcell_id`.
+* To run multiple bridges on the same ROS network, give each one a distinct, non-empty `workcell_id`. Otherwise their unprefixed frames collide on `/tf`.
+
+### Visualizing in RViz on ROS 2 Jazzy
+
+The mesh URIs in markers point at `http://localhost:8123/` (the `mesh_url_prefix` parameter) instead of the service, and `rviz_http_proxy` serves them.
+When `workcell_id` is set, run `rviz_http_proxy` in the same namespace, so that it is able to use the namespaced get resource service `flowstate_get_resource`:
+
+```bash
+ros2 run flowstate_ros_bridge rviz_http_proxy --ros-args -r __ns:=/wc1
 ```
 
 ## Documentation
