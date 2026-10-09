@@ -67,8 +67,8 @@ inline std::string ValidateWorkcellId(std::string_view workcell_id) {
   const std::string ns = "/" + std::string(workcell_id);
   int validation_result = RMW_NAMESPACE_VALID;
   std::size_t invalid_index = 0;
-  if (rmw_validate_namespace(ns.c_str(), &validation_result,
-                             &invalid_index) != RMW_RET_OK) {
+  if (rmw_validate_namespace(ns.c_str(), &validation_result, &invalid_index) !=
+      RMW_RET_OK) {
     rmw_reset_error();
     return "unable to validate namespace '" + ns + "'";
   }

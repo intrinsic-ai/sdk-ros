@@ -110,8 +110,9 @@ int main(int argc, char* argv[]) {
       strip_flowstate_tf_prefix_proto.end());
   params.push_back(std::move(rclcpp::Parameter(
       "strip_flowstate_tf_prefix", std::move(strip_flowstate_tf_prefix_list))));
-  // The 'world_tf_prefix' param value is set to 'workcell_id' param value if it is non-empty
-      if (!workcell_id.empty()) {
+  // The 'world_tf_prefix' param value is set to 'workcell_id' param value if it
+  // is non-empty
+  if (!workcell_id.empty()) {
     params.emplace_back("world_tf_prefix", workcell_id + "/");
   }
 
