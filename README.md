@@ -36,6 +36,14 @@ colcon build \
   --event-handlers=console_direct+
 ```
 
+By default, `intrinsic_sdk_cmake` downloads the prebuilt `inbuild-linux-amd64` binary from the matching [Intrinsic SDK release](https://github.com/intrinsic-ai/sdk/releases). If you are building on another architecture (e.g. `arm64`/`aarch64`) or want to build `inbuild` from source with Bazel, pass `-DINTRINSIC_SDK_CMAKE_BUILD_INBUILD=ON`:
+
+```bash
+colcon build \
+  --cmake-args -DCMAKE_BUILD_TYPE=Release -DINTRINSIC_SDK_CMAKE_BUILD_INBUILD=ON \
+  --event-handlers=console_direct+
+```
+
 ### Using the SDK in Python
 
 To use the SDK in Python, you must additionally create a virtualenv and install a few dependencies which are not provided by the SDK, nor are the ones available in Ubuntu's apt new enough.

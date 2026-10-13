@@ -1,21 +1,24 @@
 include(FetchContent)
 FetchContent_Declare(
   googleapis
-  GIT_REPOSITORY https://github.com/googleapis/googleapis
-  GIT_TAG        master
+  URL https://github.com/googleapis/googleapis/archive/refs/heads/master.tar.gz
+  DOWNLOAD_EXTRACT_TIMESTAMP FALSE
+  SOURCE_SUBDIR non_existent_subdir
 )
 FetchContent_MakeAvailable(googleapis)
 
 FetchContent_Declare(
   grpc_gateway
-  GIT_REPOSITORY https://github.com/grpc-ecosystem/grpc-gateway
-  GIT_TAG        main
+  URL https://github.com/grpc-ecosystem/grpc-gateway/archive/refs/heads/main.tar.gz
+  DOWNLOAD_EXTRACT_TIMESTAMP FALSE
+  SOURCE_SUBDIR non_existent_subdir
 )
 FetchContent_MakeAvailable(grpc_gateway)
 
 FetchContent_Declare(
   cel_spec
-  GIT_REPOSITORY https://github.com/google/cel-spec
-  GIT_TAG        v0.25.1
+  URL https://github.com/google/cel-spec/archive/refs/tags/v0.25.1.tar.gz
+  DOWNLOAD_EXTRACT_TIMESTAMP FALSE
+  SOURCE_SUBDIR non_existent_subdir
 )
 FetchContent_MakeAvailable(cel_spec)

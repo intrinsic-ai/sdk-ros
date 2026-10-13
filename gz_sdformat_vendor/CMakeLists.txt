@@ -37,7 +37,6 @@ ament_vendor(gz_sdformat_vendor
     -DSKIP_PYBIND11=ON
     -DBUILD_TESTING=OFF
   SATISFIED ${gz_sdformat_satisfied_by_system}
-  GLOBAL_HOOK
 )
 
 ament_package()

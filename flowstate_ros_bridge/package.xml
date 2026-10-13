@@ -21,10 +21,13 @@
   <depend>rclcpp_components</depend>
   <depend>rclcpp_lifecycle</depend>
   <depend condition="$ROS_DISTRO != jazzy">resource_retriever_interfaces</depend>
+  <depend>rmw</depend>
   <depend>tf2_msgs</depend>
   <depend>tf2_ros</depend>
   <depend>rclpy</depend>
   <depend>sensor_msgs</depend>
+
+  <test_depend>ament_cmake_gtest</test_depend>
 
   <export>
     <build_type>ament_cmake</build_type>

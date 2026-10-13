@@ -101,11 +101,18 @@ function(intrinsic_sdk_protobuf_generate)
   )
   list(APPEND PROTOC_ARGS "${arg_SOURCES}")
 
+  set(DESCRIPTOR_SET_DEPENDS ${protobuf_PROTOC_EXE} ${arg_SOURCES})
+  if(TARGET intrinsic_proto_desc)
+    list(APPEND DESCRIPTOR_SET_DEPENDS intrinsic_proto_desc)
+  else()
+    list(APPEND DESCRIPTOR_SET_DEPENDS ${intrinsic_sdk_cmake_DESCRIPTOR_SET_FILE})
+  endif()
+
   add_custom_command(
     OUTPUT ${DESCRIPTOR_SET}
     COMMAND protobuf::protoc
     ARGS ${PROTOC_ARGS}
-    DEPENDS ${protobuf_PROTOC_EXE}
+    DEPENDS ${DESCRIPTOR_SET_DEPENDS}
     COMMENT "Generating skill descriptor set for: ${arg_NAME}"
     VERBATIM
   )

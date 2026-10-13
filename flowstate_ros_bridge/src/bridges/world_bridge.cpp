@@ -24,6 +24,7 @@
 #include "absl/status/status.h"
 #include "absl/strings/str_format.h"
 #include "absl/strings/strip.h"
+#include "flowstate_ros_bridge/ros_name_utils.hpp"
 #include "intrinsic/eigenmath/types.h"
 #include "intrinsic/math/proto_conversion.h"
 #include "intrinsic/util/eigen.h"
@@ -59,16 +60,15 @@ void WorldBridge::declare_ros_parameters(
       ros_node_interfaces
           .get<rclcpp::node_interfaces::NodeParametersInterface>();
 
-  param_interface->declare_parameter(kTfPrefixParamName,
-                                     rclcpp::ParameterValue{""});
+  // ImageBridge also declares this parameter, so we check again before declaring
+  if (!param_interface->has_parameter(kTfPrefixParamName)) {
+    param_interface->declare_parameter(kTfPrefixParamName,
+                                       rclcpp::ParameterValue{""});
+  }
   param_interface->declare_parameter(
       kStripFlowstateTfPrefixParamName,
       rclcpp::ParameterValue(std::vector<std::string>{}));
-#if defined(FLOWSTATE_ROS_BRIDGE_USE_RESOURCE_RETRIEVER_INTERFACES)
-  param_interface->declare_parameter(
-      kMeshUrlPrefixParamName,
-      rclcpp::ParameterValue{"service:///flowstate_get_resource:/"});
-#else
+#if !defined(FLOWSTATE_ROS_BRIDGE_USE_RESOURCE_RETRIEVER_INTERFACES)
   param_interface->declare_parameter(
       kMeshUrlPrefixParamName,
       rclcpp::ParameterValue{"http://localhost:8123/"});
@@ -78,10 +78,10 @@ void WorldBridge::declare_ros_parameters(
   param_interface->declare_parameter(kEnableForceTorqueTopicParamName,
                                      rclcpp::ParameterValue(true));
   param_interface->declare_parameter(kRobotJointStateTopicParamName,
-                                     rclcpp::ParameterValue("/joint_states"));
+                                     rclcpp::ParameterValue("joint_states"));
   param_interface->declare_parameter(
       kForceTorqueTopicParamName,
-      rclcpp::ParameterValue("/fts_broadcaster/wrench"));
+      rclcpp::ParameterValue("fts_broadcaster/wrench"));
   param_interface->declare_parameter(
       kForceTorqueSensorFrameIDParamName,
       rclcpp::ParameterValue(
@@ -136,8 +136,16 @@ bool WorldBridge::initialize(ROSNodeInterfaces ros_node_interfaces,
       },
       rclcpp::ServicesQoS(), nullptr);
 
-  data_->tf_prefix_ = param_interface->get_parameter(kTfPrefixParamName)
-                          .get_value<std::string>();
+  const std::string raw_tf_prefix =
+      param_interface->get_parameter(kTfPrefixParamName)
+          .get_value<std::string>();
+  // tf2 rejects frame IDs with a leading slash, and duplicate slashes would
+  // produce malformed frame IDs, so normalize to "" or "<prefix>/".
+  data_->tf_prefix_ = NormalizeTfPrefix(raw_tf_prefix);
+  if (data_->tf_prefix_ != raw_tf_prefix) {
+    LOG(WARNING) << "Normalized " << kTfPrefixParamName << " from '"
+                 << raw_tf_prefix << "' to '" << data_->tf_prefix_ << "'";
+  }
   data_->strip_flowstate_tf_prefixes_ =
       param_interface->get_parameter(kStripFlowstateTfPrefixParamName)
           .as_string_array();
@@ -147,12 +155,14 @@ bool WorldBridge::initialize(ROSNodeInterfaces ros_node_interfaces,
           data_->node_interfaces_
               .get<rclcpp::node_interfaces::NodeTopicsInterface>();
 
+  // Absolute, so TF stays on the global /tf and /tf_sim regardless of the node
+  // namespace (workcell_id). Frames are namespaced by world_tf_prefix instead.
   data_->tf_pub_ = rclcpp::create_publisher<tf2_msgs::msg::TFMessage>(
-      param_interface, topics_interface, "tf",
+      param_interface, topics_interface, "/tf",
       tf2_ros::DynamicBroadcasterQoS());
 
   data_->sim_tf_pub_ = rclcpp::create_publisher<tf2_msgs::msg::TFMessage>(
-      param_interface, topics_interface, "tf_sim",
+      param_interface, topics_interface, "/tf_sim",
       tf2_ros::DynamicBroadcasterQoS());
 
   const rclcpp::QoS markers_qos =
@@ -161,9 +171,14 @@ bool WorldBridge::initialize(ROSNodeInterfaces ros_node_interfaces,
       rclcpp::create_publisher<visualization_msgs::msg::MarkerArray>(
           param_interface, topics_interface, "workcell_markers", markers_qos);
 
+#if defined(FLOWSTATE_ROS_BRIDGE_USE_RESOURCE_RETRIEVER_INTERFACES)
+  data_->mesh_url_prefix_ = absl::StrFormat(
+      "service://%s:/", data_->get_resource_srv_->get_service_name());
+#else
   data_->mesh_url_prefix_ =
       param_interface->get_parameter(kMeshUrlPrefixParamName)
           .get_value<std::string>();
+#endif
 
   data_->override_joint_names_ =
       param_interface->get_parameter(kOverrideJointNamesParamName)
@@ -236,11 +251,16 @@ bool WorldBridge::initialize(ROSNodeInterfaces ros_node_interfaces,
   LOG(INFO) << "Subscribed to Flowstate Robot State topic";
   data_->robot_state_sub_ = std::move(*robot_state_sub);
 
-  data_->ft_sensor_frame_id_ =
+  data_->ft_sensor_frame_id_ = PrefixFrameId(
+      data_->tf_prefix_,
       param_interface->get_parameter(kForceTorqueSensorFrameIDParamName)
-          .as_string();
-  data_->robot_base_frame_id_ =
-      param_interface->get_parameter(kRobotBaseFrameIDParamName).as_string();
+          .as_string());
+  data_->robot_base_frame_id_ = PrefixFrameId(
+      data_->tf_prefix_,
+      param_interface->get_parameter(kRobotBaseFrameIDParamName).as_string());
+  LOG(INFO) << "Robot base frame ID: '" << data_->robot_base_frame_id_
+            << "', force torque sensor frame ID: '"
+            << data_->ft_sensor_frame_id_ << "'";
 
   // Start a thread to publish sceneObject visualization messages whenever a new
   // object arrives

@@ -70,9 +70,9 @@ class Executive : public std::enable_shared_from_this<Executive> {
    * checked upon attempting connection, not necessarily within this
    * constructor.
    */
-  Executive(const std::string &executive_service_address,
-            const std::string &skill_registry_address,
-            const std::string &solution_service_address,
+  Executive(const std::string& executive_service_address,
+            const std::string& skill_registry_address,
+            const std::string& solution_service_address,
             std::size_t deadline_seconds = 5,
             std::size_t update_rate_millis = 1000);
 
@@ -80,15 +80,15 @@ class Executive : public std::enable_shared_from_this<Executive> {
   absl::Status connect();
 
   // Get a behavior tree by specifying its name.
-  absl::StatusOr<BehaviorTree> behavior_tree(const std::string &name) const;
+  absl::StatusOr<BehaviorTree> behavior_tree(const std::string& name) const;
 
   // Get a list of behavior trees in the solution.
   absl::StatusOr<std::vector<BehaviorTree>> behavior_trees() const;
 
   using ProcessFeedbackCallback =
-      std::function<void(bool done, const absl::Status &)>;
+      std::function<void(bool done, const absl::Status&)>;
   using ProcessCompletedCallback =
-      std::function<void(const bool, const std::string &)>;
+      std::function<void(const bool, const std::string&)>;
   using ProcessCancelCallback = std::function<void()>;
 
   class ProcessHandle;
@@ -155,9 +155,9 @@ class Executive : public std::enable_shared_from_this<Executive> {
    * e.g., due to connection issues, invalid parameters, or service errors.
    */
   absl::StatusOr<ProcessHandlePtr> start(
-      const BehaviorTree &bt, const ExecutionMode &execution_mode,
-      const SimulationMode &simulation_mode,
-      const nlohmann::json &process_params, ProcessFeedbackCallback feedback_cb,
+      const BehaviorTree& bt, const ExecutionMode& execution_mode,
+      const SimulationMode& simulation_mode,
+      const nlohmann::json& process_params, ProcessFeedbackCallback feedback_cb,
       ProcessCompletedCallback completed_cb,
       const std::optional<std::string> scene_id = std::nullopt);
 
@@ -247,9 +247,9 @@ class Executive : public std::enable_shared_from_this<Executive> {
    * intermediate `DynamicMessage` step for efficiency in this context.
    */
   absl::Status parameterize_start_request(
-      const google::longrunning::Operation &current_operation,
-      const nlohmann::json &start_params,
-      intrinsic_proto::executive::StartOperationRequest &start_request);
+      const google::longrunning::Operation& current_operation,
+      const nlohmann::json& start_params,
+      intrinsic_proto::executive::StartOperationRequest& start_request);
 };
 }  // namespace flowstate_ros_bridge.
 
