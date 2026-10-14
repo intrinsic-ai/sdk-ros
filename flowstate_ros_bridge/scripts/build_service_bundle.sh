@@ -1,7 +1,13 @@
 #!/bin/bash
-if [ ! -d "src/sdk-ros" ]; then
-  echo "This script must be run at the top of a Colcon workspace with sdk-ros."
-  exit
+if [ -d "src/sdk-ros" ]; then
+  SDK_ROS_DIR="src/sdk-ros"
+  SOURCE_ARGS=()
+elif [ -f "intrinsic_sdk_cmake/package.xml" ] && [ -d "flowstate_ros_bridge" ]; then
+  SDK_ROS_DIR="."
+  SOURCE_ARGS=(--source-dir . --overlay-source .)
+else
+  echo "This script must be run at the top of a Colcon workspace with src/sdk-ros or from the sdk-ros repository root."
+  exit 1
 fi
 
 ROS_DISTRO="lyrical"
@@ -37,12 +43,13 @@ done
 
 set -o errexit
 set -o verbose
-src/sdk-ros/scripts/build_container.sh \
+"$SDK_ROS_DIR/scripts/build_container.sh" \
   --ros_distro "$ROS_DISTRO" \
   --service_name flowstate_ros_bridge \
-  --service_package flowstate_ros_bridge
-src/sdk-ros/scripts/build_bundle.sh \
+  --service_package flowstate_ros_bridge \
+  "${SOURCE_ARGS[@]}"
+"$SDK_ROS_DIR/scripts/build_bundle.sh" \
   --service_name flowstate_ros_bridge \
   --service_package flowstate_ros_bridge \
-  --manifest_path src/sdk-ros/flowstate_ros_bridge/flowstate_ros_bridge.manifest.textproto \
-  --default_config src/sdk-ros/flowstate_ros_bridge/flowstate_ros_bridge_default_config.pbtxt
+  --manifest_path "$SDK_ROS_DIR/flowstate_ros_bridge/flowstate_ros_bridge.manifest.textproto" \
+  --default_config "$SDK_ROS_DIR/flowstate_ros_bridge/flowstate_ros_bridge_default_config.pbtxt"

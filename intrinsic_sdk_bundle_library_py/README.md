@@ -6,6 +6,21 @@ This package provides Python utilities, a CLI tool, and a `colcon` verb extensio
 
 ## Installation & Setup
 
+### Option A: Python `venv` (Host without ROS installed)
+
+Because container compilation runs inside `docker buildx`, you can install and run `intrinsic_sdk_bundle_library_py` directly on any host with Python 3, `docker` (with `buildx`), and `podman` — without needing a local ROS 2 installation:
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -U pip setuptools
+pip install -e "./intrinsic_sdk_bundle_library_py[venv]"
+```
+
+*(If `python3-venv` / `ensurepip` is not installed on Debian/Ubuntu, run `python3 -m venv --without-pip .venv && pip --python .venv/bin/python install -U pip setuptools` before activating. If running from a colcon workspace root `<ws>/`, pass `"./src/sdk-ros/intrinsic_sdk_bundle_library_py[venv]"` instead.)*
+
+### Option B: ROS 2 / Colcon Workspace
+
 1. Build the library package in your ROS 2 workspace:
    ```bash
    colcon build --packages-select intrinsic_sdk_bundle_library_py

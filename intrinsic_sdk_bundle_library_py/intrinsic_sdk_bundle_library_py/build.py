@@ -15,13 +15,36 @@
 import argparse
 import json
 import os
+from pathlib import Path
 import platform
 import shutil
 import subprocess
 import sys
 import urllib.request
 
-from ament_index_python.packages import get_package_share_directory
+
+def _get_resource_dir():
+    """Locate the resource directory via ament_index_python or package paths."""
+    try:
+        from ament_index_python.packages import get_package_share_directory
+        return os.path.join(
+            get_package_share_directory('intrinsic_sdk_bundle_library_py'),
+            'resource',
+        )
+    except Exception:
+        pass
+
+    candidates = [
+        Path(__file__).resolve().parent.parent / 'resource',
+        Path(sys.prefix) / 'share' / 'intrinsic_sdk_bundle_library_py' / 'resource',
+    ]
+    for candidate in candidates:
+        if candidate.is_dir():
+            return str(candidate)
+
+    raise FileNotFoundError(
+        'Could not locate intrinsic_sdk_bundle_library_py resource directory.'
+    )
 
 # Shared argument definitions for command-line parser and colcon verb
 COMMON_ARGUMENTS = {
@@ -84,8 +107,7 @@ def run_command(cmd, check=True):
 
 
 def get_sdk_version():
-    share_dir = get_package_share_directory('intrinsic_sdk_bundle_library_py')
-    version_file = os.path.join(share_dir, 'resource', 'sdk_version.json')
+    version_file = os.path.join(_get_resource_dir(), 'sdk_version.json')
 
     try:
         with open(version_file, 'r') as f:
@@ -197,13 +219,11 @@ def build_container(args):
     if args.service_name and args.service_package:
         name = args.service_name
         package = args.service_package
-        share_dir = get_package_share_directory('intrinsic_sdk_bundle_library_py')
-        dockerfile = args.dockerfile or os.path.join(share_dir, 'resource', 'service.Dockerfile')
+        dockerfile = args.dockerfile or os.path.join(_get_resource_dir(), 'service.Dockerfile')
     elif args.skill_name and args.skill_package:
         name = args.skill_name
         package = args.skill_package
-        share_dir = get_package_share_directory('intrinsic_sdk_bundle_library_py')
-        dockerfile = args.dockerfile or os.path.join(share_dir, 'resource', 'skill.Dockerfile')
+        dockerfile = args.dockerfile or os.path.join(_get_resource_dir(), 'skill.Dockerfile')
     else:
         print('Error: Must specify either service or skill name and package.')
         return
@@ -222,7 +242,7 @@ def build_container(args):
         print(f'Creating {dockerignore_path}...')
         try:
             with open(dockerignore_path, 'w') as f:
-                f.write('images\nbuild\nlog\ninstall\n')
+                f.write('images\nbuild\nlog\ninstall\n.venv\nvenv\nintrinsic_asset_bundles\n')
         except Exception as e:
             print(f'Warning: Could not create {dockerignore_path}: {e}')
 
@@ -283,10 +303,22 @@ def build_container(args):
 
         if args.dependencies:
             cmd.extend(['--build-arg', f'DEPENDENCIES={args.dependencies}'])
-        if args.source_dir:
-            cmd.extend(['--build-arg', f'SOURCE_DIR={args.source_dir}'])
-        if args.overlay_source:
-            cmd.extend(['--build-arg', f'OVERLAY_SOURCE={args.overlay_source}'])
+        source_dir = args.source_dir
+        overlay_source = args.overlay_source
+        if (
+            args.service_name
+            and not source_dir
+            and not os.path.isdir('src/sdk-ros')
+            and os.path.isfile('intrinsic_sdk_cmake/package.xml')
+        ):
+            source_dir = '.'
+            if not overlay_source:
+                overlay_source = '.'
+
+        if source_dir:
+            cmd.extend(['--build-arg', f'SOURCE_DIR={source_dir}'])
+        if overlay_source:
+            cmd.extend(['--build-arg', f'OVERLAY_SOURCE={overlay_source}'])
 
         cmd.append('.')
 
@@ -333,7 +365,8 @@ def build_bundle(args):
     if args.service_name:
         paths_to_try = [
             f'/opt/ros/overlay/install/share/{package}/{name}_protos.desc',
-            f'/opt/ros/overlay/install/share/{name}/{name}_protos.desc'
+            f'/opt/ros/overlay/install/share/{name}/{name}_protos.desc',
+            f'/opt/ros/overlay/install/share/{package}/{name}/{name}_protos.desc',
         ]
         success = False
         for src_path in paths_to_try:

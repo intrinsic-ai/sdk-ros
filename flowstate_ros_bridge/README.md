@@ -53,29 +53,45 @@ ros2 run tf2_tools view_frames
 
 Similar to how a Flowstate service that uses ROS is built, a couple of scripts are provided to build and bundle the flowstate_ros_bridge. The following steps will assume the `sdk-ros` repository is in the `src` folder of your workspace.
 
-In the root of a colcon workspace first set up the docker engine:
+In the root of a colcon workspace (or the `sdk-ros` repository root) first set up the docker engine:
 
 ```bash
 ./src/sdk-ros/scripts/setup_docker.sh
 ```
 
-Then, create the bundle with the `build_service_bundle.sh` script. This will compile the packages in a docker container and bundle that container in a tarball.
+If your host machine does not have ROS 2 installed (for example, when bundling on the host outside a ROS container/distrobox), install `intrinsic_sdk_bundle_library_py` into a Python `venv`:
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -U pip setuptools
+pip install -e "./src/sdk-ros/intrinsic_sdk_bundle_library_py[venv]"
+```
+
+*(If `python3-venv` / `ensurepip` is not installed on Debian/Ubuntu, run `python3 -m venv --without-pip .venv && pip --python .venv/bin/python install -U pip setuptools` before activating.)*
+
+Then, create the bundle with the `build_service_bundle.sh` script (or `colcon intrinsic_bundle`). This will compile the packages in a docker container and bundle that container in a tarball.
 
 ```bash
 ./src/sdk-ros/flowstate_ros_bridge/scripts/build_service_bundle.sh --ros_distro lyrical
+# Or:
+colcon intrinsic_bundle \
+  --packages-select flowstate_ros_bridge \
+  --ros-distro lyrical \
+  --default-config src/sdk-ros/flowstate_ros_bridge/flowstate_ros_bridge_default_config.pbtxt
 ```
 
 > [!NOTE]
 > Replace `lyrical` with `jazzy` if targeting ROS 2 Jazzy.
 
-The output of this command will be a tarball inside the `images` directory of the colcon workspace which can be pushed to Flowstate as a new service.
+The output of this command will be a tarball inside the `intrinsic_asset_bundles` directory (`intrinsic_asset_bundles/flowstate_ros_bridge/flowstate_ros_bridge.bundle.tar`) which can be pushed to Flowstate as a new service.
 
 ### Sideloading the flowstate_ros_bridge to a running Flowstate solution
 
 With a solution open in Flowstate, the generated service bundle can be sideloaded with `inctl`.
 
 ```bash
-./inctl service install images/flowstate_ros_bridge/flowstate_ros_bridge.bundle.tar --org $ORG --cluster $CLUSTER # replace with your org and cluster
+./inctl service install intrinsic_asset_bundles/flowstate_ros_bridge/flowstate_ros_bridge.bundle.tar --org $ORG --cluster $CLUSTER # replace with your org and cluster
 ```
 
 ## ROS names and `workcell_id`

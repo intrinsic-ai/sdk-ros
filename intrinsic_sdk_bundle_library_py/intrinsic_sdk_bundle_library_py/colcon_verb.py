@@ -15,6 +15,7 @@
 import argparse
 from pathlib import Path
 import re
+import sys
 
 from colcon_core.package_selection import add_arguments as add_package_selection_arguments
 from colcon_core.package_selection import get_packages
@@ -49,6 +50,15 @@ class BundleVerb(VerbExtensionPoint):
 
     def main(self, *, context):
         args = context.args
+
+        # Prevent colcon from scanning an active Python virtualenv in the workspace
+        if sys.prefix != sys.base_prefix:
+            venv_ignore = Path(sys.prefix) / 'COLCON_IGNORE'
+            if not venv_ignore.exists():
+                try:
+                    venv_ignore.touch()
+                except OSError:
+                    pass
 
         # Get all packages and filter selected
         decorators = get_packages(args)
