@@ -14,6 +14,7 @@
 
 #include "world_bridge.hpp"
 
+#include <chrono>
 #include <cstdlib>
 #include <limits>
 #include <string>
@@ -284,6 +285,17 @@ bool WorldBridge::initialize(ROSNodeInterfaces ros_node_interfaces,
         if (!status.ok()) {
           LOG(ERROR) << "Unable to send object visualization messages: "
                      << status.message();
+          rclcpp::sleep_for(std::chrono::seconds(1));
+          absl::MutexLock lock(&data->mutex_);
+          if (!local_object_names.has_value() ||
+              !data->send_object_names_.has_value()) {
+            data->send_object_names_ = std::move(local_object_names);
+          } else {
+            data->send_object_names_->insert(data->send_object_names_->end(),
+                                             local_object_names->begin(),
+                                             local_object_names->end());
+          }
+          data->send_new_objects_ = true;
         }
       } else {
         LOG(ERROR) << "data has expired! Terminating thread sending "
@@ -319,6 +331,7 @@ absl::Status WorldBridge::Data::SendObjectVisualizationMessages(
   visualization_msgs::msg::MarkerArray array_msg;
   rclcpp::Clock clock;
   const rclcpp::Time t = clock.now();
+  absl::Status status = absl::OkStatus();
 
   for (const intrinsic::world::WorldObject& object : *objects) {
     int object_id = 0;
@@ -375,6 +388,7 @@ absl::Status WorldBridge::Data::SendObjectVisualizationMessages(
             if (!gltf.ok()) {
               LOG(ERROR) << "Unable to fetch renderable for " << tf_frame_name
                          << ": " << gltf.status();
+              status = gltf.status();
               continue;
             }
             total_gltf_size += gltf->size();
@@ -459,7 +473,7 @@ absl::Status WorldBridge::Data::SendObjectVisualizationMessages(
     workcell_markers_pub_->publish(array_msg);
   }
 
-  return absl::OkStatus();
+  return status;
 }
 
 ///=============================================================================

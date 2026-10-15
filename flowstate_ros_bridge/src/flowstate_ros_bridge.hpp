@@ -19,6 +19,7 @@
 #include <string>
 #include <vector>
 
+#include "absl/status/status.h"
 #include "flowstate_ros_bridge/bridge_interface.hpp"
 #include "flowstate_ros_bridge/executive.hpp"
 #include "flowstate_ros_bridge/world.hpp"
@@ -49,13 +50,20 @@ class FlowstateROSBridge : public rclcpp_lifecycle::LifecycleNode {
   CallbackReturn on_cleanup(
       const rclcpp_lifecycle::State& previous_state) override;
 
+  absl::Status autostart_status() const { return autostart_status_; }
+
  private:
+  absl::Status ConfigureAndActivate();
+
   pluginlib::ClassLoader<BridgeInterface> bridge_loader_;
   std::vector<pluginlib::UniquePtr<BridgeInterface>> bridges_;
   std::shared_ptr<Executive> executive_;
   std::shared_ptr<World> world_;
   std::shared_ptr<intrinsic::PubSub> pubsub_;
   std::vector<std::string> bridge_ids_;
+  rclcpp::TimerBase::SharedPtr autostart_timer_;
+  std::size_t autostart_attempts_ = 0;
+  absl::Status autostart_status_ = absl::OkStatus();
 };
 }  // namespace flowstate_ros_bridge.
 
