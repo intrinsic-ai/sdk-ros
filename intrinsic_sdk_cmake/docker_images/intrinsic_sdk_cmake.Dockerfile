@@ -29,7 +29,7 @@ FROM source AS build_export
 
 ARG ROS_DISTRO
 
-# Setup rosdep
+# Setup rosdep and colcon
 RUN \
     --mount=type=cache,target=/var/cache/apt,sharing=locked \
     --mount=type=cache,target=/var/lib/apt,sharing=locked \
@@ -38,7 +38,21 @@ RUN \
     && echo 'Binary::apt::APT::Keep-Downloaded-Packages "true";' >/etc/apt/apt.conf.d/keep-cache \
     && apt-get update \
     && apt-get install -y --no-install-recommends \
+        python3-colcon-common-extensions \
         python3-rosdep
+
+# Ignore non-underlay packages (services, skills, and functional tests) so rosdep and
+# colcon only process packages up to intrinsic_sdk_cmake.
+RUN set -x \
+    && cd /opt/intrinsic/intrinsic_sdk_cmake \
+    && touch src/intrinsic_sdk_ros/intrinsic_sdk_bundle_library_py/test/functional_tests/COLCON_IGNORE \
+    && underlay_pkgs="$(colcon list --base-paths src --names-only --packages-up-to intrinsic_sdk_cmake)" \
+    && colcon list --base-paths src --paths-only | while read -r pkg_path; do \
+        pkg_name="$(basename "$pkg_path")"; \
+        if ! echo "$underlay_pkgs" | grep -qx "$pkg_name"; then \
+            touch "$pkg_path/COLCON_IGNORE"; \
+        fi; \
+    done
 
 # Bootstrap rosdep
 RUN set -x \
@@ -47,7 +61,6 @@ RUN set -x \
 
 # Install exec-like dependencies for the packages in intrinsic_sdk_cmake and
 # save them for re-install in a later stage.
-# Exclude intrinsic_sdk_ros and intrinsic_sdk for now.
 # TODO(wjwwood): it would be nice to get the list of packages from rosdep
 #   without installing them, but I couldn't figure out how to do that easily.
 RUN \
@@ -60,8 +73,6 @@ RUN \
     && apt-get update \
     && rosdep update --rosdistro ${ROS_DISTRO} \
     && cd /opt/intrinsic/intrinsic_sdk_cmake \
-    && touch src/intrinsic_sdk_ros/intrinsic_sdk/COLCON_IGNORE \
-    && touch src/intrinsic_sdk_ros/intrinsic_sdk_ros/COLCON_IGNORE \
     && rosdep install \
         --from-paths src \
         --ignore-src \
@@ -108,8 +119,7 @@ RUN set -x \
         https://raw.githubusercontent.com/colcon/colcon-metadata-repository/master/index.yaml \
     && colcon metadata update
 
-# Install the rest of the standard dependencies for the packages in intrinsic_sdk_ros.
-# Exclude intrinsic_sdk_ros and intrinsic_sdk for now.
+# Install the rest of the standard dependencies for the packages in intrinsic_sdk_cmake.
 RUN \
     --mount=type=cache,target=/var/cache/apt,sharing=locked \
     --mount=type=cache,target=/var/lib/apt,sharing=locked \
@@ -120,8 +130,6 @@ RUN \
     && apt-get update \
     && rosdep update --rosdistro ${ROS_DISTRO} \
     && cd /opt/intrinsic/intrinsic_sdk_cmake \
-    && touch src/intrinsic_sdk_ros/intrinsic_sdk/COLCON_IGNORE \
-    && touch src/intrinsic_sdk_ros/intrinsic_sdk_ros/COLCON_IGNORE \
     && rosdep install \
         --from-paths src \
         --ignore-src \
@@ -136,11 +144,10 @@ RUN \
     && export PATH="/usr/lib/ccache:$PATH" \
     && ccache -z \
     && cd /opt/intrinsic/intrinsic_sdk_cmake \
-    && touch src/intrinsic_sdk_ros/intrinsic_sdk/COLCON_IGNORE \
-    && touch src/intrinsic_sdk_ros/intrinsic_sdk_ros/COLCON_IGNORE \
     && colcon build \
         --cmake-args -DBUILD_TESTING=OFF \
         --merge-install \
+        --packages-up-to intrinsic_sdk_cmake \
     && ccache -s
 
 # result stage: base + copy install artifacts + re-installed build_export depends + dev tools
