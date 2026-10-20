@@ -175,19 +175,18 @@ To verify that it works correctly, check the logs for:
 
 ## 4. Customizing Build Context for Services
 
-By default, the `service.Dockerfile` assumes a standard ROS workspace structure where the repository is located at `src/sdk-ros` relative to the workspace root.
+By default, the `service.Dockerfile` assumes a standard ROS workspace structure where the workspace packages are located at `src` relative to the workspace root (and automatically ignores pre-built `intrinsic_sdk_cmake` underlay packages found in `src`).
 
-If you are building from a different directory structure (for example, in a CI environment where the repository contents are directly at the workspace root), you can use the following optional arguments with the `container` command to override the defaults:
+If you are building from a different directory structure (for example, directly at the `sdk-ros` repository root or in a CI environment), `intrinsic_sdk_build container` automatically sets `OVERLAY_SOURCE=.` when run at the `sdk-ros` root, or you can override the build arguments explicitly:
 
-- `--source-dir`: Overrides the `SOURCE_DIR` build argument in `service.Dockerfile` (defaults to `src/sdk-ros`).
 - `--overlay-source`: Overrides the `OVERLAY_SOURCE` build argument in `service.Dockerfile` (defaults to `src`).
+- `--source-dir`: Legacy option (defaults to `src/sdk-ros`), retained for backwards compatibility.
 
 Example usage in CI (where context is the repo root):
 ```bash
 python3 intrinsic_sdk_bundle_library_py/intrinsic_sdk_bundle_library_py/build.py container \
   --service_name test_python_service \
   --service_package test_python_service \
-  --source-dir . \
-  --overlay-source .
+  --overlay-source intrinsic_sdk_bundle_library_py/test/functional_tests/test_python_service
 ```
 
