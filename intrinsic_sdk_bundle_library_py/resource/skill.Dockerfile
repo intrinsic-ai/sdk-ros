@@ -40,12 +40,19 @@ ARG SOURCE_DIR=.
 # Add the user's code to the container.
 ADD ${SOURCE_DIR} $SKILL_WORKSPACE/src
 
-# Clean up unused test packages to prevent rosdep from installing their dependencies.
-RUN if [ -d $SKILL_WORKSPACE/src/test/functional_tests ]; then \
-        echo "Cleaning up unused test packages..." \
-        && cd $SKILL_WORKSPACE/src/test/functional_tests \
-        && find . -maxdepth 1 -type d ! -name "$SKILL_PACKAGE" ! -name "." -exec rm -rf {} +; \
-    fi
+# Clean up unused test packages and ignore pre-built intrinsic_sdk_cmake underlay
+# packages so rosdep and colcon only process the overlay skill package(s).
+RUN find $SKILL_WORKSPACE/src -type d -path "*/test/functional_tests" 2>/dev/null | while read -r ft_dir; do \
+        echo "Cleaning up unused test packages in ${ft_dir}..." \
+        && find "${ft_dir}" -maxdepth 1 -type d ! -name "${SKILL_PACKAGE}" ! -name "functional_tests" -exec rm -rf {} +; \
+    done \
+    && cd $SKILL_WORKSPACE \
+    && for pkg_path in $(colcon list --base-paths src --paths-only --packages-up-to intrinsic_sdk_cmake 2>/dev/null || true) \
+                       $(colcon list --base-paths src --paths-only --packages-select intrinsic_sdk intrinsic_sdk_ros 2>/dev/null || true); do \
+        if [ "$(basename "$pkg_path")" != "$SKILL_PACKAGE" ]; then \
+            touch "$pkg_path/COLCON_IGNORE"; \
+        fi; \
+    done
 
 
 # build stage: build dependencies + build the packages
