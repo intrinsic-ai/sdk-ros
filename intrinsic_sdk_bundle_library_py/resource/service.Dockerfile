@@ -12,126 +12,144 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# Build up the service with these stages:
-#   - base (ros:lyrical + settings) ->
-#   - underlay (dependencies) ->
-#   - overlay (user code) ->
-#   - result (base + copied install folder of underlay and overlay)
-
+# intrinsic_sdk_cmake build base + user service code built and setup to run
+ARG REPOSITORY=ghcr.io/intrinsic-ai
+ARG TAG=latest
 ARG ROS_DISTRO=lyrical
+ARG BASE_IMAGE_TAG=${TAG}-${ROS_DISTRO}
 
-# base stage: ros:lyrical + configs
-FROM ros:${ROS_DISTRO} AS base
+# source stage: copy user source code and ignore pre-built underlay packages
+FROM ${REPOSITORY}/intrinsic_sdk_cmake:${BASE_IMAGE_TAG} AS source
 
-WORKDIR /opt/ros/underlay
-
-ENV ROS_HOME=/tmp
-
-# Compatibility symlink for prebuilt LLVM/Clang toolchain binaries that expect libxml2.so.2
-# TODO(wjwwood): Prebuilt LLVM/Clang toolchain binaries downloaded by Bazel (via @toolchains_llvm)
-# dynamically link against libxml2.so.2. In Ubuntu 26.04 (Lyrical), libxml2 was bumped to
-# libxml2.so.16. Upstream LLVM resolved this by statically linking libxml2 into lld
-# (see https://github.com/llvm/llvm-project/issues/113696 and https://github.com/llvm/llvm-project/pull/166867).
-# We can remove this workaround once an LLVM release containing that fix is released and
-# adopted by intrinsic-ai/sdk's @toolchains_llvm.
-RUN if [ -f /usr/lib/x86_64-linux-gnu/libxml2.so.16 ] && [ ! -f /usr/lib/x86_64-linux-gnu/libxml2.so.2 ]; then \
-        ln -s /usr/lib/x86_64-linux-gnu/libxml2.so.16 /usr/lib/x86_64-linux-gnu/libxml2.so.2; \
-    fi \
-    && if [ -f /usr/lib/aarch64-linux-gnu/libxml2.so.16 ] && [ ! -f /usr/lib/aarch64-linux-gnu/libxml2.so.2 ]; then \
-        ln -s /usr/lib/aarch64-linux-gnu/libxml2.so.16 /usr/lib/aarch64-linux-gnu/libxml2.so.2; \
-    fi
-
-# underlay stage: base + dependencies built
-FROM base AS underlay
-
-ARG SOURCE_DIR=src/sdk-ros
 ARG SERVICE_PACKAGE
-ADD ${SOURCE_DIR} /opt/ros/underlay/src/sdk-ros
+# Kept for backwards compatibility with callers passing --build-arg SOURCE_DIR=...
+ARG SOURCE_DIR=src/sdk-ros
+ARG OVERLAY_SOURCE=src
 
-# Clean up unused test packages to prevent rosdep from installing their dependencies.
-RUN if [ -d /opt/ros/underlay/src/sdk-ros/intrinsic_sdk_bundle_library_py/test/functional_tests ]; then \
-        echo "Cleaning up unused test packages..." \
-        && cd /opt/ros/underlay/src/sdk-ros/intrinsic_sdk_bundle_library_py/test/functional_tests \
-        && find . -maxdepth 1 -type d ! -name "$SERVICE_PACKAGE" ! -name "." -exec rm -rf {} +; \
-    fi
+WORKDIR /opt/ros/overlay
+ADD ${OVERLAY_SOURCE} /opt/ros/overlay/src
+
+# Clean up unused test packages and ignore pre-built intrinsic_sdk_cmake underlay
+# packages so rosdep and colcon only process the overlay service package(s).
+RUN find /opt/ros/overlay/src -type d -path "*/test/functional_tests" 2>/dev/null | while read -r ft_dir; do \
+        echo "Cleaning up unused test packages in ${ft_dir}..." \
+        && find "${ft_dir}" -maxdepth 1 -type d ! -name "${SERVICE_PACKAGE}" ! -name "functional_tests" -exec rm -rf {} +; \
+    done \
+    && for pkg_path in $(colcon list --base-paths src --paths-only --packages-up-to intrinsic_sdk_cmake 2>/dev/null || true) \
+                       $(colcon list --base-paths src --paths-only --packages-select intrinsic_sdk intrinsic_sdk_ros 2>/dev/null || true); do \
+        if [ "$(basename "$pkg_path")" != "$SERVICE_PACKAGE" ]; then \
+            touch "$pkg_path/COLCON_IGNORE"; \
+        fi; \
+    done
 
 
-RUN . /opt/ros/${ROS_DISTRO}/setup.sh \
-    && apt-get update \
-    && rosdep update \
-    && rosdep install --from-paths src --ignore-src -r -y \
-    && apt install -y ros-${ROS_DISTRO}-ament-cmake-vendor-package \
-    && colcon build \
-        --continue-on-error \
-        --cmake-args -DCMAKE_BUILD_TYPE=Release \
-        --event-handlers=console_direct+ \
-        --merge-install \
-        --packages-up-to intrinsic_sdk
-
-# overlay stage: underlay + service code built
-FROM underlay AS overlay
+# build stage: install build dependencies + build the service package(s)
+FROM source AS build
 
 ARG SERVICE_PACKAGE
 ARG DEPENDENCIES
-
 ARG ROS_DISTRO=lyrical
-RUN apt-get update \
-    && apt install -y ros-${ROS_DISTRO}-rmw-zenoh-cpp python3-protobuf ${DEPENDENCIES} \
-    && rm -rf /var/lib/apt/lists/*
 
-ARG OVERLAY_SOURCE=src
-ADD ${OVERLAY_SOURCE} /opt/ros/overlay/src
+RUN if [ "$ROS_DISTRO" != "jazzy" ] && [ "$ROS_DISTRO" != "lyrical" ]; then \
+        echo "Error: Only ROS_DISTRO=jazzy or ROS_DISTRO=lyrical is supported for services currently." >&2; \
+        exit 1; \
+    fi
 
-RUN . /opt/ros/${ROS_DISTRO}/setup.sh \
-    && . /opt/ros/underlay/install/setup.sh \
+# Install build and run dependencies for the service package(s).
+RUN \
+    --mount=type=cache,target=/var/cache/apt,sharing=locked \
+    --mount=type=cache,target=/var/lib/apt,sharing=locked \
+    . /opt/intrinsic/intrinsic_sdk_cmake/install/setup.sh \
+    && set -x \
+    && rm -f /etc/apt/apt.conf.d/docker-clean \
+    && echo 'Binary::apt::APT::Keep-Downloaded-Packages "true";' >/etc/apt/apt.conf.d/keep-cache \
     && apt-get update \
+    && (rosdep init || true) \
     && rosdep update \
     && cd /opt/ros/overlay \
-    && rosdep install --from-paths src --ignore-src -r -y --dependency-types exec \
-    && dpkg --get-selections > /service_exec_apt_packages.txt \
-    && rosdep install --from-paths src --ignore-src -r -y \
+    && rosdep install \
+        --from-paths src \
+        --ignore-src \
+        --default-yes \
+    && apt-get install -y ccache python3-protobuf ${DEPENDENCIES} \
+    && /usr/sbin/update-ccache-symlinks
+
+# Build the service package(s).
+RUN \
+    --mount=type=cache,target=/ccache/ \
+    . /opt/intrinsic/intrinsic_sdk_cmake/install/setup.sh \
+    && set -x \
+    && export CCACHE_DIR=/ccache \
+    && export PATH="/usr/lib/ccache:$PATH" \
+    && ccache -z \
+    && cd /opt/ros/overlay \
     && colcon build \
-      --cmake-args -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=ON \
-      --event-handlers=console_direct+ \
-      --merge-install \
-      --packages-up-to=${SERVICE_PACKAGE} \
-      --packages-skip intrinsic_sdk grpc_vendor
+        --cmake-args -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=ON \
+        --event-handlers=console_direct+ \
+        --merge-install \
+        --packages-up-to ${SERVICE_PACKAGE} \
+    && ccache -s
 
 
-# result stage: base + copied install folders from the overlay + service setup
-FROM base
+# exec_depends stage: capture just the exec depends on top of intrinsic_sdk_cmake_run
+FROM ${REPOSITORY}/intrinsic_sdk_cmake_run:${BASE_IMAGE_TAG} AS exec_depends
+
+COPY --from=source \
+    /opt/ros/overlay/src \
+    /opt/ros/overlay/src
+
+RUN \
+    --mount=type=cache,target=/var/cache/apt,sharing=locked \
+    --mount=type=cache,target=/var/lib/apt,sharing=locked \
+    . /opt/intrinsic/intrinsic_sdk_cmake/install/setup.sh \
+    && set -x \
+    && rm -f /etc/apt/apt.conf.d/docker-clean \
+    && echo 'Binary::apt::APT::Keep-Downloaded-Packages "true";' >/etc/apt/apt.conf.d/keep-cache \
+    && apt-get update \
+    && (rosdep init || true) \
+    && rosdep update \
+    && cd /opt/ros/overlay \
+    && rosdep install \
+        --from-paths src \
+        --ignore-src \
+        --default-yes \
+        --dependency-types exec \
+    && dpkg --get-selections > /service_exec_apt_packages.txt
+
+
+# run stage: install exec dependencies + copy install artifacts from build stage
+FROM ${REPOSITORY}/intrinsic_sdk_cmake_run:${BASE_IMAGE_TAG} AS run
 
 ARG SERVICE_PACKAGE
 ARG SERVICE_NAME
 ARG DEPENDENCIES
 
-ARG ROS_DISTRO=lyrical
-COPY --from=overlay /service_exec_apt_packages.txt /service_exec_apt_packages.txt
-RUN apt-get update \
+# Install run dependencies for the service package(s).
+COPY --from=exec_depends \
+    /service_exec_apt_packages.txt \
+    /service_exec_apt_packages.txt
+RUN \
+    --mount=type=cache,target=/var/cache/apt,sharing=locked \
+    --mount=type=cache,target=/var/lib/apt,sharing=locked \
+    set -x \
+    && rm -f /etc/apt/apt.conf.d/docker-clean \
+    && echo 'Binary::apt::APT::Keep-Downloaded-Packages "true";' >/etc/apt/apt.conf.d/keep-cache \
+    && apt-get update \
     && apt-cache dumpavail | dpkg --merge-avail \
     && dpkg --set-selections < /service_exec_apt_packages.txt \
     && apt-get dselect-upgrade -y \
-    && apt-get install -y ros-${ROS_DISTRO}-rmw-zenoh-cpp ${DEPENDENCIES} \
-    && rm -rf /var/lib/apt/lists/*
-ENV RMW_IMPLEMENTATION=rmw_zenoh_cpp
+    && if [ -n "${DEPENDENCIES}" ]; then apt-get install -y ${DEPENDENCIES}; fi
 
-COPY --from=overlay /opt/ros/underlay/install /opt/ros/underlay/install
-COPY --from=overlay /opt/ros/overlay/install /opt/ros/overlay/install
+COPY --from=build /opt/ros/overlay/install /opt/ros/overlay/install
 
 RUN sed --in-place \
+        --expression '$isource "/opt/intrinsic/intrinsic_sdk_cmake/install/setup.bash"' \
+        /ros_entrypoint.sh \
+    && sed --in-place \
         --expression '$isource "/opt/ros/overlay/install/setup.bash"' \
-        /ros_entrypoint.sh \
-    && sed --in-place \
-        --expression '$iexport RMW_IMPLEMENTATION=rmw_zenoh_cpp' \
-        /ros_entrypoint.sh \
-    && sed --in-place \
-        --expression '$iexport ROS_HOME=/tmp' \
-        /ros_entrypoint.sh \
-    && sed --in-place \
-        --expression '$iexport ZENOH_CONFIG_OVERRIDE='\'connect/endpoints=[\"tcp/zenoh-router.app-intrinsic-base.svc.cluster.local:7447\"]\''' \
         /ros_entrypoint.sh
 
-# Build arguments are not substituted in the CMD command and hence we set environemnt variables
+# Build arguments are not substituted in the CMD command and hence we set environment variables
 # which can be substituted instead.
 ENV SERVICE_PACKAGE=${SERVICE_PACKAGE}
 ENV SERVICE_NAME=${SERVICE_NAME}
