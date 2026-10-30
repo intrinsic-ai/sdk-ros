@@ -68,6 +68,7 @@ target_link_libraries(${PROJECT_NAME}
     gRPC::grpc++
     gz-msgs::gz-msgs
     gz-transport::gz-transport
+    nlohmann_json::nlohmann_json
     ortools::ortools
     opencensus-cpp::stats
     PkgConfig::LIBZIP
