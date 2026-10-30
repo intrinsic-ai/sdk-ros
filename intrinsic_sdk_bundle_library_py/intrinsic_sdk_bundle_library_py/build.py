@@ -22,17 +22,22 @@ import subprocess
 import sys
 import urllib.request
 
+try:
+    from ament_index_python.packages import get_package_share_directory
+except ImportError:
+    get_package_share_directory = None
+
 
 def _get_resource_dir():
     """Locate the resource directory via ament_index_python or package paths."""
-    try:
-        from ament_index_python.packages import get_package_share_directory
-        return os.path.join(
-            get_package_share_directory('intrinsic_sdk_bundle_library_py'),
-            'resource',
-        )
-    except Exception:
-        pass
+    if get_package_share_directory is not None:
+        try:
+            return os.path.join(
+                get_package_share_directory('intrinsic_sdk_bundle_library_py'),
+                'resource',
+            )
+        except Exception:
+            pass
 
     candidates = [
         Path(__file__).resolve().parent.parent / 'resource',
@@ -386,6 +391,16 @@ def build_bundle(args):
     else:
         src_path = f'/opt/{name}_workspace/install/share/{package}/{name}_protos.desc'
         run_command(['podman', 'cp', f'{container_name}:{src_path}', desc_path])
+        sdk_desc_path = os.path.join(bundle_dir, name, 'intrinsic_proto.desc')
+        try:
+            run_command([
+                'podman',
+                'cp',
+                f'{container_name}:/opt/intrinsic/intrinsic_sdk_cmake/install/share/intrinsic_sdk_cmake/intrinsic_proto.desc',
+                sdk_desc_path,
+            ])
+        except Exception:
+            sdk_desc_path = None
 
     run_command(['podman', 'rm', '-f', container_name])
 
@@ -401,23 +416,49 @@ def build_bundle(args):
         inbuild_path = download_inbuild(sdk_version)
 
     # Build bundle
-    inbuild_cmd = [inbuild_path]
     if args.service_name:
-        inbuild_cmd.extend(['service', 'bundle'])
+        inbuild_cmd = [
+            inbuild_path,
+            'service',
+            'bundle',
+            '--file_descriptor_set', desc_path,
+            '--manifest', args.manifest_path,
+            '--oci_image', tar_path,
+            '--output', os.path.join(bundle_dir, name, f'{name}.bundle.tar')
+        ]
+        if args.default_config:
+            inbuild_cmd.extend(['--default_config', args.default_config])
+        run_command(inbuild_cmd)
     else:
-        inbuild_cmd.extend(['skill', 'bundle'])
-
-    inbuild_cmd.extend([
-        '--file_descriptor_set', desc_path,
-        '--manifest', args.manifest_path,
-        '--oci_image', tar_path,
-        '--output', os.path.join(bundle_dir, name, f'{name}.bundle.tar')
-    ])
-
-    if args.default_config:
-        inbuild_cmd.extend(['--default_config', args.default_config])
-
-    run_command(inbuild_cmd)
+        augmented_manifest_path = os.path.join(
+            bundle_dir, name, f'{name}_augmented_manifest.pbbin'
+        )
+        augmented_desc_path = os.path.join(
+            bundle_dir, name, f'{name}_augmented_protos.desc'
+        )
+        descriptor_sets = (
+            f'{desc_path},{sdk_desc_path}'
+            if sdk_desc_path and os.path.exists(sdk_desc_path)
+            else desc_path
+        )
+        run_command([
+            inbuild_path,
+            'skill',
+            'manifest',
+            '--manifest', args.manifest_path,
+            '--file_descriptor_sets', descriptor_sets,
+            '--output', augmented_manifest_path,
+            '--file_descriptor_set_out', augmented_desc_path,
+        ])
+        run_command([
+            inbuild_path,
+            'skill',
+            'bundle',
+            '--augmented_manifest', augmented_manifest_path,
+            '--augmented_file_descriptor_set', augmented_desc_path,
+            '--oci_image', tar_path,
+            '--output', os.path.join(bundle_dir, name, f'{name}.bundle.tar'),
+        ])
 
 
 def main():
