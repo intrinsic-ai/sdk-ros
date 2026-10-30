@@ -175,7 +175,7 @@ class Executive : public std::enable_shared_from_this<Executive> {
   std::shared_ptr<ProcessHandle> current_process_;
 
   // Delete any operations started by this bridge and those already running.
-  void clear_and_delete_operations();
+  absl::Status clear_and_delete_operations();
 
   /**
    * @brief Populates the 'parameters' field (google.protobuf.Any) in a

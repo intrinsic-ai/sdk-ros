@@ -143,8 +143,11 @@ absl::Status Executive::connect() {
   // during runtime.
   connected_ = true;
 
-  // Clear all operations.
-  clear_and_delete_operations();
+  // Clear all operations (also verifies the executive service is serving).
+  if (absl::Status status = clear_and_delete_operations(); !status.ok()) {
+    connected_ = false;
+    return status;
+  }
 
   return absl::OkStatus();
 }
@@ -238,10 +241,10 @@ absl::Status populate_descriptor_database(
 }  // namespace
 
 ///=============================================================================
-void Executive::clear_and_delete_operations() {
+absl::Status Executive::clear_and_delete_operations() {
   std::lock_guard<std::recursive_mutex> lock(mutex_);
   if (!connected_) {
-    return;
+    return absl::FailedPreconditionError("Not connected to executive service.");
   }
 
   if (current_process_ != nullptr && !current_process_->done()) {
@@ -252,17 +255,18 @@ void Executive::clear_and_delete_operations() {
   }
   // Now delete any other operations that may have been started.
   // First list active operations.
-  auto client_context = make_client_context(this->deadline_seconds_);
   google::longrunning::ListOperationsRequest list_request;
   list_request.set_page_size(kListOperationsPageSize);
   do {
+    auto client_context = make_client_context(this->deadline_seconds_);
     google::longrunning::ListOperationsResponse list_response;
     const auto status = executive_stub_->ListOperations(
         client_context.get(), list_request, &list_response);
 
     if (!status.ok()) {
-      LOG(INFO) << "Error while listing operations.";
-      return;
+      LOG(WARNING) << "Error while listing operations: "
+                   << status.error_message();
+      return intrinsic::ToAbslStatus(status);
     }
     for (const auto& operation : list_response.operations()) {
       // TODO(Yadunund): If we want this bridge to not override
@@ -273,6 +277,8 @@ void Executive::clear_and_delete_operations() {
     }
     list_request.set_page_token(list_response.next_page_token());
   } while (!list_request.page_token().empty());
+
+  return absl::OkStatus();
 }
 
 ///=============================================================================
@@ -448,7 +454,7 @@ absl::StatusOr<Executive::ProcessHandlePtr> Executive::start(
   if (!connected_) {
     return absl::InvalidArgumentError("Not connected to executive service.");
   }
-  clear_and_delete_operations();
+  clear_and_delete_operations().IgnoreError();
   google::longrunning::Operation current_operation;
   // To start a process, we create an operation first and then start
   // the operation.

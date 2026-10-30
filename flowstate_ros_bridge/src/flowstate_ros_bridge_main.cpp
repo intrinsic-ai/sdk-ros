@@ -12,11 +12,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include <cstdlib>
 #include <fstream>
 #include <memory>
 
 #include "absl/log/log.h"
 #include "class_loader/class_loader.hpp"
+#include "flowstate_ros_bridge.hpp"
 #include "flowstate_ros_bridge.pb.h"
 #include "flowstate_ros_bridge/ros_name_utils.hpp"
 #include "intrinsic/resources/proto/runtime_context.pb.h"
@@ -191,10 +193,14 @@ int main(int argc, char* argv[]) {
     LOG(ERROR) << "Failed to load library";
     return 1;
   }
+  bool ok = true;
   // Scope to destruct node_wrapper before shutdown
   {
     rclcpp_components::NodeInstanceWrapper node_wrapper =
         node_factory->create_node_instance(options);
+    if (!rclcpp::ok()) {
+      return EXIT_FAILURE;
+    }
     rclcpp::node_interfaces::NodeBaseInterface::SharedPtr node =
         node_wrapper.get_node_base_interface();
     exec.add_node(node);
@@ -202,10 +208,14 @@ int main(int argc, char* argv[]) {
     exec.spin();
 
     exec.remove_node(node_wrapper.get_node_base_interface());
+    auto bridge =
+        std::static_pointer_cast<flowstate_ros_bridge::FlowstateROSBridge>(
+            node_wrapper.get_node_instance());
+    ok = bridge->autostart_status().ok();
   }
 
   // Shutdown ROS
   rclcpp::shutdown();
 
-  return 0;
+  return ok ? EXIT_SUCCESS : EXIT_FAILURE;
 }

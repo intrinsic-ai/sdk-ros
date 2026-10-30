@@ -14,9 +14,13 @@
 
 #include "flowstate_ros_bridge.hpp"
 
+#include <chrono>
+
 #include "absl/flags/flag.h"
+#include "absl/status/status.h"
 #include "flowstate_ros_bridge/bridge_interface.hpp"
 #include "intrinsic/platform/pubsub/zenoh_util/zenoh_config.h"
+#include "lifecycle_msgs/msg/state.hpp"
 
 namespace flowstate_ros_bridge {
 constexpr const char* kExecutiveAddressParamName = "executive_service_address";
@@ -33,6 +37,8 @@ constexpr const char* kExecutiveDeadlineParamName =
     "executive_deadline_seconds";
 constexpr const char* kExecutiveUpdateRateMillisParamName =
     "executive_update_rate_millis";
+constexpr std::size_t kMaxAutostartAttempts = 60;
+constexpr std::chrono::seconds kAutostartRetryPeriod{2};
 
 ///=============================================================================
 FlowstateROSBridge::FlowstateROSBridge(const rclcpp::NodeOptions& options)
@@ -117,9 +123,57 @@ FlowstateROSBridge::FlowstateROSBridge(const rclcpp::NodeOptions& options)
   }
 
   if (autostart) {
-    this->configure();
-    this->activate();
+    this->autostart_status_ = this->ConfigureAndActivate();
+    if (absl::IsUnavailable(this->autostart_status_)) {
+      this->autostart_attempts_ = 1;
+      LOG(WARNING) << "ConfigureAndActivate() failed (attempt "
+                   << this->autostart_attempts_ << "/" << kMaxAutostartAttempts
+                   << "), retrying every " << kAutostartRetryPeriod.count()
+                   << "s...";
+      this->autostart_timer_ =
+          this->create_wall_timer(kAutostartRetryPeriod, [this]() {
+            this->autostart_status_ = this->ConfigureAndActivate();
+            if (this->autostart_status_.ok()) {
+              this->autostart_timer_->cancel();
+              return;
+            }
+            if (!absl::IsUnavailable(this->autostart_status_) ||
+                ++this->autostart_attempts_ >= kMaxAutostartAttempts) {
+              LOG(ERROR) << this->autostart_status_;
+              this->autostart_timer_->cancel();
+              rclcpp::shutdown();
+              return;
+            }
+            LOG(WARNING) << "ConfigureAndActivate() failed (attempt "
+                         << this->autostart_attempts_ << "/"
+                         << kMaxAutostartAttempts << "), retrying in "
+                         << kAutostartRetryPeriod.count() << "s...";
+          });
+    } else if (!this->autostart_status_.ok()) {
+      LOG(ERROR) << this->autostart_status_;
+      rclcpp::shutdown();
+    }
   }
+}
+
+///=============================================================================
+absl::Status FlowstateROSBridge::ConfigureAndActivate() {
+  if (!rclcpp::ok()) {
+    return absl::CancelledError("ROS context is shutting down.");
+  }
+  if (this->get_current_state().id() ==
+          lifecycle_msgs::msg::State::PRIMARY_STATE_UNCONFIGURED &&
+      this->configure().id() !=
+          lifecycle_msgs::msg::State::PRIMARY_STATE_INACTIVE) {
+    return absl::UnavailableError("Failed to configure flowstate_ros_bridge.");
+  }
+  if (this->get_current_state().id() ==
+          lifecycle_msgs::msg::State::PRIMARY_STATE_INACTIVE &&
+      this->activate().id() !=
+          lifecycle_msgs::msg::State::PRIMARY_STATE_ACTIVE) {
+    return absl::InternalError("Failed to activate flowstate_ros_bridge.");
+  }
+  return absl::OkStatus();
 }
 
 ///=============================================================================

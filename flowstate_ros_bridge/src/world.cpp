@@ -109,6 +109,8 @@ absl::Status World::connect() {
   geometry_stub_ = GeometryService::NewStub(std::move(geometry_channel));
   LOG(INFO) << "Successfully connected to geometry service!";
 
+  INTR_RETURN_IF_ERROR(object_world_client_->ListObjectNames().status());
+
   connected_ = true;
 
   return absl::OkStatus();
