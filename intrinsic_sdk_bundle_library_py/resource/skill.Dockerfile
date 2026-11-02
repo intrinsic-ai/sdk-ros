@@ -47,11 +47,9 @@ RUN find $SKILL_WORKSPACE/src -type d -path "*/test/functional_tests" 2>/dev/nul
         && find "${ft_dir}" -maxdepth 1 -type d ! -name "${SKILL_PACKAGE}" ! -name "functional_tests" -exec rm -rf {} +; \
     done \
     && cd $SKILL_WORKSPACE \
-    && for pkg_path in $(colcon list --base-paths src --paths-only --packages-up-to intrinsic_sdk_cmake 2>/dev/null || true) \
-                       $(colcon list --base-paths src --paths-only --packages-select intrinsic_sdk intrinsic_sdk_ros 2>/dev/null || true); do \
-        if [ "$(basename "$pkg_path")" != "$SKILL_PACKAGE" ]; then \
-            touch "$pkg_path/COLCON_IGNORE"; \
-        fi; \
+    && for pkg_path in $(colcon list --base-paths src --paths-only --packages-up-to intrinsic_sdk_cmake --packages-ignore "${SKILL_PACKAGE}" 2>/dev/null || true) \
+                       $(colcon list --base-paths src --paths-only --packages-select intrinsic_sdk intrinsic_sdk_ros --packages-ignore "${SKILL_PACKAGE}" 2>/dev/null || true); do \
+        touch "$pkg_path/COLCON_IGNORE"; \
     done
 
 

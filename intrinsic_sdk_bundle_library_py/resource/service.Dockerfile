@@ -35,11 +35,9 @@ RUN find /opt/ros/overlay/src -type d -path "*/test/functional_tests" 2>/dev/nul
         echo "Cleaning up unused test packages in ${ft_dir}..." \
         && find "${ft_dir}" -maxdepth 1 -type d ! -name "${SERVICE_PACKAGE}" ! -name "functional_tests" -exec rm -rf {} +; \
     done \
-    && for pkg_path in $(colcon list --base-paths src --paths-only --packages-up-to intrinsic_sdk_cmake 2>/dev/null || true) \
-                       $(colcon list --base-paths src --paths-only --packages-select intrinsic_sdk intrinsic_sdk_ros 2>/dev/null || true); do \
-        if [ "$(basename "$pkg_path")" != "$SERVICE_PACKAGE" ]; then \
-            touch "$pkg_path/COLCON_IGNORE"; \
-        fi; \
+    && for pkg_path in $(colcon list --base-paths src --paths-only --packages-up-to intrinsic_sdk_cmake --packages-ignore "${SERVICE_PACKAGE}" 2>/dev/null || true) \
+                       $(colcon list --base-paths src --paths-only --packages-select intrinsic_sdk intrinsic_sdk_ros --packages-ignore "${SERVICE_PACKAGE}" 2>/dev/null || true); do \
+        touch "$pkg_path/COLCON_IGNORE"; \
     done
 
 
