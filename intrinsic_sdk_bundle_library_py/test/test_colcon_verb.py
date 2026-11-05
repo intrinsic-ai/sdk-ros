@@ -142,6 +142,55 @@ class TestColconVerb(unittest.TestCase):
             str(Path('/ws/src/my_skill_pkg/my_skill_pkg.manifest.textproto').resolve())
         )
 
+    @patch('intrinsic_sdk_bundle_library_py.colcon_verb.get_packages', return_value=[])
+    @patch('pathlib.Path.touch')
+    @patch('pathlib.Path.exists', return_value=False)
+    def test_venv_colcon_ignore_created_for_non_hidden_workspace_venv(
+        self, mock_exists, mock_touch, mock_get_packages
+    ):
+        verb = BundleVerb()
+        mock_context = MagicMock()
+        mock_context.args = argparse.Namespace(base_paths=['/ws'])
+
+        with patch.object(sys, 'prefix', '/ws/venv'), patch.object(
+            sys, 'base_prefix', '/usr'
+        ):
+            verb.main(context=mock_context)
+
+        mock_touch.assert_called_once()
+
+    @patch('intrinsic_sdk_bundle_library_py.colcon_verb.get_packages', return_value=[])
+    @patch('pathlib.Path.touch')
+    def test_venv_colcon_ignore_skipped_for_hidden_venv(
+        self, mock_touch, mock_get_packages
+    ):
+        verb = BundleVerb()
+        mock_context = MagicMock()
+        mock_context.args = argparse.Namespace(base_paths=['/ws'])
+
+        with patch.object(sys, 'prefix', '/ws/.venv'), patch.object(
+            sys, 'base_prefix', '/usr'
+        ):
+            verb.main(context=mock_context)
+
+        mock_touch.assert_not_called()
+
+    @patch('intrinsic_sdk_bundle_library_py.colcon_verb.get_packages', return_value=[])
+    @patch('pathlib.Path.touch')
+    def test_venv_colcon_ignore_skipped_for_external_venv(
+        self, mock_touch, mock_get_packages
+    ):
+        verb = BundleVerb()
+        mock_context = MagicMock()
+        mock_context.args = argparse.Namespace(base_paths=['/ws'])
+
+        with patch.object(sys, 'prefix', '/opt/venvs/my_venv'), patch.object(
+            sys, 'base_prefix', '/usr'
+        ):
+            verb.main(context=mock_context)
+
+        mock_touch.assert_not_called()
+
 
 if __name__ == '__main__':
     unittest.main()

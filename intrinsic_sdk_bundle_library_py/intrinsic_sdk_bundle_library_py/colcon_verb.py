@@ -51,14 +51,26 @@ class BundleVerb(VerbExtensionPoint):
     def main(self, *, context):
         args = context.args
 
-        # Prevent colcon from scanning an active Python virtualenv in the workspace
+        # Prevent colcon from scanning an active non-hidden Python virtualenv
+        # located inside the workspace (e.g. ./venv). Hidden directories like
+        # .venv are already skipped by colcon, and external venvs are not
+        # crawled.
         if sys.prefix != sys.base_prefix:
-            venv_ignore = Path(sys.prefix) / 'COLCON_IGNORE'
-            if not venv_ignore.exists():
+            venv_path = Path(sys.prefix).resolve()
+            base_paths = getattr(args, 'base_paths', None) or ['.']
+            for base in base_paths:
                 try:
-                    venv_ignore.touch()
-                except OSError:
-                    pass
+                    rel_parts = venv_path.relative_to(Path(base).resolve()).parts
+                except ValueError:
+                    continue
+                if rel_parts and not any(p.startswith('.') for p in rel_parts):
+                    venv_ignore = venv_path / 'COLCON_IGNORE'
+                    if not venv_ignore.exists():
+                        try:
+                            venv_ignore.touch()
+                        except OSError:
+                            pass
+                    break
 
         # Get all packages and filter selected
         decorators = get_packages(args)
