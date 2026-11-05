@@ -135,7 +135,7 @@ RUN \
     && apt-get update \
     && apt-cache dumpavail | dpkg --merge-avail \
     && dpkg --set-selections < /service_exec_apt_packages.txt \
-    && apt-get dselect-upgrade -y \
+    && apt-get dselect-upgrade -y -o APT::Solver=internal \
     && if [ -n "${DEPENDENCIES}" ]; then apt-get install -y ${DEPENDENCIES}; fi
 
 COPY --from=build /opt/ros/overlay/install /opt/ros/overlay/install
