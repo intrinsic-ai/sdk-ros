@@ -15,13 +15,42 @@
 import argparse
 import json
 import os
+from pathlib import Path
 import platform
 import shutil
 import subprocess
 import sys
 import urllib.request
 
-from ament_index_python.packages import get_package_share_directory
+try:
+    from ament_index_python.packages import get_package_share_directory
+except ImportError:
+    get_package_share_directory = None
+
+
+def _get_resource_dir():
+    """Locate the resource directory via ament_index_python or package paths."""
+    if get_package_share_directory is not None:
+        try:
+            return os.path.join(
+                get_package_share_directory('intrinsic_sdk_bundle_library_py'),
+                'resource',
+            )
+        except Exception:
+            pass
+
+    candidates = [
+        Path(__file__).resolve().parent.parent / 'resource',
+        Path(sys.prefix) / 'share' / 'intrinsic_sdk_bundle_library_py' / 'resource',
+    ]
+    for candidate in candidates:
+        if candidate.is_dir():
+            return str(candidate)
+
+    raise FileNotFoundError(
+        'Could not locate intrinsic_sdk_bundle_library_py resource directory.'
+    )
+
 
 # Shared argument definitions for command-line parser and colcon verb
 COMMON_ARGUMENTS = {
@@ -84,8 +113,7 @@ def run_command(cmd, check=True):
 
 
 def get_sdk_version():
-    share_dir = get_package_share_directory('intrinsic_sdk_bundle_library_py')
-    version_file = os.path.join(share_dir, 'resource', 'sdk_version.json')
+    version_file = os.path.join(_get_resource_dir(), 'sdk_version.json')
 
     try:
         with open(version_file, 'r') as f:
@@ -197,13 +225,11 @@ def build_container(args):
     if args.service_name and args.service_package:
         name = args.service_name
         package = args.service_package
-        share_dir = get_package_share_directory('intrinsic_sdk_bundle_library_py')
-        dockerfile = args.dockerfile or os.path.join(share_dir, 'resource', 'service.Dockerfile')
+        dockerfile = args.dockerfile or os.path.join(_get_resource_dir(), 'service.Dockerfile')
     elif args.skill_name and args.skill_package:
         name = args.skill_name
         package = args.skill_package
-        share_dir = get_package_share_directory('intrinsic_sdk_bundle_library_py')
-        dockerfile = args.dockerfile or os.path.join(share_dir, 'resource', 'skill.Dockerfile')
+        dockerfile = args.dockerfile or os.path.join(_get_resource_dir(), 'skill.Dockerfile')
     else:
         print('Error: Must specify either service or skill name and package.')
         return
@@ -216,15 +242,44 @@ def build_container(args):
     )
     dockerfile = os.path.realpath(dockerfile)
 
-    # Ensure .dockerignore exists to avoid sending large directories to build context
+    # Ensure .dockerignore contains required entries to avoid sending large
+    # directories to the build context.
     dockerignore_path = '.dockerignore'
-    if not os.path.exists(dockerignore_path):
-        print(f'Creating {dockerignore_path}...')
-        try:
-            with open(dockerignore_path, 'w') as f:
-                f.write('images\nbuild\nlog\ninstall\n')
-        except Exception as e:
-            print(f'Warning: Could not create {dockerignore_path}: {e}')
+    required_ignores = [
+        'images',
+        'build',
+        'log',
+        'install',
+        '.venv',
+        'venv',
+        'intrinsic_asset_bundles',
+    ]
+    try:
+        existing_ignores = set()
+        needs_newline = False
+        if os.path.exists(dockerignore_path):
+            with open(dockerignore_path, 'r') as f:
+                content = f.read()
+                existing_ignores = {
+                    line.strip().rstrip('/')
+                    for line in content.splitlines()
+                    if line.strip()
+                }
+                needs_newline = bool(content) and not content.endswith('\n')
+        missing_ignores = [
+            entry for entry in required_ignores if entry not in existing_ignores
+        ]
+        if missing_ignores:
+            file_exists = os.path.exists(dockerignore_path)
+            action = 'Updating' if file_exists else 'Creating'
+            print(f'{action} {dockerignore_path}...')
+            mode = 'a' if file_exists else 'w'
+            with open(dockerignore_path, mode) as f:
+                if needs_newline:
+                    f.write('\n')
+                f.write('\n'.join(missing_ignores) + '\n')
+    except Exception as e:
+        print(f'Warning: Could not update {dockerignore_path}: {e}')
 
     # Ensure builder exists
     builder_name = args.builder_name or 'container-builder'
@@ -283,10 +338,22 @@ def build_container(args):
 
         if args.dependencies:
             cmd.extend(['--build-arg', f'DEPENDENCIES={args.dependencies}'])
-        if args.source_dir:
-            cmd.extend(['--build-arg', f'SOURCE_DIR={args.source_dir}'])
-        if args.overlay_source:
-            cmd.extend(['--build-arg', f'OVERLAY_SOURCE={args.overlay_source}'])
+        source_dir = args.source_dir
+        overlay_source = args.overlay_source
+        if (
+            args.service_name
+            and not source_dir
+            and not os.path.isdir('src/sdk-ros')
+            and os.path.isfile('intrinsic_sdk_cmake/package.xml')
+        ):
+            source_dir = '.'
+            if not overlay_source:
+                overlay_source = '.'
+
+        if source_dir:
+            cmd.extend(['--build-arg', f'SOURCE_DIR={source_dir}'])
+        if overlay_source:
+            cmd.extend(['--build-arg', f'OVERLAY_SOURCE={overlay_source}'])
 
         cmd.append('.')
 
@@ -333,7 +400,8 @@ def build_bundle(args):
     if args.service_name:
         paths_to_try = [
             f'/opt/ros/overlay/install/share/{package}/{name}_protos.desc',
-            f'/opt/ros/overlay/install/share/{name}/{name}_protos.desc'
+            f'/opt/ros/overlay/install/share/{name}/{name}_protos.desc',
+            f'/opt/ros/overlay/install/share/{package}/{name}/{name}_protos.desc',
         ]
         success = False
         for src_path in paths_to_try:
@@ -353,6 +421,20 @@ def build_bundle(args):
     else:
         src_path = f'/opt/{name}_workspace/install/share/{package}/{name}_protos.desc'
         run_command(['podman', 'cp', f'{container_name}:{src_path}', desc_path])
+        sdk_desc_path = os.path.join(bundle_dir, name, 'intrinsic_proto.desc')
+        sdk_desc_src = (
+            '/opt/intrinsic/intrinsic_sdk_cmake/install/share/'
+            'intrinsic_sdk_cmake/intrinsic_proto.desc'
+        )
+        try:
+            run_command([
+                'podman',
+                'cp',
+                f'{container_name}:{sdk_desc_src}',
+                sdk_desc_path,
+            ])
+        except Exception:
+            sdk_desc_path = None
 
     run_command(['podman', 'rm', '-f', container_name])
 
@@ -368,23 +450,49 @@ def build_bundle(args):
         inbuild_path = download_inbuild(sdk_version)
 
     # Build bundle
-    inbuild_cmd = [inbuild_path]
     if args.service_name:
-        inbuild_cmd.extend(['service', 'bundle'])
+        inbuild_cmd = [
+            inbuild_path,
+            'service',
+            'bundle',
+            '--file_descriptor_set', desc_path,
+            '--manifest', args.manifest_path,
+            '--oci_image', tar_path,
+            '--output', os.path.join(bundle_dir, name, f'{name}.bundle.tar')
+        ]
+        if args.default_config:
+            inbuild_cmd.extend(['--default_config', args.default_config])
+        run_command(inbuild_cmd)
     else:
-        inbuild_cmd.extend(['skill', 'bundle'])
-
-    inbuild_cmd.extend([
-        '--file_descriptor_set', desc_path,
-        '--manifest', args.manifest_path,
-        '--oci_image', tar_path,
-        '--output', os.path.join(bundle_dir, name, f'{name}.bundle.tar')
-    ])
-
-    if args.default_config:
-        inbuild_cmd.extend(['--default_config', args.default_config])
-
-    run_command(inbuild_cmd)
+        augmented_manifest_path = os.path.join(
+            bundle_dir, name, f'{name}_augmented_manifest.pbbin'
+        )
+        augmented_desc_path = os.path.join(
+            bundle_dir, name, f'{name}_augmented_protos.desc'
+        )
+        descriptor_sets = (
+            f'{desc_path},{sdk_desc_path}'
+            if sdk_desc_path and os.path.exists(sdk_desc_path)
+            else desc_path
+        )
+        run_command([
+            inbuild_path,
+            'skill',
+            'manifest',
+            '--manifest', args.manifest_path,
+            '--file_descriptor_sets', descriptor_sets,
+            '--output', augmented_manifest_path,
+            '--file_descriptor_set_out', augmented_desc_path,
+        ])
+        run_command([
+            inbuild_path,
+            'skill',
+            'bundle',
+            '--augmented_manifest', augmented_manifest_path,
+            '--augmented_file_descriptor_set', augmented_desc_path,
+            '--oci_image', tar_path,
+            '--output', os.path.join(bundle_dir, name, f'{name}.bundle.tar'),
+        ])
 
 
 def main():

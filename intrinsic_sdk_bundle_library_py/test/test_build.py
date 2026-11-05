@@ -93,8 +93,9 @@ class TestBuild(unittest.TestCase):
         build.run_command(['ls'])
         mock_run.assert_called_once_with(['ls'], check=True)
 
+    @patch('builtins.open', new_callable=mock_open)
     @patch('intrinsic_sdk_bundle_library_py.build.run_command')
-    def test_build_container_skill(self, mock_run_command):
+    def test_build_container_skill(self, mock_run_command, mock_file):
         args = MagicMock()
         args.service_name = None
         args.service_package = None
@@ -165,8 +166,9 @@ class TestBuild(unittest.TestCase):
                 break
         self.assertTrue(found_bundle)
 
+    @patch('builtins.open', new_callable=mock_open)
     @patch('intrinsic_sdk_bundle_library_py.build.run_command')
-    def test_build_container_service(self, mock_run_command):
+    def test_build_container_service(self, mock_run_command, mock_file):
         args = MagicMock()
         args.service_name = 'test_service'
         args.service_package = 'test_package'
@@ -233,6 +235,73 @@ class TestBuild(unittest.TestCase):
                 )
                 break
         self.assertTrue(found_bundle)
+
+    @patch('intrinsic_sdk_bundle_library_py.build.run_command')
+    @patch('os.makedirs')
+    @patch('os.path.exists', return_value=False)
+    @patch('builtins.open', new_callable=mock_open)
+    def test_dockerignore_created_when_missing(
+        self, mock_file, mock_exists, mock_makedirs, mock_run_command
+    ):
+        args = MagicMock()
+        args.service_name = None
+        args.service_package = None
+        args.skill_name = 'test_skill'
+        args.skill_package = 'test_package'
+        args.dockerfile = None
+        args.bundle_dir = './intrinsic_asset_bundles'
+        args.builder_name = 'test-builder'
+        args.no_cache = False
+        args.ros_distro = 'lyrical'
+        args.skill_type = 'python'
+        args.skill_executable = None
+        args.skill_config = None
+        args.skill_asset_id_org = None
+        args.dependencies = None
+        args.source_dir = None
+        args.overlay_source = None
+
+        build.build_container(args)
+
+        mock_file.assert_called_once_with('.dockerignore', 'w')
+        mock_file().write.assert_called_once_with(
+            'images\nbuild\nlog\ninstall\n.venv\nvenv\nintrinsic_asset_bundles\n'
+        )
+
+    @patch('intrinsic_sdk_bundle_library_py.build.run_command')
+    @patch('os.makedirs')
+    @patch('os.path.exists', return_value=True)
+    @patch(
+        'builtins.open',
+        new_callable=mock_open,
+        read_data='images\nbuild\nlog\ninstall\nintrinsic_asset_bundles\n',
+    )
+    def test_dockerignore_appends_missing_entries(
+        self, mock_file, mock_exists, mock_makedirs, mock_run_command
+    ):
+        args = MagicMock()
+        args.service_name = None
+        args.service_package = None
+        args.skill_name = 'test_skill'
+        args.skill_package = 'test_package'
+        args.dockerfile = None
+        args.bundle_dir = './intrinsic_asset_bundles'
+        args.builder_name = 'test-builder'
+        args.no_cache = False
+        args.ros_distro = 'lyrical'
+        args.skill_type = 'python'
+        args.skill_executable = None
+        args.skill_config = None
+        args.skill_asset_id_org = None
+        args.dependencies = None
+        args.source_dir = None
+        args.overlay_source = None
+
+        build.build_container(args)
+
+        mock_file.assert_any_call('.dockerignore', 'r')
+        mock_file.assert_any_call('.dockerignore', 'a')
+        mock_file().write.assert_called_once_with('.venv\nvenv\n')
 
 
 if __name__ == '__main__':
