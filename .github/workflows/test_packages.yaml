@@ -1,0 +1,40 @@
+name: Test ROS Packages
+run-name: ${{ github.actor }}'s changes have triggered a test run of the ROS packages.
+
+on:
+  pull_request:
+    types: [opened, reopened, synchronize, edited]
+  push:
+    branches:
+      - main
+
+env:
+  # Space-separated list of ROS packages to build and test.
+  PACKAGES_TO_TEST: >-
+    intrinsic_sdk_bundle_library_py
+
+jobs:
+  test-packages:
+    runs-on: ubuntu-24.04-8core
+    strategy:
+      matrix:
+        ros_distro: [lyrical, jazzy]
+        include:
+          - ros_distro: lyrical
+            docker_image: ubuntu:resolute
+          - ros_distro: jazzy
+            docker_image: ubuntu:noble
+    container:
+      image: ${{ matrix.docker_image }}
+    steps:
+      - name: Set up ROS environment
+        uses: ros-tooling/setup-ros@649ef6bcd696da05bc27ceb3fab69d810c0daeab # v0.7.19
+        with:
+          required-ros-distributions: ${{ matrix.ros_distro }}
+
+      - name: Build and test packages
+        uses: ros-tooling/action-ros-ci@3a640b10f09b756dabe556dac5413aba369f71b0 # v0.4.8
+        with:
+          package-name: ${{ env.PACKAGES_TO_TEST }}
+          target-ros2-distro: ${{ matrix.ros_distro }}
+          coverage-result: false

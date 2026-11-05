@@ -51,6 +51,7 @@ def _get_resource_dir():
         'Could not locate intrinsic_sdk_bundle_library_py resource directory.'
     )
 
+
 # Shared argument definitions for command-line parser and colcon verb
 COMMON_ARGUMENTS = {
     'ros_distro': {
@@ -392,11 +393,15 @@ def build_bundle(args):
         src_path = f'/opt/{name}_workspace/install/share/{package}/{name}_protos.desc'
         run_command(['podman', 'cp', f'{container_name}:{src_path}', desc_path])
         sdk_desc_path = os.path.join(bundle_dir, name, 'intrinsic_proto.desc')
+        sdk_desc_src = (
+            '/opt/intrinsic/intrinsic_sdk_cmake/install/share/'
+            'intrinsic_sdk_cmake/intrinsic_proto.desc'
+        )
         try:
             run_command([
                 'podman',
                 'cp',
-                f'{container_name}:/opt/intrinsic/intrinsic_sdk_cmake/install/share/intrinsic_sdk_cmake/intrinsic_proto.desc',
+                f'{container_name}:{sdk_desc_src}',
                 sdk_desc_path,
             ])
         except Exception:
