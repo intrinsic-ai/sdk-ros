@@ -242,15 +242,44 @@ def build_container(args):
     )
     dockerfile = os.path.realpath(dockerfile)
 
-    # Ensure .dockerignore exists to avoid sending large directories to build context
+    # Ensure .dockerignore contains required entries to avoid sending large
+    # directories to the build context.
     dockerignore_path = '.dockerignore'
-    if not os.path.exists(dockerignore_path):
-        print(f'Creating {dockerignore_path}...')
-        try:
-            with open(dockerignore_path, 'w') as f:
-                f.write('images\nbuild\nlog\ninstall\n.venv\nvenv\nintrinsic_asset_bundles\n')
-        except Exception as e:
-            print(f'Warning: Could not create {dockerignore_path}: {e}')
+    required_ignores = [
+        'images',
+        'build',
+        'log',
+        'install',
+        '.venv',
+        'venv',
+        'intrinsic_asset_bundles',
+    ]
+    try:
+        existing_ignores = set()
+        needs_newline = False
+        if os.path.exists(dockerignore_path):
+            with open(dockerignore_path, 'r') as f:
+                content = f.read()
+                existing_ignores = {
+                    line.strip().rstrip('/')
+                    for line in content.splitlines()
+                    if line.strip()
+                }
+                needs_newline = bool(content) and not content.endswith('\n')
+        missing_ignores = [
+            entry for entry in required_ignores if entry not in existing_ignores
+        ]
+        if missing_ignores:
+            file_exists = os.path.exists(dockerignore_path)
+            action = 'Updating' if file_exists else 'Creating'
+            print(f'{action} {dockerignore_path}...')
+            mode = 'a' if file_exists else 'w'
+            with open(dockerignore_path, mode) as f:
+                if needs_newline:
+                    f.write('\n')
+                f.write('\n'.join(missing_ignores) + '\n')
+    except Exception as e:
+        print(f'Warning: Could not update {dockerignore_path}: {e}')
 
     # Ensure builder exists
     builder_name = args.builder_name or 'container-builder'
