@@ -11,7 +11,10 @@ from std_msgs.msg import String
 
 FLAGS = flags.FLAGS
 flags.DEFINE_integer("port", 8003, "Port to listen on.", allow_override=True)
-flags.DEFINE_string("skill_service_config_filename", "", "Path to config.", allow_override=True)
+flags.DEFINE_string(
+    "skill_service_config_filename", "", "Path to config.", allow_override=True
+)
+
 
 class TestPythonSkill(skill_interface.Skill):
     def __init__(self):
@@ -19,28 +22,32 @@ class TestPythonSkill(skill_interface.Skill):
         if not rclpy.ok():
             rclpy.init()
         self.node = Node("test_python_skill_node")
-        self.publisher = self.node.create_publisher(String, "test_python_skill_topic", 10)
+        self.publisher = self.node.create_publisher(
+            String, "test_python_skill_topic", 10
+        )
         logging.info("TestPythonSkill initialized with ROS publisher")
 
     def execute(self, request, context):
         logging.info("Executing TestPythonSkill")
         from test_python_skill import test_python_skill_pb2
-        
+
         input_val = ""
         try:
             input_val = request.params.input_data
             logging.info(f"Received input_data: {input_val}")
-            
+
             # Publish to ROS topic
             msg = String()
             msg.data = f"Skill received: {input_val}"
             self.publisher.publish(msg)
             logging.info(f"Published to ROS topic: {msg.data}")
-            
+
         except Exception as e:
             logging.warning(f"Failed to read or publish input_data: {e}")
-            
-        return test_python_skill_pb2.TestPythonSkillResult(message=f"Received: {input_val}")
+
+        return test_python_skill_pb2.TestPythonSkillResult(
+            message=f"Received: {input_val}"
+        )
 
     def get_skill_runtime_data(self, skill_name: str):
         class SmartContainer:
@@ -49,6 +56,7 @@ class TestPythonSkill(skill_interface.Skill):
 
             def __getattr__(self, name):
                 import datetime
+
                 lower = name.lower()
                 if "timeout" in lower:
                     return datetime.timedelta(seconds=180)
@@ -61,7 +69,7 @@ class TestPythonSkill(skill_interface.Skill):
                 return SmartContainer()
 
         from test_python_skill import test_python_skill_pb2
-        
+
         params = SmartContainer(
             descriptor=test_python_skill_pb2.TestPythonSkillParams.DESCRIPTOR,
             default_value=None,
@@ -87,9 +95,10 @@ class TestPythonSkill(skill_interface.Skill):
     def get_skill_project(self, name):
         return self
 
+
 def start_runner(argv):
     logging.info("TestPythonSkill started")
-    
+
     from intrinsic.skills.internal import skill_service_impl
 
     # Helper to find pb2 modules in various SDK namespaces
@@ -107,7 +116,7 @@ def start_runner(argv):
 
     skills_pb2 = find_mod("skills_pb2")
     skill_proto = skills_pb2.Skill() if skills_pb2 else None
-    
+
     skill_instance = TestPythonSkill()
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
 
@@ -115,7 +124,7 @@ def start_runner(argv):
         def __init__(self, inst, proto):
             self._skill = inst
             self._info = skill_service_impl.SkillInformationServicer(proto)
-            
+
             try:
                 self._executor = skill_service_impl.SkillExecutorServicer(
                     inst, None, None, None
@@ -145,6 +154,7 @@ def start_runner(argv):
             logging.warning(f"Falling back to dummy for {name}")
             try:
                 from intrinsic.skills.proto import skill_service_pb2
+
                 return lambda r, c: skill_service_pb2.PredictResult()
             except:
                 return lambda r, c: None
@@ -166,11 +176,12 @@ def start_runner(argv):
     server.add_insecure_port(f"[::]:{FLAGS.port}")
     server.start()
     logging.info(f"gRPC Server listening on port {FLAGS.port}")
-    
+
     try:
         server.wait_for_termination()
     except KeyboardInterrupt:
         logging.info("TestPythonSkill stopped")
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     app.run(start_runner, flags_parser=lambda argv: FLAGS(argv, known_only=True))

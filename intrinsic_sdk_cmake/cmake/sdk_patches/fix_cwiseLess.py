@@ -1,6 +1,8 @@
 import os
 
-file_path = "intrinsic/icon/control/algorithms/joint_position_pid_velocity_controller.cc"
+file_path = (
+    "intrinsic/icon/control/algorithms/joint_position_pid_velocity_controller.cc"
+)
 
 if os.path.exists(file_path):
     with open(file_path, "r") as f:
@@ -20,7 +22,9 @@ if os.path.exists(file_path):
         content = content.replace(old_code, new_code)
         with open(file_path, "w") as f:
             f.write(content)
-        print("Successfully fixed cwiseLess in joint_position_pid_velocity_controller.cc")
+        print(
+            "Successfully fixed cwiseLess in joint_position_pid_velocity_controller.cc"
+        )
     else:
         print("Old code not found in joint_position_pid_velocity_controller.cc")
 else:

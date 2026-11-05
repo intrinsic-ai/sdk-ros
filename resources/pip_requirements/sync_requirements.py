@@ -17,6 +17,7 @@ import os
 import re
 import sys
 
+
 def generate_echo_chain(requirements_content):
     lines = requirements_content.splitlines()
     echo_lines = []
@@ -29,30 +30,44 @@ def generate_echo_chain(requirements_content):
             if i == len(lines) - 1:
                 echo_lines.append(f" && echo '{escaped_line}' >> /tmp/requirements.txt")
             else:
-                echo_lines.append(f" && echo '{escaped_line}' >> /tmp/requirements.txt \\")
+                echo_lines.append(
+                    f" && echo '{escaped_line}' >> /tmp/requirements.txt \\"
+                )
     return "\n".join(echo_lines)
 
+
 def main():
-    repo_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-    requirements_path = os.path.join(repo_root, 'resources', 'pip_requirements', 'requirements.txt')
+    repo_root = os.path.dirname(
+        os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    )
+    requirements_path = os.path.join(
+        repo_root, "resources", "pip_requirements", "requirements.txt"
+    )
 
     if not os.path.exists(requirements_path):
         print(f"Error: requirements.txt not found at {requirements_path}")
         sys.exit(1)
 
-    with open(requirements_path, 'r') as f:
+    with open(requirements_path, "r") as f:
         requirements_content = f.read().strip()
 
     dockerfiles = [
-        os.path.join(repo_root, 'resources', 'Dockerfile.skill'),
-        os.path.join(repo_root, 'intrinsic_sdk_bundle_library_py', 'resource', 'skill.Dockerfile')
+        os.path.join(repo_root, "resources", "Dockerfile.skill"),
+        os.path.join(
+            repo_root, "intrinsic_sdk_bundle_library_py", "resource", "skill.Dockerfile"
+        ),
     ]
 
     # Use robust sentinel comments to locate the block
-    pattern = re.compile(r"(# BEGIN EMBEDDED REQUIREMENTS\n)(.*?)(\n# END EMBEDDED REQUIREMENTS)", re.DOTALL)
+    pattern = re.compile(
+        r"(# BEGIN EMBEDDED REQUIREMENTS\n)(.*?)(\n# END EMBEDDED REQUIREMENTS)",
+        re.DOTALL,
+    )
 
     # Fallback pattern to migrate from the old 'cat' format if still present
-    fallback_pattern = re.compile(r"(RUN cat << 'EOF' > /tmp/requirements.txt\n)(.*?)(\nEOF)", re.DOTALL)
+    fallback_pattern = re.compile(
+        r"(RUN cat << 'EOF' > /tmp/requirements.txt\n)(.*?)(\nEOF)", re.DOTALL
+    )
 
     replacement_content = generate_echo_chain(requirements_content)
 
@@ -62,7 +77,7 @@ def main():
             print(f"Warning: Dockerfile not found at {dockerfile_path}, skipping.")
             continue
 
-        with open(dockerfile_path, 'r') as f:
+        with open(dockerfile_path, "r") as f:
             content = f.read()
 
         has_sentinels = True
@@ -71,7 +86,9 @@ def main():
             # Try fallback to migrate
             match = fallback_pattern.search(content)
             if not match:
-                print(f"Error: Could not find embedded requirements block or sentinels in {dockerfile_path}")
+                print(
+                    f"Error: Could not find embedded requirements block or sentinels in {dockerfile_path}"
+                )
                 sys.exit(1)
             has_sentinels = False
 
@@ -79,20 +96,28 @@ def main():
 
         # If we already have sentinels and the content matches, we are done
         if has_sentinels and existing_block == replacement_content:
-            print(f"No changes needed for {os.path.relpath(dockerfile_path, repo_root)}")
+            print(
+                f"No changes needed for {os.path.relpath(dockerfile_path, repo_root)}"
+            )
             continue
 
-        print(f"Updating embedded requirements in {os.path.relpath(dockerfile_path, repo_root)}")
+        print(
+            f"Updating embedded requirements in {os.path.relpath(dockerfile_path, repo_root)}"
+        )
 
         if has_sentinels:
-            new_content = pattern.sub(lambda m: m.group(1) + replacement_content + m.group(3), content)
+            new_content = pattern.sub(
+                lambda m: m.group(1) + replacement_content + m.group(3), content
+            )
         else:
             # Migrate from old format to new format with sentinels
-            print(f"Migrating {os.path.relpath(dockerfile_path, repo_root)} to sentinel comments format...")
+            print(
+                f"Migrating {os.path.relpath(dockerfile_path, repo_root)} to sentinel comments format..."
+            )
             new_block = f"# BEGIN EMBEDDED REQUIREMENTS\n{replacement_content}\n# END EMBEDDED REQUIREMENTS"
             new_content = fallback_pattern.sub(new_block, content)
 
-        with open(dockerfile_path, 'w') as f:
+        with open(dockerfile_path, "w") as f:
             f.write(new_content)
         any_changed = True
 
@@ -101,5 +126,6 @@ def main():
     else:
         print("Sync completed. All files are already up-to-date.")
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     main()

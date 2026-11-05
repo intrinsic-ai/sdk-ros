@@ -14,42 +14,44 @@
 
 from setuptools import find_packages, setup
 
-package_name = 'intrinsic_sdk_bundle_library_py'
+package_name = "intrinsic_sdk_bundle_library_py"
 
 setup(
     name=package_name,
-    version='0.1.0',
-    packages=find_packages(exclude=['test']),
+    version="0.1.0",
+    packages=find_packages(exclude=["test"]),
     data_files=[
-        ('share/ament_index/resource_index/packages',
-            ['resource/' + package_name]),
-        ('share/' + package_name, ['package.xml']),
-        ('share/' + package_name + '/resource', [
-            'resource/skill.Dockerfile',
-            'resource/service.Dockerfile',
-            'resource/sdk_version.json'
-        ]),
+        ("share/ament_index/resource_index/packages", ["resource/" + package_name]),
+        ("share/" + package_name, ["package.xml"]),
+        (
+            "share/" + package_name + "/resource",
+            [
+                "resource/skill.Dockerfile",
+                "resource/service.Dockerfile",
+                "resource/sdk_version.json",
+            ],
+        ),
     ],
-    install_requires=['setuptools'],
+    install_requires=["setuptools"],
     zip_safe=True,
-    maintainer='William Woodall',
-    maintainer_email='wjwwood@intrinsic.ai',
+    maintainer="William Woodall",
+    maintainer_email="wjwwood@intrinsic.ai",
     description=(
-        'Python build and bundle utilities for the Intrinsic SDK, used to create '
-        'container images and bundles for custom skills and services.'
+        "Python build and bundle utilities for the Intrinsic SDK, used to create "
+        "container images and bundles for custom skills and services."
     ),
-    license='Apache 2.0',
+    license="Apache 2.0",
     extras_require={
-        'test': [
-            'pytest',
+        "test": [
+            "pytest",
         ],
     },
     entry_points={
-        'console_scripts': [
-            'intrinsic_sdk_build = intrinsic_sdk_bundle_library_py.build:main',
+        "console_scripts": [
+            "intrinsic_sdk_build = intrinsic_sdk_bundle_library_py.build:main",
         ],
-        'colcon_core.verb': [
-            'intrinsic_bundle = intrinsic_sdk_bundle_library_py.colcon_verb:BundleVerb',
+        "colcon_core.verb": [
+            "intrinsic_bundle = intrinsic_sdk_bundle_library_py.colcon_verb:BundleVerb",
         ],
     },
 )

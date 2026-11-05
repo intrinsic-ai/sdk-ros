@@ -19,5 +19,11 @@ import pytest
 @pytest.mark.copyright
 @pytest.mark.linter
 def test_copyright():
-    rc = main(argv=['intrinsic_sdk_bundle_library_py', 'test/test_build.py', 'test/test_colcon_verb.py'])
-    assert rc == 0, 'Found errors'
+    rc = main(
+        argv=[
+            "intrinsic_sdk_bundle_library_py",
+            "test/test_build.py",
+            "test/test_colcon_verb.py",
+        ]
+    )
+    assert rc == 0, "Found errors"
