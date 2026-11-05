@@ -49,15 +49,9 @@ ros2 run tf2_tools view_frames
 
 ## Option 2: Sideloading to Flowstate as a service
 
-### Building the flowstate_ros_bridge bundle (Docker)
+### Building the flowstate_ros_bridge bundle
 
-Similar to how a Flowstate service that uses ROS is built, a couple of scripts are provided to build and bundle the flowstate_ros_bridge. The following steps will assume the `sdk-ros` repository is in the `src` folder of your workspace.
-
-In the root of a colcon workspace (or the `sdk-ros` repository root) first set up the docker engine:
-
-```bash
-./src/sdk-ros/scripts/setup_docker.sh
-```
+Similar to how a Flowstate service that uses ROS is built, a couple of tools are provided to build and bundle the flowstate_ros_bridge. The following steps will assume the `sdk-ros` repository is in the `src` folder of your workspace.
 
 If your host machine does not have ROS 2 installed (for example, when bundling on the host outside a ROS container/distrobox), install `intrinsic_sdk_bundle_library_py` into a Python `venv`:
 
@@ -70,11 +64,9 @@ pip install -e "./src/sdk-ros/intrinsic_sdk_bundle_library_py[venv]"
 
 *(If `python3-venv` / `ensurepip` is not installed on Debian/Ubuntu, run `python3 -m venv --without-pip .venv && pip --python .venv/bin/python install -U pip setuptools` before activating.)*
 
-Then, create the bundle with the `build_service_bundle.sh` script (or `colcon intrinsic_bundle`). This will compile the packages in a docker container and bundle that container in a tarball.
+Then, create the bundle with the `colcon intrinsic_bundle`. This will compile the packages in a docker container and bundle that container in a tarball.
 
 ```bash
-./src/sdk-ros/flowstate_ros_bridge/scripts/build_service_bundle.sh --ros_distro lyrical
-# Or:
 colcon intrinsic_bundle \
   --packages-select flowstate_ros_bridge \
   --ros-distro lyrical \
