@@ -43,6 +43,9 @@ setup(
         'test': [
             'pytest',
         ],
+        'venv': [
+            'colcon-common-extensions',
+        ],
     },
     entry_points={
         'console_scripts': [
