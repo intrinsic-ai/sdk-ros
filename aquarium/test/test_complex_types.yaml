@@ -1,0 +1,37 @@
+target:
+  type: "node"
+  package: "aquarium"
+  name: "dummy_camera_server.py"
+
+types:
+  - name: "aquarium/msg/TestCameraConfig"
+    fields:
+      - "string trigger_mode"
+      - "double exposure_time"
+  - name: "aquarium/msg/TestStorageLocation"
+    fields:
+      - "string store"
+      - "string key"
+  - name: "aquarium/msg/TestSensorImage"
+    fields:
+      - "int64 sensor_id"
+      - "string frame_id"
+      - "uint8[] data"
+  - name: "aquarium/msg/TestCaptureResult"
+    fields:
+      - "aquarium/msg/TestSensorImage[] images"
+
+interfaces:
+  - internal_interface: "ros_service"
+    internal_name: "/test_capture"
+    internal_type: "aquarium/srv/TestCapture"
+    external_interface: "zenoh_queryable_proto"
+    external_name: "test_capture"
+    external_type: "aquarium.srv.TestCapture"
+    request_fields:
+      - "aquarium/msg/TestCameraConfig camera_config"
+      - "int64[] sensor_ids"
+      - "aquarium/msg/TestStorageLocation[bounded] capture_result_location"
+    response_fields:
+      - "aquarium/msg/TestCaptureResult capture_result"
+      - "aquarium/msg/TestStorageLocation capture_result_location"

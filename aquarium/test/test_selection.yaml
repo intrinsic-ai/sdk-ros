@@ -1,0 +1,2 @@
+exposed_services:
+  - /add_two_ints
