@@ -1,0 +1,26 @@
+<launch>
+  <arg name="use_fake_hardware"
+       default="false"
+       description="Use software emulation rather than a real gripper"/>
+  <arg name="gripper_model"
+       default="hand_e"
+       description="Available models: hand_e, hand_e_c10, 2f_140, 2f_85"/>
+  <arg name="com_port"
+       default="/dev/ttyUSB0"
+       description="Port for communicating with Robotiq hardware"/>
+  <arg name="slave_address"
+       default="9"
+       description="Modbus RTU slave address (Robotiq default is 9)"/>
+  <arg name="ros_domain_id"
+       default="42"
+       description="ROS_DOMAIN_ID for isolating the internal ROS 2 graph"/>
+
+  <set_env name="ROS_DOMAIN_ID" value="$(var ros_domain_id)" />
+
+  <include file="$(find-pkg-share robotiq_description)/launch/robotiq_control.launch.py">
+    <arg name="use_fake_hardware" value="$(var use_fake_hardware)" />
+    <arg name="gripper_model" value="$(var gripper_model)" />
+    <arg name="com_port" value="$(var com_port)" />
+    <arg name="slave_address" value="$(var slave_address)" />
+  </include>
+</launch>

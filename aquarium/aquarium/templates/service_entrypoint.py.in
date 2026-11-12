@@ -1,0 +1,99 @@
+#!/usr/bin/python3
+# Copyright 2026 Intrinsic Innovation LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+import os
+import subprocess
+import sys
+
+CONFIG_FILE = '/etc/intrinsic/runtime_config.pb'
+CLUSTER_ZENOH_ENDPOINT = (
+    'connect/endpoints='
+    '["tcp/zenoh-router.app-intrinsic-base.svc.cluster.local:7447"]'
+)
+LOCAL_ZENOH_ENDPOINT = 'connect/endpoints=["tcp/127.0.0.1:7447"]'
+
+
+def is_running_in_cluster():
+  if os.environ.get('KUBERNETES_SERVICE_HOST'):
+    return True
+  if os.path.exists(CONFIG_FILE):
+    return True
+  try:
+    with open('/etc/resolv.conf', 'rt', encoding='utf-8') as f:
+      for line in f:
+        if line.startswith('search') and 'cluster.local' in line:
+          return True
+  except OSError:
+    pass
+  return False
+
+
+if 'ZENOH_CONFIG_OVERRIDE' not in os.environ:
+  if is_running_in_cluster():
+    os.environ['ZENOH_CONFIG_OVERRIDE'] = CLUSTER_ZENOH_ENDPOINT
+  else:
+    os.environ['ZENOH_CONFIG_OVERRIDE'] = LOCAL_ZENOH_ENDPOINT
+
+print(
+    'ENTRYPOINT: ZENOH_CONFIG_OVERRIDE set to:'
+    f" {os.environ.get('ZENOH_CONFIG_OVERRIDE')}",
+    flush=True,
+)
+
+sys.path.append('/workspace/config_protos')
+
+try:
+  import runtime_context_pb2
+  import @SERVICE_NAME_CLEAN@_config_pb2 as service_config_pb2
+except ImportError as e:
+  print(f'ENTRYPOINT ERROR: Failed to import proto modules: {e}', flush=True)
+  subprocess.run(['ros2', 'launch', '/workspace/aquarium_launch.xml'])
+  sys.exit(0)
+
+launch_args = []
+allowed_args = @ALLOWED_ARG_NAMES_REPR@
+
+if os.path.exists(CONFIG_FILE):
+  try:
+    with open(CONFIG_FILE, 'rb') as f:
+      context = runtime_context_pb2.RuntimeContext.FromString(f.read())
+
+    if context.config.Is(service_config_pb2.@CONFIG_MSG_NAME@.DESCRIPTOR):
+      config = service_config_pb2.@CONFIG_MSG_NAME@()
+      context.config.Unpack(config)
+
+      for field in config.DESCRIPTOR.fields:
+        if (
+            field.name in allowed_args
+            and field.label != field.LABEL_REPEATED
+            and (not field.has_presence or config.HasField(field.name))
+        ):
+          val = getattr(config, field.name)
+          if field.type == field.TYPE_BOOL:
+            val = str(val).lower()
+          launch_args.append(f'{field.name}:={val}')
+      print(
+          f'ENTRYPOINT: Found runtime config overrides: {launch_args}',
+          flush=True,
+      )
+  except Exception as e:
+    print(
+        f'ENTRYPOINT WARNING: Failed to parse runtime config: {e}',
+        flush=True,
+    )
+
+cmd = ['ros2', 'launch', '/workspace/aquarium_launch.xml'] + launch_args
+print(f"ENTRYPOINT: Executing: {' '.join(cmd)}", flush=True)
+os.execvp(cmd[0], cmd)

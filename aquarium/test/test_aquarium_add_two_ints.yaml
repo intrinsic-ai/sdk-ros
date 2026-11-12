@@ -1,0 +1,17 @@
+interfaces:
+  - internal_interface: "ros_service"
+    internal_name: "/add_two_ints"
+    internal_type: "example_interfaces/srv/AddTwoInts"
+    type_hash: "RIHS01_e118de6bf5eeb66a2491b5bda11202e7b68f198d6f67922cf30364858239c81a"
+    external_interface: "zenoh_queryable_proto"
+    external_name: "add_two_ints"
+    external_type: "example_interfaces.srv.AddTwoInts"
+    request_fields:
+      - "int64 a"
+      - "int64 b"
+    response_fields:
+      - "int64 sum"
+target:
+  type: "node"
+  package: "demo_nodes_cpp"
+  name: "add_two_ints_server"

@@ -1,0 +1,36 @@
+types:
+  - name: "sensor_msgs/msg/JointState"
+    fields:
+      - "std_msgs/msg/Header header"
+      - "string[] name"
+      - "double[] position"
+      - "double[] velocity"
+      - "double[] effort"
+  - name: "std_msgs/msg/Header"
+    fields:
+      - "builtin_interfaces/msg/Time stamp"
+      - "string frame_id"
+  - name: "builtin_interfaces/msg/Time"
+    fields:
+      - "int32 sec"
+      - "uint32 nanosec"
+
+interfaces:
+  - internal_interface: "ros_action_client"
+    internal_name: "/gripper_action_controller/gripper_cmd"
+    internal_type: "control_msgs/action/ParallelGripperCommand"
+    type_hash: "RIHS01_388b0a9cb34b22db9c6d67b752df85e173f40d6ad1d2a13824f114620f4d3fa1"
+    external_interface: "zenoh_queryable_proto"
+    external_name: "gripper_cmd"
+    external_type: "control_msgs.action.ParallelGripperCommand"
+    request_fields:
+      - "sensor_msgs/msg/JointState command"
+    response_fields:
+      - "sensor_msgs/msg/JointState state"
+      - "bool stalled"
+      - "bool reached_goal"
+
+target:
+  type: "node"
+  package: "parallel_gripper_action_controller"
+  name: "gripper_action_controller"

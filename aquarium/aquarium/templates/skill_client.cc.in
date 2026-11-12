@@ -1,0 +1,134 @@
+// Copyright 2026 Intrinsic Innovation LLC
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+#include <grpcpp/grpcpp.h>
+
+#include <chrono>
+#include <iostream>
+#include <memory>
+#include <string>
+#include <thread>
+
+#include "@SKILL_NAME@.pb.h"
+#include "google/longrunning/operations.grpc.pb.h"
+#include "google/longrunning/operations.pb.h"
+#include "intrinsic/skills/proto/skill_service.grpc.pb.h"
+
+using google::longrunning::Operation;
+using grpc::Channel;
+using grpc::ClientContext;
+using grpc::Status;
+using intrinsic_proto::skills::ExecuteRequest;
+using intrinsic_proto::skills::ExecuteResult;
+using intrinsic_proto::skills::Executor;
+
+int main(int argc, char** argv) {
+  std::string target_str = "localhost:8001";
+  if (argc > 1) {
+    target_str = argv[1];
+  }
+
+  auto channel =
+      grpc::CreateChannel(target_str, grpc::InsecureChannelCredentials());
+  std::cout << "Client connecting to " << target_str << std::endl;
+
+  auto state = channel->GetState(true);
+  while (state != GRPC_CHANNEL_READY) {
+    const auto deadline =
+        std::chrono::system_clock::now() + std::chrono::seconds(1);
+    if (!channel->WaitForStateChange(state, deadline)) {
+      std::cerr << "Timeout connecting to " << target_str << std::endl;
+      return 1;
+    }
+    state = channel->GetState(true);
+  }
+
+  auto stub = Executor::NewStub(channel);
+
+  ai::intrinsic::@PROTO_MSG_CLASS@Params params;
+@PARAMS_SETUP@
+
+  ExecuteRequest request;
+  request.set_world_id("dummy_world");
+  auto* instance = request.mutable_instance();
+  instance->set_instance_name("test_instance");
+  instance->set_id_version("ai.intrinsic.@SKILL_NAME@.0.0.1");
+  request.mutable_parameters()->PackFrom(params);
+
+  Operation operation;
+  ClientContext context;
+  Status status = stub->StartExecute(&context, request, &operation);
+  if (!status.ok()) {
+    std::cerr << "StartExecute failed: " << status.error_message() << std::endl;
+    return 1;
+  }
+
+  std::cout << "Operation started: " << operation.name() << std::endl;
+
+  google::longrunning::GetOperationRequest get_op_req;
+  get_op_req.set_name(operation.name());
+
+  bool done = false;
+  int attempts = 0;
+  while (!done && attempts < 15) {
+    ClientContext get_op_context;
+    status = stub->GetOperation(&get_op_context, get_op_req, &operation);
+    if (!status.ok()) {
+      std::cerr << "GetOperation failed: " << status.error_message()
+                << std::endl;
+      return 1;
+    }
+    if (operation.done()) {
+      done = true;
+      break;
+    }
+    std::this_thread::sleep_for(std::chrono::seconds(1));
+    attempts++;
+  }
+
+  if (!done) {
+    std::cerr << "Operation timed out" << std::endl;
+    return 1;
+  }
+
+  if (operation.has_error()) {
+    std::cerr << "Operation failed: " << operation.error().message()
+              << std::endl;
+    return 1;
+  }
+
+  ExecuteResult execute_result;
+  if (!operation.response().UnpackTo(&execute_result)) {
+    std::cerr << "Failed to unpack ExecuteResult" << std::endl;
+    return 1;
+  }
+
+  ai::intrinsic::@PROTO_MSG_CLASS@Result result;
+  if (!execute_result.result().UnpackTo(&result)) {
+    std::cerr << "Failed to unpack result" << std::endl;
+    return 1;
+  }
+
+  std::cout << "Result aquarium_skill_status: "
+            << result.aquarium_skill_status() << std::endl;
+  if (result.aquarium_skill_status() != "SUCCEEDED") {
+    std::cerr << "Result aquarium_skill_status is not SUCCEEDED: "
+              << result.aquarium_skill_status() << std::endl;
+    return 1;
+  }
+  std::cout << "Full result: " << result.DebugString() << std::endl;
+
+  std::cout << "SUCCESS" << std::endl;
+  return 0;
+}

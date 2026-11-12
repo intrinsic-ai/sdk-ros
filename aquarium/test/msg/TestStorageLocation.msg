@@ -1,0 +1,2 @@
+string store
+string key

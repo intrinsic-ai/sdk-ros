@@ -1,0 +1,110 @@
+// Copyright 2026 Intrinsic Innovation LLC
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+syntax = "proto3";
+
+package test_messages;
+
+message Time {
+  int32 sec = 1;
+  int32 nanosec = 2;
+}
+
+message Header {
+  Time stamp = 1;
+  string frame_id = 2;
+}
+
+message Image {
+  Header header = 1;
+  int32 height = 2;
+  int32 width = 3;
+  string encoding = 4;
+  int32 is_bigendian = 5;
+  int32 step = 6;
+  bytes data = 7;
+}
+
+message Vector3 {
+  double x = 1;
+  double y = 2;
+  double z = 3;
+}
+
+message Quaternion {
+  double x = 1;
+  double y = 2;
+  double z = 3;
+  double w = 4;
+}
+
+message Transform {
+  Vector3 translation = 1;
+  Quaternion rotation = 2;
+}
+
+message TransformStamped {
+  Header header = 1;
+  string child_frame_id = 2;
+  Transform transform = 3;
+}
+
+message TFMessage {
+  repeated TransformStamped transforms = 1;
+}
+
+message PointField {
+  string name = 1;
+  int32 offset = 2;
+  int32 datatype = 3;
+  int32 count = 4;
+}
+
+message PointCloud2 {
+  Header header = 1;
+  int32 height = 2;
+  int32 width = 3;
+  repeated PointField fields = 4;
+  bool is_bigendian = 5;
+  int32 point_step = 6;
+  int32 row_step = 7;
+  bytes data = 8;
+  bool is_dense = 9;
+}
+
+message Point {
+  double x = 1;
+  double y = 2;
+  double z = 3;
+}
+
+message Pose {
+  Point position = 1;
+  Quaternion orientation = 2;
+}
+
+message PoseWithCovariance {
+  Pose pose = 1;
+  repeated double covariance = 2;
+}
+
+message PoseStamped {
+  Header header = 1;
+  Pose pose = 2;
+}
+
+message Path {
+  Header header = 1;
+  repeated PoseStamped poses = 2;
+}
