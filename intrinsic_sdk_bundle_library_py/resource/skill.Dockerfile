@@ -40,12 +40,18 @@ ARG SOURCE_DIR=.
 # Add the user's code to the container.
 ADD ${SOURCE_DIR} $SKILL_WORKSPACE/src
 
-# Clean up unused test packages to prevent rosdep from installing their dependencies.
-RUN if [ -d $SKILL_WORKSPACE/src/test/functional_tests ]; then \
-        echo "Cleaning up unused test packages..." \
-        && cd $SKILL_WORKSPACE/src/test/functional_tests \
-        && find . -maxdepth 1 -type d ! -name "$SKILL_PACKAGE" ! -name "." -exec rm -rf {} +; \
-    fi
+# Ignore pre-built intrinsic_sdk_cmake underlay packages and any packages not needed
+# by SKILL_PACKAGE so rosdep and colcon only process the target overlay package(s).
+RUN set -x \
+    && cd $SKILL_WORKSPACE \
+    && target_pkgs="$(colcon list --base-paths src --paths-only --packages-up-to "${SKILL_PACKAGE}")" \
+    && underlay_pkgs="$(colcon list --base-paths src --paths-only --packages-up-to intrinsic_sdk_cmake --packages-ignore "${SKILL_PACKAGE}" 2>/dev/null || true)" \
+    && colcon list --base-paths src --paths-only | while IFS= read -r pkg_path; do \
+        if ( [ -n "$underlay_pkgs" ] && printf '%s\n' "$underlay_pkgs" | grep -Fxq "$pkg_path" ) \
+            || ! printf '%s\n' "$target_pkgs" | grep -Fxq "$pkg_path"; then \
+            touch "$pkg_path/COLCON_IGNORE"; \
+        fi; \
+    done
 
 
 # build stage: build dependencies + build the packages
@@ -160,7 +166,9 @@ RUN \
     && apt-get update \
     && apt-cache dumpavail | dpkg --merge-avail \
     && dpkg --set-selections < /user_exec_apt_packages.txt \
-    && apt-get dselect-upgrade -y \
+    # Force the legacy internal solver: APT 3.x's default solver3 on Ubuntu 26.04 (Lyrical)
+    # can fail with conflicting assignments on dpkg --set-selections + dselect-upgrade.
+    && apt-get dselect-upgrade -y -o APT::Solver=internal \
     && apt-get install -y python3-pip
 
 # BEGIN EMBEDDED REQUIREMENTS

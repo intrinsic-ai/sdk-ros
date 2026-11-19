@@ -142,7 +142,6 @@ jobs:
             BASE_IMAGE_TAG=temp-${{ matrix.ros_distro }}
             SERVICE_NAME=test_python_service
             SERVICE_PACKAGE=test_python_service
-            SOURCE_DIR=.
             OVERLAY_SOURCE=intrinsic_sdk_bundle_library_py/test/functional_tests/test_python_service
           tags: |
             test_python_service:temp-${{ matrix.ros_distro }}
@@ -177,9 +176,42 @@ jobs:
             BASE_IMAGE_TAG=temp-${{ matrix.ros_distro }}
             SERVICE_NAME=test_cpp_service
             SERVICE_PACKAGE=test_cpp_service
-            SOURCE_DIR=.
             OVERLAY_SOURCE=intrinsic_sdk_bundle_library_py/test/functional_tests/test_cpp_service
           tags: |
             test_cpp_service:temp-${{ matrix.ros_distro }}
+
+      - name: Test generic_action_skill Docker Image
+        uses: docker/build-push-action@ca052bb54ab0790a636c9b5f226502c73d547a25 # was: docker/build-push-action@v5
+        with:
+          context: .
+          file: intrinsic_sdk_bundle_library_py/resource/skill.Dockerfile
+          build-args: |
+            REPOSITORY=localhost:5000
+            TAG=temp
+            ROS_DISTRO=${{ matrix.ros_distro }}
+            BASE_IMAGE_TAG=temp-${{ matrix.ros_distro }}
+            SKILL_NAME=generic_action_skill
+            SKILL_PACKAGE=generic_action_skill
+            SKILL_TYPE=python
+            SKILL_EXECUTABLE=lib/generic_action_skill/generic_action_skill_main
+            SKILL_CONFIG=share/generic_action_skill/generic_action_skill_config.pbbin
+          tags: |
+            generic_action_skill:temp-${{ matrix.ros_distro }}
+
+      - name: Test flowstate_ros_bridge Docker Image
+        uses: docker/build-push-action@ca052bb54ab0790a636c9b5f226502c73d547a25 # was: docker/build-push-action@v5
+        with:
+          context: .
+          file: intrinsic_sdk_bundle_library_py/resource/service.Dockerfile
+          build-args: |
+            REPOSITORY=localhost:5000
+            TAG=temp
+            ROS_DISTRO=${{ matrix.ros_distro }}
+            BASE_IMAGE_TAG=temp-${{ matrix.ros_distro }}
+            SERVICE_NAME=flowstate_ros_bridge
+            SERVICE_PACKAGE=flowstate_ros_bridge
+            OVERLAY_SOURCE=.
+          tags: |
+            flowstate_ros_bridge:temp-${{ matrix.ros_distro }}
 
       - run: echo "🍏 This job's status is ${{ job.status }}."

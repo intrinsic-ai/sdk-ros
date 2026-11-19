@@ -44,6 +44,7 @@
   <depend>libxml2</depend>
   <depend>libzip-dev</depend>
   <depend>libzstd-dev</depend>
+  <depend>nlohmann-json-dev</depend>
   <depend>opencensus_cpp_vendor</depend>
   <depend>ortools_vendor</depend>
   <depend>pybind11_abseil_vendor</depend>

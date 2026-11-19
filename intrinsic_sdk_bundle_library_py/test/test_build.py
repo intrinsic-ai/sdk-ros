@@ -303,6 +303,39 @@ class TestBuild(unittest.TestCase):
         mock_file.assert_any_call('.dockerignore', 'a')
         mock_file().write.assert_called_once_with('.venv\nvenv\n')
 
+    @patch('os.makedirs')
+    @patch('os.path.isfile', return_value=True)
+    @patch('os.path.isdir', return_value=False)
+    @patch('builtins.open', new_callable=mock_open)
+    @patch('intrinsic_sdk_bundle_library_py.build.run_command')
+    def test_build_container_service_repo_root_sets_only_overlay_source(
+        self, mock_run_command, mock_file, mock_isdir, mock_isfile, mock_makedirs
+    ):
+        args = MagicMock()
+        args.service_name = 'test_service'
+        args.service_package = 'test_package'
+        args.skill_name = None
+        args.skill_package = None
+        args.dockerfile = None
+        args.bundle_dir = './intrinsic_asset_bundles'
+        args.builder_name = 'test-builder'
+        args.no_cache = False
+        args.ros_distro = 'lyrical'
+        args.skill_type = 'cpp'
+        args.dependencies = None
+        args.source_dir = None
+        args.overlay_source = None
+
+        build.build_container(args)
+
+        build_cmd = next(
+            call[0][0]
+            for call in mock_run_command.call_args_list
+            if call[0][0][:3] == ['docker', 'buildx', 'build']
+        )
+        self.assertIn('OVERLAY_SOURCE=.', build_cmd)
+        self.assertFalse(any(a.startswith('SOURCE_DIR=') for a in build_cmd))
+
 
 if __name__ == '__main__':
     unittest.main()
