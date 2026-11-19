@@ -27,4 +27,6 @@ RUN \
     && apt-get update \
     && apt-cache dumpavail | dpkg --merge-avail \
     && dpkg --set-selections < /exec_apt_packages.txt \
-    && apt-get dselect-upgrade -y
+    # Force the legacy internal solver: APT 3.x's default solver3 on Ubuntu 26.04 (Lyrical)
+    # can fail with conflicting assignments on dpkg --set-selections + dselect-upgrade.
+    && apt-get dselect-upgrade -y -o APT::Solver=internal

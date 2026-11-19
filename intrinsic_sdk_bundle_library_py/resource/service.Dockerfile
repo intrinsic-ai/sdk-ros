@@ -136,6 +136,8 @@ RUN \
     && apt-get update \
     && apt-cache dumpavail | dpkg --merge-avail \
     && dpkg --set-selections < /service_exec_apt_packages.txt \
+    # Force the legacy internal solver: APT 3.x's default solver3 on Ubuntu 26.04 (Lyrical)
+    # can fail with conflicting assignments on dpkg --set-selections + dselect-upgrade.
     && apt-get dselect-upgrade -y -o APT::Solver=internal \
     && if [ -n "${DEPENDENCIES}" ]; then apt-get install -y ${DEPENDENCIES}; fi
 
