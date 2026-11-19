@@ -342,13 +342,11 @@ def build_container(args):
         overlay_source = args.overlay_source
         if (
             args.service_name
-            and not source_dir
+            and not overlay_source
             and not os.path.isdir('src/sdk-ros')
             and os.path.isfile('intrinsic_sdk_cmake/package.xml')
         ):
-            source_dir = '.'
-            if not overlay_source:
-                overlay_source = '.'
+            overlay_source = '.'
 
         if source_dir:
             cmd.extend(['--build-arg', f'SOURCE_DIR={source_dir}'])
@@ -518,7 +516,10 @@ def main():
     add_common_argument(parser_container, 'keep_builder')
     parser_container.add_argument(
         '--source-dir',
-        help='Override SOURCE_DIR build arg in service.Dockerfile'
+        help=(
+            'Override SOURCE_DIR build arg in skill.Dockerfile '
+            '(deprecated for services; use --overlay-source instead)'
+        ),
     )
     parser_container.add_argument(
         '--overlay-source',

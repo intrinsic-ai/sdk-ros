@@ -180,7 +180,7 @@ By default, the `service.Dockerfile` assumes a standard ROS workspace structure 
 If you are building from a different directory structure (for example, directly at the `sdk-ros` repository root or in a CI environment), `intrinsic_sdk_build container` automatically sets `OVERLAY_SOURCE=.` when run at the `sdk-ros` root, or you can override the build arguments explicitly:
 
 - `--overlay-source`: Overrides the `OVERLAY_SOURCE` build argument in `service.Dockerfile` (defaults to `src`).
-- `--source-dir`: Legacy option (defaults to `src/sdk-ros`), retained for backwards compatibility.
+- `--source-dir`: Deprecated for services (retained as a no-op in `service.Dockerfile` for backwards compatibility; overrides `SOURCE_DIR` in `skill.Dockerfile`).
 
 Example usage in CI (where context is the repo root):
 ```bash

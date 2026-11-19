@@ -142,7 +142,6 @@ jobs:
             BASE_IMAGE_TAG=temp-${{ matrix.ros_distro }}
             SERVICE_NAME=test_python_service
             SERVICE_PACKAGE=test_python_service
-            SOURCE_DIR=.
             OVERLAY_SOURCE=intrinsic_sdk_bundle_library_py/test/functional_tests/test_python_service
           tags: |
             test_python_service:temp-${{ matrix.ros_distro }}
@@ -177,7 +176,6 @@ jobs:
             BASE_IMAGE_TAG=temp-${{ matrix.ros_distro }}
             SERVICE_NAME=test_cpp_service
             SERVICE_PACKAGE=test_cpp_service
-            SOURCE_DIR=.
             OVERLAY_SOURCE=intrinsic_sdk_bundle_library_py/test/functional_tests/test_cpp_service
           tags: |
             test_cpp_service:temp-${{ matrix.ros_distro }}

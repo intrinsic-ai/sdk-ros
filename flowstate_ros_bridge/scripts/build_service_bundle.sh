@@ -4,7 +4,7 @@ if [ -d "src/sdk-ros" ]; then
   SOURCE_ARGS=()
 elif [ -f "intrinsic_sdk_cmake/package.xml" ] && [ -d "flowstate_ros_bridge" ]; then
   SDK_ROS_DIR="."
-  SOURCE_ARGS=(--source-dir . --overlay-source .)
+  SOURCE_ARGS=(--overlay-source .)
 else
   echo "This script must be run at the top of a Colcon workspace with src/sdk-ros or from the sdk-ros repository root."
   exit 1
