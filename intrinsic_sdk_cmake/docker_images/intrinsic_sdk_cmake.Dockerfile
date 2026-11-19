@@ -41,15 +41,13 @@ RUN \
         python3-colcon-common-extensions \
         python3-rosdep
 
-# Ignore non-underlay packages (services, skills, and functional tests) so rosdep and
-# colcon only process packages up to intrinsic_sdk_cmake.
+# Ignore non-underlay packages so rosdep and colcon only process packages up to
+# intrinsic_sdk_cmake.
 RUN set -x \
     && cd /opt/intrinsic/intrinsic_sdk_cmake \
-    && touch src/intrinsic_sdk_ros/intrinsic_sdk_bundle_library_py/test/functional_tests/COLCON_IGNORE \
-    && underlay_pkgs="$(colcon list --base-paths src --names-only --packages-up-to intrinsic_sdk_cmake)" \
-    && colcon list --base-paths src --paths-only | while read -r pkg_path; do \
-        pkg_name="$(basename "$pkg_path")"; \
-        if ! echo "$underlay_pkgs" | grep -qx "$pkg_name"; then \
+    && underlay_pkgs="$(colcon list --base-paths src --paths-only --packages-up-to intrinsic_sdk_cmake)" \
+    && colcon list --base-paths src --paths-only | while IFS= read -r pkg_path; do \
+        if ! printf '%s\n' "$underlay_pkgs" | grep -Fxq "$pkg_path"; then \
             touch "$pkg_path/COLCON_IGNORE"; \
         fi; \
     done
