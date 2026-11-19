@@ -144,9 +144,6 @@ RUN \
 COPY --from=build /opt/ros/overlay/install /opt/ros/overlay/install
 
 RUN sed --in-place \
-        --expression '$isource "/opt/intrinsic/intrinsic_sdk_cmake/install/setup.bash"' \
-        /ros_entrypoint.sh \
-    && sed --in-place \
         --expression '$isource "/opt/ros/overlay/install/setup.bash"' \
         /ros_entrypoint.sh
 
