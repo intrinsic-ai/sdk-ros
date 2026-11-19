@@ -29,15 +29,16 @@ ARG OVERLAY_SOURCE=src
 WORKDIR /opt/ros/overlay
 ADD ${OVERLAY_SOURCE} /opt/ros/overlay/src
 
-# Clean up unused test packages and ignore pre-built intrinsic_sdk_cmake underlay
-# packages so rosdep and colcon only process the overlay service package(s).
-RUN find /opt/ros/overlay/src -type d -path "*/test/functional_tests" 2>/dev/null | while read -r ft_dir; do \
-        echo "Cleaning up unused test packages in ${ft_dir}..." \
-        && find "${ft_dir}" -maxdepth 1 -type d ! -name "${SERVICE_PACKAGE}" ! -name "functional_tests" -exec rm -rf {} +; \
-    done \
-    && for pkg_path in $(colcon list --base-paths src --paths-only --packages-up-to intrinsic_sdk_cmake --packages-ignore "${SERVICE_PACKAGE}" 2>/dev/null || true) \
-                       $(colcon list --base-paths src --paths-only --packages-select intrinsic_sdk intrinsic_sdk_ros --packages-ignore "${SERVICE_PACKAGE}" 2>/dev/null || true); do \
-        touch "$pkg_path/COLCON_IGNORE"; \
+# Ignore pre-built intrinsic_sdk_cmake underlay packages and any packages not needed
+# by SERVICE_PACKAGE so rosdep and colcon only process the target overlay package(s).
+RUN set -x \
+    && target_pkgs="$(colcon list --base-paths src --paths-only --packages-up-to "${SERVICE_PACKAGE}")" \
+    && underlay_pkgs="$(colcon list --base-paths src --paths-only --packages-up-to intrinsic_sdk_cmake --packages-ignore "${SERVICE_PACKAGE}" 2>/dev/null || true)" \
+    && colcon list --base-paths src --paths-only | while IFS= read -r pkg_path; do \
+        if ( [ -n "$underlay_pkgs" ] && printf '%s\n' "$underlay_pkgs" | grep -Fxq "$pkg_path" ) \
+            || ! printf '%s\n' "$target_pkgs" | grep -Fxq "$pkg_path"; then \
+            touch "$pkg_path/COLCON_IGNORE"; \
+        fi; \
     done
 
 

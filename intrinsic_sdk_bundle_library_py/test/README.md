@@ -175,7 +175,7 @@ To verify that it works correctly, check the logs for:
 
 ## 4. Customizing Build Context for Services
 
-By default, the `service.Dockerfile` assumes a standard ROS workspace structure where the workspace packages are located at `src` relative to the workspace root (and automatically ignores pre-built `intrinsic_sdk_cmake` underlay packages found in `src`).
+By default, the `service.Dockerfile` assumes a standard ROS workspace structure where the workspace packages are located at `src` relative to the workspace root (and automatically ignores pre-built `intrinsic_sdk_cmake` underlay packages and unrelated packages found in `src`).
 
 If you are building from a different directory structure (for example, directly at the `sdk-ros` repository root or in a CI environment), `intrinsic_sdk_build container` automatically sets `OVERLAY_SOURCE=.` when run at the `sdk-ros` root, or you can override the build arguments explicitly:
 
