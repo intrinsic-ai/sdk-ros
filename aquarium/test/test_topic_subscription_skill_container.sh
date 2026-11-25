@@ -16,17 +16,22 @@
 set -euo pipefail
 
 NO_CACHE=0
+SKIP_BUILD=0
 for arg in "$@"; do
   case "${arg}" in
     --no-cache)
       NO_CACHE=1
       ;;
+    --skip-build)
+      SKIP_BUILD=1
+      ;;
     -h|--help)
-      echo "Usage: $0 [--no-cache]"
+      echo "Usage: $0 [--no-cache] [--skip-build]"
       exit 0
       ;;
     *)
-      echo "Error: Unknown argument '${arg}'. Usage: $0 [--no-cache]" >&2
+      echo "Error: Unknown argument '${arg}'." >&2
+      echo "Usage: $0 [--no-cache] [--skip-build]" >&2
       exit 1
       ;;
   esac
@@ -69,34 +74,44 @@ if [ "${NO_CACHE}" -eq 1 ]; then
   buildah pull --policy always docker.io/library/ros:lyrical-ros-core
 fi
 
-echo "=== 2a. Building SDK Underlay Deps Image ==="
-buildah bud "${BUILDAH_COMMON_ARGS[@]}" \
-  -t aquarium-sdk-underlay-deps:latest \
-  -f "${OUTPUT_DIR}/Dockerfile.underlay_deps" .
+if [ "${SKIP_BUILD}" -eq 0 ]; then
+  echo "=== 2a. Ensuring SDK Underlay Deps Image ==="
+  if [ "${NO_CACHE}" -eq 1 ] || \
+     ! buildah inspect --type image aquarium-sdk-underlay-deps:latest \
+         >/dev/null 2>&1; then
+    buildah bud "${BUILDAH_COMMON_ARGS[@]}" \
+      -t aquarium-sdk-underlay-deps:latest \
+      -f "${OUTPUT_DIR}/Dockerfile.underlay_deps" .
+  fi
 
-echo "=== 2b. Building SDK Underlay Image ==="
-buildah bud "${BUILDAH_COMMON_ARGS[@]}" \
-  -t aquarium-sdk-underlay:latest \
-  --build-arg "SDK_ROS_DIR=${SDK_ROS_DIR}" \
-  -f "${OUTPUT_DIR}/Dockerfile.underlay" .
+  echo "=== 2b. Ensuring SDK Underlay Image ==="
+  if [ "${NO_CACHE}" -eq 1 ] || \
+     ! buildah inspect --type image aquarium-sdk-underlay:latest \
+         >/dev/null 2>&1; then
+    buildah bud "${BUILDAH_COMMON_ARGS[@]}" \
+      -t aquarium-sdk-underlay:latest \
+      --build-arg "SDK_ROS_DIR=${SDK_ROS_DIR}" \
+      -f "${OUTPUT_DIR}/Dockerfile.underlay" .
+  fi
 
-echo "=== 3. Building Service Image ==="
-buildah bud "${BUILDAH_COMMON_ARGS[@]}" \
-  -t demo-nodes-cpp-talker \
-  --build-arg "OUTPUT_DIR=${OUTPUT_DIR}" \
-  --build-arg "TARGET_PACKAGE=demo_nodes_cpp" \
-  --build-arg "TARGET_APT_PACKAGE=ros-${ROS_DISTRO_NAME}-demo-nodes-cpp" \
-  --build-arg "CONFIG_PATH=${OUTPUT_DIR}/aquarium.yaml" \
-  --build-arg "LAUNCH_PATH=${OUTPUT_DIR}/aquarium_launch.xml" \
-  --build-arg "ENTRYPOINT_PATH=${OUTPUT_DIR}/entrypoint.py" \
-  -f "${OUTPUT_DIR}/Dockerfile.service" .
+  echo "=== 3. Building Service Image ==="
+  buildah bud "${BUILDAH_COMMON_ARGS[@]}" \
+    -t demo-nodes-cpp-talker \
+    --build-arg "OUTPUT_DIR=${OUTPUT_DIR}" \
+    --build-arg "TARGET_PACKAGE=demo_nodes_cpp" \
+    --build-arg "TARGET_APT_PACKAGE=ros-${ROS_DISTRO_NAME}-demo-nodes-cpp" \
+    --build-arg "CONFIG_PATH=${OUTPUT_DIR}/aquarium.yaml" \
+    --build-arg "LAUNCH_PATH=${OUTPUT_DIR}/aquarium_launch.xml" \
+    --build-arg "ENTRYPOINT_PATH=${OUTPUT_DIR}/entrypoint.py" \
+    -f "${OUTPUT_DIR}/Dockerfile.service" .
 
-echo "=== 4. Building Skill Image ==="
-buildah bud "${BUILDAH_COMMON_ARGS[@]}" \
-  -t chatter_skill:latest \
-  --build-arg "OUTPUT_DIR=${OUTPUT_DIR}" \
-  --build-arg SKILL_NAME=chatter_skill \
-  -f "${OUTPUT_DIR}/Dockerfile.skill" .
+  echo "=== 4. Building Skill Image ==="
+  buildah bud "${BUILDAH_COMMON_ARGS[@]}" \
+    -t chatter_skill:latest \
+    --build-arg "OUTPUT_DIR=${OUTPUT_DIR}" \
+    --build-arg SKILL_NAME=chatter_skill \
+    -f "${OUTPUT_DIR}/Dockerfile.skill" .
+fi
 
 TEST_PASSED=0
 
@@ -150,10 +165,10 @@ podman run -d --name skill_container --network host \
   --skill_registry_service_address localhost:8090
 
 for _ in $(seq 1 30); do
-  if podman logs service_container 2>&1 \
-       | grep -q "aquarium_gateway online" && \
-     podman logs skill_container 2>&1 \
-       | grep -q "Skill service listening"; then
+  SVC_LOGS="$(podman logs service_container 2>&1 || true)"
+  SKILL_LOGS="$(podman logs skill_container 2>&1 || true)"
+  if grep -q "aquarium_gateway online" <<< "${SVC_LOGS}" && \
+     grep -q "Skill service listening" <<< "${SKILL_LOGS}"; then
     break
   fi
   sleep 0.5
@@ -165,7 +180,7 @@ CLIENT_BIN="${CLIENT_BIN}/lib/chatter_skill/chatter_skill_client"
 CLIENT_OUT="$(podman run --rm --network host chatter_skill:latest \
   "${CLIENT_BIN}" localhost:8001)"
 echo "${CLIENT_OUT}"
-echo "${CLIENT_OUT}" | grep -q "Hello World:"
+grep -q "Hello World:" <<< "${CLIENT_OUT}"
 
 echo "=== CONTAINER TEST PASSED ==="
 TEST_PASSED=1

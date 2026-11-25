@@ -892,6 +892,261 @@ class TestTargetsConfig(unittest.TestCase):
         with self.assertRaises(SystemExit):
           run_config(txtpb, workspace_dir=tmpdir)
 
+  def test_ros_domain_id_default_and_runtime_override(self):
+    with tempfile.TemporaryDirectory() as tmpdir:
+      aq_dir = os.path.join(tmpdir, 'src', 'sdk-ros', 'aquarium')
+      os.makedirs(aq_dir)
+      with open(
+          os.path.join(aq_dir, 'package.xml'), 'w', encoding='utf-8'
+      ) as f:
+        f.write('<package><name>aquarium</name></package>\n')
+
+      real_rt_proto = os.path.join(
+          os.path.dirname(__file__),
+          '..',
+          '..',
+          '..',
+          '..',
+          'build',
+          'aquarium_images',
+          'runtime_context.proto',
+      )
+      sdk_proto_dir = os.path.join(
+          tmpdir, 'src', 'sdk', 'intrinsic', 'resources', 'proto'
+      )
+      os.makedirs(sdk_proto_dir)
+      dst_rt_proto = os.path.join(sdk_proto_dir, 'runtime_context.proto')
+      if os.path.isfile(real_rt_proto):
+        with open(real_rt_proto, 'r', encoding='utf-8') as src_f:
+          rt_txt = src_f.read()
+      else:
+        rt_txt = (
+            'syntax = "proto3";\n'
+            'package intrinsic_proto.config;\n'
+            'import "google/protobuf/any.proto";\n'
+            'message RuntimeContext {\n'
+            '  int32 port = 1;\n'
+            '  string name = 5;\n'
+            '  google.protobuf.Any config = 6;\n'
+            '}\n'
+        )
+      with open(dst_rt_proto, 'w', encoding='utf-8') as f:
+        f.write(rt_txt)
+
+      cfg_path = os.path.join(tmpdir, 'aquarium.yaml')
+      with open(cfg_path, 'w', encoding='utf-8') as f:
+        f.write(
+            'target:\n'
+            '  type: "node"\n'
+            '  package: "demo_nodes_cpp"\n'
+            '  name: "add_two_ints_server"\n'
+            'interfaces:\n'
+            '  - internal_interface: "ros_service"\n'
+            '    internal_name: "/add_two_ints"\n'
+            '    internal_type: "example_interfaces/srv/AddTwoInts"\n'
+            '    external_interface: "zenoh_queryable_proto"\n'
+            '    external_name: "add_two_ints"\n'
+            '    type_hash: "RIHS01_dummy"\n'
+            '    request_fields: ["int64 a", "int64 b"]\n'
+            '    response_fields: ["int64 sum"]\n'
+        )
+
+      out_dir = os.path.join(tmpdir, 'build', 'aquarium_images')
+      old_cwd = os.getcwd()
+      try:
+        os.chdir(tmpdir)
+        with mock.patch('sys.stdout', io.StringIO()):
+          run_generate(cfg_path, output_dir=out_dir)
+      finally:
+        os.chdir(old_cwd)
+
+      proto_path = os.path.join(
+          out_dir, 'demo_nodes_cpp_add_two_ints_server_config.proto'
+      )
+      with open(proto_path, 'r', encoding='utf-8') as f:
+        proto_txt = f.read()
+      self.assertEqual(proto_txt.count('ros_domain_id'), 1)
+      self.assertIn('optional int32 ros_domain_id = 1;', proto_txt)
+
+      default_txtpb = os.path.join(
+          out_dir,
+          'demo-nodes-cpp-add-two-ints-server_default_config.textproto',
+      )
+      with open(default_txtpb, 'r', encoding='utf-8') as f:
+        default_txt = f.read()
+      self.assertIn('ros_domain_id: 1', default_txt)
+
+      entrypoint_path = os.path.join(out_dir, 'entrypoint.py')
+      with open(entrypoint_path, 'r', encoding='utf-8') as f:
+        ep_txt = f.read()
+      self.assertIn('allowed_args = []', ep_txt)
+
+      # Launch target declaring ros_domain_id:=42 must not duplicate the field.
+      launch_cfg_path = os.path.join(tmpdir, 'launch_aquarium.yaml')
+      with open(launch_cfg_path, 'w', encoding='utf-8') as f:
+        f.write(
+            'target:\n'
+            '  type: "launch"\n'
+            '  package: "my_pkg"\n'
+            '  name: "my.launch.xml"\n'
+            '  arguments:\n'
+            '    - "ros_domain_id:=42"\n'
+            'interfaces: []\n'
+        )
+      launch_out = os.path.join(tmpdir, 'build', 'launch_out')
+      old_cwd = os.getcwd()
+      try:
+        os.chdir(tmpdir)
+        with mock.patch('sys.stdout', io.StringIO()):
+          run_generate(launch_cfg_path, output_dir=launch_out)
+      finally:
+        os.chdir(old_cwd)
+      with open(
+          os.path.join(launch_out, 'my_pkg_my_launch_xml_config.proto'),
+          'r',
+          encoding='utf-8',
+      ) as f:
+        launch_proto_txt = f.read()
+      self.assertEqual(launch_proto_txt.count('ros_domain_id'), 1)
+      with open(
+          os.path.join(
+              launch_out, 'my-pkg-my.launch.xml_default_config.textproto'
+          ),
+          'r',
+          encoding='utf-8',
+      ) as f:
+        launch_def_txt = f.read()
+      self.assertIn('ros_domain_id: 42', launch_def_txt)
+
+      # Compile descriptor set and execute entrypoint.py logic across cases.
+      import shutil as _shutil
+      import subprocess as _sp
+      import sys as _sys
+      import types as _types
+      from google.protobuf import descriptor_pb2
+      from google.protobuf import descriptor_pool
+      from google.protobuf import message_factory
+
+      if not _shutil.which('protoc'):
+        return
+
+      desc_path = os.path.join(tmpdir, 'test_config.desc')
+      protoc_cmd = [
+          'protoc',
+          '--include_imports',
+          f'--descriptor_set_out={desc_path}',
+          f'--proto_path={out_dir}',
+      ]
+      if os.path.exists('/usr/include/google/protobuf/any.proto'):
+        protoc_cmd.append('--proto_path=/usr/include')
+      protoc_cmd.extend([
+          proto_path,
+          os.path.join(out_dir, 'runtime_context.proto'),
+      ])
+      _sp.run(protoc_cmd, check=True)
+
+      with open(desc_path, 'rb') as df:
+        fds = descriptor_pb2.FileDescriptorSet.FromString(df.read())
+      get_msg_cls = getattr(message_factory, 'GetMessageClass', None)
+      if get_msg_cls is not None:
+        pool = descriptor_pool.DescriptorPool()
+        for fd_proto in fds.file:
+          pool.Add(fd_proto)
+        rc_cls = get_msg_cls(
+            pool.FindMessageTypeByName('intrinsic_proto.config.RuntimeContext')
+        )
+        svc_cls = get_msg_cls(
+            pool.FindMessageTypeByName(
+                'ai.intrinsic.DemoNodesCppAddTwoIntsServerConfig'
+            )
+        )
+      else:
+        msgs = message_factory.GetMessages(fds.file)
+        rc_cls = msgs['intrinsic_proto.config.RuntimeContext']
+        svc_cls = msgs['ai.intrinsic.DemoNodesCppAddTwoIntsServerConfig']
+
+      rc_mod = _types.ModuleType('runtime_context_pb2')
+      rc_mod.RuntimeContext = rc_cls
+      svc_mod = _types.ModuleType(
+          'demo_nodes_cpp_add_two_ints_server_config_pb2'
+      )
+      svc_mod.DemoNodesCppAddTwoIntsServerConfig = svc_cls
+
+      _sys.modules['runtime_context_pb2'] = rc_mod
+      _sys.modules['demo_nodes_cpp_add_two_ints_server_config_pb2'] = svc_mod
+      try:
+
+        def _run_ep(config_bytes=None, preset_env=None):
+          rt_pb_path = os.path.join(tmpdir, 'runtime_config.pb')
+          if config_bytes is not None:
+            with open(rt_pb_path, 'wb') as pf:
+              pf.write(config_bytes)
+          elif os.path.exists(rt_pb_path):
+            os.remove(rt_pb_path)
+
+          patched_ep = ep_txt.replace(
+              "CONFIG_FILE = '/etc/intrinsic/runtime_config.pb'",
+              f'CONFIG_FILE = {rt_pb_path!r}',
+          )
+          env_patch = {'ZENOH_CONFIG_OVERRIDE': 'connect/endpoints=[]'}
+          if preset_env:
+            env_patch.update(preset_env)
+
+          captured = {}
+
+          def _fake_execvp(file_arg, args_list):
+            captured['file'] = file_arg
+            captured['args'] = list(args_list)
+            captured['ros_domain_id'] = os.environ.get('ROS_DOMAIN_ID')
+
+          clean_env = {
+              k: v for k, v in os.environ.items() if k != 'ROS_DOMAIN_ID'
+          }
+          clean_env.update(env_patch)
+          with mock.patch.dict(os.environ, clean_env, clear=True):
+            with mock.patch('os.execvp', side_effect=_fake_execvp):
+              with mock.patch('sys.stdout', io.StringIO()):
+                # pylint: disable=exec-used
+                exec(compile(patched_ep, entrypoint_path, 'exec'), {})
+                # pylint: enable=exec-used
+          return captured
+
+        # 1. No runtime_config.pb -> defaults to ROS_DOMAIN_ID=1
+        res_default = _run_ep(config_bytes=None)
+        self.assertEqual(res_default['ros_domain_id'], '1')
+        self.assertEqual(
+            res_default['args'],
+            ['ros2', 'launch', '/workspace/aquarium_launch.xml'],
+        )
+
+        # 2. runtime_config.pb with ros_domain_id=7 -> exact value '7'
+        cfg_7 = svc_cls(ros_domain_id=7)
+        ctx_7 = rc_cls()
+        ctx_7.config.Pack(cfg_7)
+        res_7 = _run_ep(config_bytes=ctx_7.SerializeToString())
+        self.assertEqual(res_7['ros_domain_id'], '7')
+        self.assertEqual(
+            res_7['args'],
+            ['ros2', 'launch', '/workspace/aquarium_launch.xml'],
+        )
+
+        # 3. runtime_config.pb with explicit ros_domain_id=0 -> exact value '0'
+        cfg_0 = svc_cls(ros_domain_id=0)
+        ctx_0 = rc_cls()
+        ctx_0.config.Pack(cfg_0)
+        res_0 = _run_ep(config_bytes=ctx_0.SerializeToString())
+        self.assertEqual(res_0['ros_domain_id'], '0')
+
+        # 4. runtime_config.pb with unset ros_domain_id -> stays '1'
+        cfg_empty = svc_cls()
+        ctx_empty = rc_cls()
+        ctx_empty.config.Pack(cfg_empty)
+        res_empty = _run_ep(config_bytes=ctx_empty.SerializeToString())
+        self.assertEqual(res_empty['ros_domain_id'], '1')
+      finally:
+        _sys.modules.pop('runtime_context_pb2', None)
+        _sys.modules.pop('demo_nodes_cpp_add_two_ints_server_config_pb2', None)
+
 
 if __name__ == '__main__':
   unittest.main()

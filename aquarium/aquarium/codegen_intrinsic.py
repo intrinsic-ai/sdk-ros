@@ -807,6 +807,11 @@ def run_generate(config_path, output_dir=None, privileged=False):
           config_fields.append(('string', k, field_idx, None))
           field_idx += 1
 
+  if 'ros_domain_id' not in seen_keys:
+    seen_keys.add('ros_domain_id')
+    config_fields.append(('int32', 'ros_domain_id', field_idx, '1'))
+    field_idx += 1
+
   proto_path = os.path.join(output_dir, f'{service_name_clean}_config.proto')
   proto_lines = [
       'syntax = "proto3";\n',

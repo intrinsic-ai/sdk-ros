@@ -18,6 +18,7 @@ import subprocess
 import sys
 
 CONFIG_FILE = '/etc/intrinsic/runtime_config.pb'
+DEFAULT_ROS_DOMAIN_ID = '1'
 CLUSTER_ZENOH_ENDPOINT = (
     'connect/endpoints='
     '["tcp/zenoh-router.app-intrinsic-base.svc.cluster.local:7447"]'
@@ -40,6 +41,9 @@ def is_running_in_cluster():
   return False
 
 
+if not os.environ.get('ROS_DOMAIN_ID'):
+  os.environ['ROS_DOMAIN_ID'] = DEFAULT_ROS_DOMAIN_ID
+
 if 'ZENOH_CONFIG_OVERRIDE' not in os.environ:
   if is_running_in_cluster():
     os.environ['ZENOH_CONFIG_OVERRIDE'] = CLUSTER_ZENOH_ENDPOINT
@@ -59,6 +63,11 @@ try:
   import @SERVICE_NAME_CLEAN@_config_pb2 as service_config_pb2
 except ImportError as e:
   print(f'ENTRYPOINT ERROR: Failed to import proto modules: {e}', flush=True)
+  print(
+      'ENTRYPOINT: ROS_DOMAIN_ID set to:'
+      f" {os.environ.get('ROS_DOMAIN_ID')}",
+      flush=True,
+  )
   subprocess.run(['ros2', 'launch', '/workspace/aquarium_launch.xml'])
   sys.exit(0)
 
@@ -73,6 +82,12 @@ if os.path.exists(CONFIG_FILE):
     if context.config.Is(service_config_pb2.@CONFIG_MSG_NAME@.DESCRIPTOR):
       config = service_config_pb2.@CONFIG_MSG_NAME@()
       context.config.Unpack(config)
+
+      domain_field = config.DESCRIPTOR.fields_by_name.get('ros_domain_id')
+      if domain_field is not None and (
+          not domain_field.has_presence or config.HasField('ros_domain_id')
+      ):
+        os.environ['ROS_DOMAIN_ID'] = str(config.ros_domain_id)
 
       for field in config.DESCRIPTOR.fields:
         if (
@@ -93,6 +108,12 @@ if os.path.exists(CONFIG_FILE):
         f'ENTRYPOINT WARNING: Failed to parse runtime config: {e}',
         flush=True,
     )
+
+print(
+    'ENTRYPOINT: ROS_DOMAIN_ID set to:'
+    f" {os.environ.get('ROS_DOMAIN_ID')}",
+    flush=True,
+)
 
 cmd = ['ros2', 'launch', '/workspace/aquarium_launch.xml'] + launch_args
 print(f"ENTRYPOINT: Executing: {' '.join(cmd)}", flush=True)

@@ -16,17 +16,22 @@
 set -euo pipefail
 
 NO_CACHE=0
+SKIP_BUILD=0
 for arg in "$@"; do
   case "${arg}" in
     --no-cache)
       NO_CACHE=1
       ;;
+    --skip-build)
+      SKIP_BUILD=1
+      ;;
     -h|--help)
-      echo "Usage: $0 [--no-cache]"
+      echo "Usage: $0 [--no-cache] [--skip-build]"
       exit 0
       ;;
     *)
-      echo "Error: Unknown argument '${arg}'. Usage: $0 [--no-cache]" >&2
+      echo "Error: Unknown argument '${arg}'." >&2
+      echo "Usage: $0 [--no-cache] [--skip-build]" >&2
       exit 1
       ;;
   esac
@@ -69,34 +74,44 @@ if [ "${NO_CACHE}" -eq 1 ]; then
   buildah pull --policy always docker.io/library/ros:lyrical-ros-core
 fi
 
-echo "=== 2a. Building SDK Underlay Deps Image ==="
-buildah bud "${BUILDAH_COMMON_ARGS[@]}" \
-  -t aquarium-sdk-underlay-deps:latest \
-  -f "${OUTPUT_DIR}/Dockerfile.underlay_deps" .
+if [ "${SKIP_BUILD}" -eq 0 ]; then
+  echo "=== 2a. Ensuring SDK Underlay Deps Image ==="
+  if [ "${NO_CACHE}" -eq 1 ] || \
+     ! buildah inspect --type image aquarium-sdk-underlay-deps:latest \
+         >/dev/null 2>&1; then
+    buildah bud "${BUILDAH_COMMON_ARGS[@]}" \
+      -t aquarium-sdk-underlay-deps:latest \
+      -f "${OUTPUT_DIR}/Dockerfile.underlay_deps" .
+  fi
 
-echo "=== 2b. Building SDK Underlay Image ==="
-buildah bud "${BUILDAH_COMMON_ARGS[@]}" \
-  -t aquarium-sdk-underlay:latest \
-  --build-arg "SDK_ROS_DIR=${SDK_ROS_DIR}" \
-  -f "${OUTPUT_DIR}/Dockerfile.underlay" .
+  echo "=== 2b. Ensuring SDK Underlay Image ==="
+  if [ "${NO_CACHE}" -eq 1 ] || \
+     ! buildah inspect --type image aquarium-sdk-underlay:latest \
+         >/dev/null 2>&1; then
+    buildah bud "${BUILDAH_COMMON_ARGS[@]}" \
+      -t aquarium-sdk-underlay:latest \
+      --build-arg "SDK_ROS_DIR=${SDK_ROS_DIR}" \
+      -f "${OUTPUT_DIR}/Dockerfile.underlay" .
+  fi
 
-echo "=== 3. Building Service Image ==="
-buildah bud "${BUILDAH_COMMON_ARGS[@]}" \
-  -t demo-nodes-cpp-add-two-ints-server \
-  --build-arg "OUTPUT_DIR=${OUTPUT_DIR}" \
-  --build-arg "TARGET_PACKAGE=demo_nodes_cpp" \
-  --build-arg "TARGET_APT_PACKAGE=ros-${ROS_DISTRO_NAME}-demo-nodes-cpp" \
-  --build-arg "CONFIG_PATH=${OUTPUT_DIR}/aquarium.yaml" \
-  --build-arg "LAUNCH_PATH=${OUTPUT_DIR}/aquarium_launch.xml" \
-  --build-arg "ENTRYPOINT_PATH=${OUTPUT_DIR}/entrypoint.py" \
-  -f "${OUTPUT_DIR}/Dockerfile.service" .
+  echo "=== 3. Building Service Image ==="
+  buildah bud "${BUILDAH_COMMON_ARGS[@]}" \
+    -t demo-nodes-cpp-add-two-ints-server \
+    --build-arg "OUTPUT_DIR=${OUTPUT_DIR}" \
+    --build-arg "TARGET_PACKAGE=demo_nodes_cpp" \
+    --build-arg "TARGET_APT_PACKAGE=ros-${ROS_DISTRO_NAME}-demo-nodes-cpp" \
+    --build-arg "CONFIG_PATH=${OUTPUT_DIR}/aquarium.yaml" \
+    --build-arg "LAUNCH_PATH=${OUTPUT_DIR}/aquarium_launch.xml" \
+    --build-arg "ENTRYPOINT_PATH=${OUTPUT_DIR}/entrypoint.py" \
+    -f "${OUTPUT_DIR}/Dockerfile.service" .
 
-echo "=== 4. Building Skill Image ==="
-buildah bud "${BUILDAH_COMMON_ARGS[@]}" \
-  -t add_two_ints_skill:latest \
-  --build-arg "OUTPUT_DIR=${OUTPUT_DIR}" \
-  --build-arg SKILL_NAME=add_two_ints_skill \
-  -f "${OUTPUT_DIR}/Dockerfile.skill" .
+  echo "=== 4. Building Skill Image ==="
+  buildah bud "${BUILDAH_COMMON_ARGS[@]}" \
+    -t add_two_ints_skill:latest \
+    --build-arg "OUTPUT_DIR=${OUTPUT_DIR}" \
+    --build-arg SKILL_NAME=add_two_ints_skill \
+    -f "${OUTPUT_DIR}/Dockerfile.skill" .
+fi
 
 TEST_PASSED=0
 
@@ -150,22 +165,107 @@ podman run -d --name skill_container --network host \
   --skill_registry_service_address localhost:8089
 
 for _ in $(seq 1 30); do
-  if podman logs service_container 2>&1 \
-       | grep -q "aquarium_gateway online" && \
-     podman logs skill_container 2>&1 \
-       | grep -q "Skill service listening"; then
+  SVC_LOGS="$(podman logs service_container 2>&1 || true)"
+  SKILL_LOGS="$(podman logs skill_container 2>&1 || true)"
+  if grep -q "aquarium_gateway online" <<< "${SVC_LOGS}" && \
+     grep -q "Skill service listening" <<< "${SKILL_LOGS}"; then
     break
   fi
   sleep 0.5
 done
 
-echo "=== 9. Running Test Client in Container ==="
+echo "=== 9. Verifying Default ROS_DOMAIN_ID=1 Isolation and E2E Call ==="
+SVC_LOGS="$(podman logs service_container 2>&1)"
+grep -q "ENTRYPOINT: ROS_DOMAIN_ID set to: 1" <<< "${SVC_LOGS}"
+
+ZENOH_LOCAL_ENV='connect/endpoints=["tcp/127.0.0.1:7447"]'
+DOM0_SERVICES="$(podman run --rm --network host \
+  -e RMW_IMPLEMENTATION=rmw_zenoh_cpp \
+  -e ROS_DOMAIN_ID=0 \
+  -e "ZENOH_CONFIG_OVERRIDE=${ZENOH_LOCAL_ENV}" \
+  localhost/aquarium-sdk-underlay-deps:latest \
+  ros2 service list --no-daemon --spin-time 3)"
+if grep -q "^/add_two_ints$" <<< "${DOM0_SERVICES}"; then
+  echo "ERROR: /add_two_ints leaked onto ROS_DOMAIN_ID=0" >&2
+  exit 1
+fi
+
+DOM1_SERVICES="$(podman run --rm --network host \
+  -e RMW_IMPLEMENTATION=rmw_zenoh_cpp \
+  -e ROS_DOMAIN_ID=1 \
+  -e "ZENOH_CONFIG_OVERRIDE=${ZENOH_LOCAL_ENV}" \
+  localhost/aquarium-sdk-underlay-deps:latest \
+  ros2 service list --no-daemon --spin-time 3)"
+grep -q "^/add_two_ints$" <<< "${DOM1_SERVICES}"
+
 CLIENT_BIN="/opt/add_two_ints_skill_workspace/install/add_two_ints_skill"
 CLIENT_BIN="${CLIENT_BIN}/lib/add_two_ints_skill/add_two_ints_skill_client"
 CLIENT_OUT="$(podman run --rm --network host add_two_ints_skill:latest \
   "${CLIENT_BIN}" localhost:8001)"
 echo "${CLIENT_OUT}"
-echo "${CLIENT_OUT}" | grep -q "sum: 84"
+grep -q "sum: 84" <<< "${CLIENT_OUT}"
+
+echo "=== 10. Verifying RuntimeContext ros_domain_id=7 Override ==="
+podman rm -f service_container skill_container >/dev/null 2>&1 || true
+
+RUNTIME_CFG_PB="${WORKSPACE_DIR}/${OUTPUT_DIR}/runtime_config.pb"
+podman run --rm --entrypoint /usr/bin/python3 \
+  demo-nodes-cpp-add-two-ints-server:latest -c \
+  "import sys; sys.path.append('/workspace/config_protos'); \
+import runtime_context_pb2 as rc; \
+import demo_nodes_cpp_add_two_ints_server_config_pb2 as sc; \
+ctx = rc.RuntimeContext(); \
+ctx.config.Pack(sc.DemoNodesCppAddTwoIntsServerConfig(ros_domain_id=7)); \
+sys.stdout.buffer.write(ctx.SerializeToString())" > "${RUNTIME_CFG_PB}"
+
+podman run -d --name service_container --network host \
+  -e "ZENOH_CONFIG_OVERRIDE=${ZENOH_LOCAL_ENV}" \
+  -v "${RUNTIME_CFG_PB}:/etc/intrinsic/runtime_config.pb:ro,z" \
+  demo-nodes-cpp-add-two-ints-server:latest
+
+podman run -d --name skill_container --network host \
+  add_two_ints_skill:latest \
+  --world_service_address localhost:8089 \
+  --geometry_service_address localhost:8089 \
+  --motion_planner_service_address localhost:8089 \
+  --skill_registry_service_address localhost:8089
+
+for _ in $(seq 1 30); do
+  SVC_LOGS_7="$(podman logs service_container 2>&1 || true)"
+  SKILL_LOGS_7="$(podman logs skill_container 2>&1 || true)"
+  if grep -q "aquarium_gateway online" <<< "${SVC_LOGS_7}" && \
+     grep -q "Skill service listening" <<< "${SKILL_LOGS_7}"; then
+    break
+  fi
+  sleep 0.5
+done
+
+SVC_LOGS_7="$(podman logs service_container 2>&1)"
+grep -q "ENTRYPOINT: ROS_DOMAIN_ID set to: 7" <<< "${SVC_LOGS_7}"
+
+DOM1_AFTER="$(podman run --rm --network host \
+  -e RMW_IMPLEMENTATION=rmw_zenoh_cpp \
+  -e ROS_DOMAIN_ID=1 \
+  -e "ZENOH_CONFIG_OVERRIDE=${ZENOH_LOCAL_ENV}" \
+  localhost/aquarium-sdk-underlay-deps:latest \
+  ros2 service list --no-daemon --spin-time 3)"
+if grep -q "^/add_two_ints$" <<< "${DOM1_AFTER}"; then
+  echo "ERROR: /add_two_ints remained on ROS_DOMAIN_ID=1 after override" >&2
+  exit 1
+fi
+
+DOM7_SERVICES="$(podman run --rm --network host \
+  -e RMW_IMPLEMENTATION=rmw_zenoh_cpp \
+  -e ROS_DOMAIN_ID=7 \
+  -e "ZENOH_CONFIG_OVERRIDE=${ZENOH_LOCAL_ENV}" \
+  localhost/aquarium-sdk-underlay-deps:latest \
+  ros2 service list --no-daemon --spin-time 3)"
+grep -q "^/add_two_ints$" <<< "${DOM7_SERVICES}"
+
+CLIENT_OUT_7="$(podman run --rm --network host add_two_ints_skill:latest \
+  "${CLIENT_BIN}" localhost:8001)"
+echo "${CLIENT_OUT_7}"
+grep -q "sum: 84" <<< "${CLIENT_OUT_7}"
 
 echo "=== CONTAINER TEST PASSED ==="
 TEST_PASSED=1

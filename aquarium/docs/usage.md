@@ -86,13 +86,19 @@ with any explicit `arguments` in `aquarium.yaml`, and writes two files into
 `build/aquarium_images/`:
 * `<service_name>_config.proto`: Protobuf schema with a field per launch
   argument (`bool`, `int32`, `double`, or `string` inferred from default
-  values).
+  values), plus `optional int32 ros_domain_id` for ROS 2 graph isolation.
 * `<service_tag>_default_config.textproto`: Default `google.protobuf.Any`
-  configuration embedded into the service bundle.
+  configuration embedded into the service bundle (with `ros_domain_id: 1` by
+  default unless the target already defines a `ros_domain_id` argument).
 
-At container startup, the service entrypoint reads
-`/etc/intrinsic/runtime_config.pb` and forwards each configured field to
-`ros2 launch` as `<arg_name>:=<value>`.
+At container startup, the service entrypoint sets `ROS_DOMAIN_ID` (`1` by
+default, or the exact `ros_domain_id` value from
+`/etc/intrinsic/runtime_config.pb` when configured) and forwards each
+configured launch argument to `ros2 launch` as `<arg_name>:=<value>`. Keeping
+service pods off Domain `0` isolates internal ROS 2 topics, services, and
+actions from `flowstate_ros_bridge`; if multiple Aquarium services in the same
+workcell publish overlapping ROS 2 names, assign distinct `ros_domain_id`
+values in their service configurations.
 
 To override launch arguments at deployment time without rebuilding the bundle,
 edit a `.textproto` file and encode it into a binary `google.protobuf.Any`
@@ -190,6 +196,10 @@ override the router endpoint:
 ```bash
 export ZENOH_CONFIG_OVERRIDE='connect/endpoints=["tcp/127.0.0.1:7447"]'
 ```
+
+To inspect a running Aquarium service container from external ROS 2 CLI tools or
+`rviz2` bridged to the cluster's Zenoh router, export `ROS_DOMAIN_ID=1` (or the
+custom `ros_domain_id` configured for that service instance).
 
 ### Generated Skill Query Timeout
 

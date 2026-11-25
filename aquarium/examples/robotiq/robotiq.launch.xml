@@ -11,11 +11,6 @@
   <arg name="slave_address"
        default="9"
        description="Modbus RTU slave address (Robotiq default is 9)"/>
-  <arg name="ros_domain_id"
-       default="42"
-       description="ROS_DOMAIN_ID for isolating the internal ROS 2 graph"/>
-
-  <set_env name="ROS_DOMAIN_ID" value="$(var ros_domain_id)" />
 
   <include file="$(find-pkg-share robotiq_description)/launch/robotiq_control.launch.py">
     <arg name="use_fake_hardware" value="$(var use_fake_hardware)" />
