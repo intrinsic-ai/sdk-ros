@@ -93,12 +93,13 @@ with any explicit `arguments` in `aquarium.yaml`, and writes two files into
 
 At container startup, the service entrypoint sets `ROS_DOMAIN_ID` (`1` by
 default, or the exact `ros_domain_id` value from
-`/etc/intrinsic/runtime_config.pb` when configured) and forwards each
-configured launch argument to `ros2 launch` as `<arg_name>:=<value>`. Keeping
-service pods off Domain `0` isolates internal ROS 2 topics, services, and
-actions from `flowstate_ros_bridge`; if multiple Aquarium services in the same
-workcell publish overlapping ROS 2 names, assign distinct `ros_domain_id`
-values in their service configurations.
+`/etc/intrinsic/runtime_config.pb` when configured), forwards `RuntimeContext`
+`port` and `name` (`grpc_port` and `resource_name`) to `aquarium_gateway`, and
+passes each configured launch argument to `ros2 launch` as
+`<arg_name>:=<value>`. Keeping service pods off Domain `0` isolates internal
+ROS 2 topics, services, and actions from `flowstate_ros_bridge`; if multiple
+Aquarium services in the same workcell publish overlapping ROS 2 names, assign
+distinct `ros_domain_id` values in their service configurations.
 
 To override launch arguments at deployment time without rebuilding the bundle,
 edit a `.textproto` file and encode it into a binary `google.protobuf.Any`

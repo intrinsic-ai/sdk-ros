@@ -50,8 +50,7 @@ int main(int argc, char** argv) {
   aquarium_gateway::g_grpc_port =
       aquarium_gateway::g_node->get_parameter("grpc_port").as_int();
 
-  if (!aquarium_gateway::g_resource_name.empty() &&
-      !aquarium_gateway::g_capability.empty()) {
+  if (!aquarium_gateway::g_resource_name.empty()) {
     RCLCPP_INFO(aquarium_gateway::g_node->get_logger(),
                 "Resource registration enabled: resource_name='%s', "
                 "capability='%s', grpc_port=%d",
@@ -59,9 +58,8 @@ int main(int argc, char** argv) {
                 aquarium_gateway::g_capability.c_str(),
                 aquarium_gateway::g_grpc_port);
   } else {
-    RCLCPP_INFO(
-        aquarium_gateway::g_node->get_logger(),
-        "Resource registration skipped (resource_name or capability empty).");
+    RCLCPP_INFO(aquarium_gateway::g_node->get_logger(),
+                "Resource registration skipped (resource_name empty).");
   }
 
   // Build dynamic runtime Protobuf schema registry in memory.

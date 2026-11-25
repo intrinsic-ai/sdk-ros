@@ -404,9 +404,16 @@ def generate_launch_xml_content(target, workspace_dir=None):
     launch_content += '  </include>\n'
 
   launch_content += (
+      '  <arg name="aquarium_grpc_port" default="50051"/>\n'
+      '  <arg name="aquarium_resource_name" default=""/>\n'
       '  <node pkg="aquarium" exec="aquarium_gateway"'
       ' name="aquarium_gateway">\n'
       '    <param name="config_file" value="/workspace/aquarium.yaml"/>\n'
+      '    <param name="grpc_port"'
+      ' value="$(var aquarium_grpc_port)" type="int"/>\n'
+      '    <param name="resource_name"\n'
+      '           value="$(var aquarium_resource_name)"\n'
+      '           type="str"/>\n'
       '  </node>\n'
       '</launch>\n'
   )

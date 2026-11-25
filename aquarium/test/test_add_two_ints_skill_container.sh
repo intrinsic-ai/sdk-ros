@@ -205,7 +205,7 @@ CLIENT_OUT="$(podman run --rm --network host add_two_ints_skill:latest \
 echo "${CLIENT_OUT}"
 grep -q "sum: 84" <<< "${CLIENT_OUT}"
 
-echo "=== 10. Verifying RuntimeContext ros_domain_id=7 Override ==="
+echo "=== 10. Verifying RuntimeContext ros_domain_id, port, and name ==="
 podman rm -f service_container skill_container >/dev/null 2>&1 || true
 
 RUNTIME_CFG_PB="${WORKSPACE_DIR}/${OUTPUT_DIR}/runtime_config.pb"
@@ -214,7 +214,7 @@ podman run --rm --entrypoint /usr/bin/python3 \
   "import sys; sys.path.append('/workspace/config_protos'); \
 import runtime_context_pb2 as rc; \
 import demo_nodes_cpp_add_two_ints_server_config_pb2 as sc; \
-ctx = rc.RuntimeContext(); \
+ctx = rc.RuntimeContext(port=50061, name='add_two_ints_svc'); \
 ctx.config.Pack(sc.DemoNodesCppAddTwoIntsServerConfig(ros_domain_id=7)); \
 sys.stdout.buffer.write(ctx.SerializeToString())" > "${RUNTIME_CFG_PB}"
 
@@ -242,6 +242,23 @@ done
 
 SVC_LOGS_7="$(podman logs service_container 2>&1)"
 grep -q "ENTRYPOINT: ROS_DOMAIN_ID set to: 7" <<< "${SVC_LOGS_7}"
+grep -q "aquarium_grpc_port:=50061" <<< "${SVC_LOGS_7}"
+grep -q "aquarium_resource_name:=add_two_ints_svc" <<< "${SVC_LOGS_7}"
+grep -q "Resource registration enabled: resource_name='add_two_ints_svc'" \
+  <<< "${SVC_LOGS_7}"
+grep -q "gRPC server listening on 0.0.0.0:50061" <<< "${SVC_LOGS_7}"
+
+REG_OUT="$(podman exec dummy_grpc python3 -c \
+  "import grpc; \
+ch = grpc.insecure_channel('127.0.0.1:50061'); \
+fn = ch.unary_unary( \
+  '/intrinsic_proto.resources.ResourceRegistry/ListResourceInstances', \
+  request_serializer=lambda x: x, \
+  response_deserializer=lambda x: x); \
+resp = fn(b'', timeout=5.0); \
+assert b'add_two_ints_svc' in resp and b'127.0.0.1:50061' in resp, resp; \
+print('RESOURCE_REGISTRY_OK')")"
+grep -q "RESOURCE_REGISTRY_OK" <<< "${REG_OUT}"
 
 DOM1_AFTER="$(podman run --rm --network host \
   -e RMW_IMPLEMENTATION=rmw_zenoh_cpp \

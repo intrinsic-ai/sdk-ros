@@ -186,12 +186,28 @@ class TestTargetsConfig(unittest.TestCase):
         '<node pkg="aquarium" exec="aquarium_gateway"',
         xml_content,
     )
+    self.assertIn(
+        '<arg name="aquarium_grpc_port" default="50051"/>',
+        xml_content,
+    )
+    self.assertIn(
+        '<arg name="aquarium_resource_name" default=""/>',
+        xml_content,
+    )
+    self.assertIn(
+        '<param name="grpc_port" value="$(var aquarium_grpc_port)"'
+        ' type="int"/>',
+        xml_content,
+    )
+    self.assertIn('value="$(var aquarium_resource_name)"', xml_content)
+    ET.fromstring(xml_content)
 
     entrypoint_content = _generate_entrypoint_content(
         'robotiq_service',
         'RobotiqServiceConfig',
         ['com_port:=/dev/ttyUSB0', 'required_token'],
     )
+    self.assertNotIn('subprocess', entrypoint_content)
     self.assertIn('robotiq_service_config_pb2', entrypoint_content)
     self.assertIn("'com_port'", entrypoint_content)
     self.assertIn("'required_token'", entrypoint_content)
@@ -1143,6 +1159,47 @@ class TestTargetsConfig(unittest.TestCase):
         ctx_empty.config.Pack(cfg_empty)
         res_empty = _run_ep(config_bytes=ctx_empty.SerializeToString())
         self.assertEqual(res_empty['ros_domain_id'], '1')
+
+        # 5. RuntimeContext port and name forwarded without config Any
+        ctx_meta = rc_cls(port=8088, name='gripper_left')
+        res_meta = _run_ep(config_bytes=ctx_meta.SerializeToString())
+        self.assertEqual(res_meta['ros_domain_id'], '1')
+        self.assertEqual(
+            res_meta['args'],
+            [
+                'ros2',
+                'launch',
+                '/workspace/aquarium_launch.xml',
+                'aquarium_grpc_port:=8088',
+                'aquarium_resource_name:=gripper_left',
+            ],
+        )
+
+        # 6. RuntimeContext port, name, and config(ros_domain_id=7) together
+        ctx_full = rc_cls(port=9091, name='cam_front')
+        ctx_full.config.Pack(svc_cls(ros_domain_id=7))
+        res_full = _run_ep(config_bytes=ctx_full.SerializeToString())
+        self.assertEqual(res_full['ros_domain_id'], '7')
+        self.assertEqual(
+            res_full['args'],
+            [
+                'ros2',
+                'launch',
+                '/workspace/aquarium_launch.xml',
+                'aquarium_grpc_port:=9091',
+                'aquarium_resource_name:=cam_front',
+            ],
+        )
+
+        # 7. ImportError fallback uses os.execvp rather than subprocess.run
+        with mock.patch.dict(_sys.modules, {'runtime_context_pb2': None}):
+          res_imp = _run_ep(config_bytes=ctx_full.SerializeToString())
+        self.assertEqual(res_imp['file'], 'ros2')
+        self.assertEqual(res_imp['ros_domain_id'], '1')
+        self.assertEqual(
+            res_imp['args'],
+            ['ros2', 'launch', '/workspace/aquarium_launch.xml'],
+        )
       finally:
         _sys.modules.pop('runtime_context_pb2', None)
         _sys.modules.pop('demo_nodes_cpp_add_two_ints_server_config_pb2', None)
