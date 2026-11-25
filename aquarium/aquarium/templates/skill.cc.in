@@ -1,0 +1,238 @@
+// Copyright 2026 Intrinsic Innovation LLC
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+#include "@SKILL_NAME@.h"
+
+#include <sys/stat.h>
+
+#include <atomic>
+#include <chrono>
+#include <cstdint>
+#include <cstdlib>
+#include <exception>
+#include <fstream>
+#include <future>
+#include <memory>
+#include <mutex>
+#include <optional>
+#include <sstream>
+#include <stdexcept>
+#include <string>
+#include <utility>
+
+#include <zenoh.hxx>
+
+#include "@SKILL_NAME@.pb.h"
+#include "absl/log/log.h"
+#include "absl/status/status.h"
+#include "absl/status/statusor.h"
+#include "intrinsic/skills/cc/skill_utils.h"
+#include "intrinsic/skills/proto/skill_service.pb.h"
+#include "intrinsic/util/status/status_macros.h"
+
+using ::ai::intrinsic::@PROTO_MSG_CLASS@Params;
+using ::ai::intrinsic::@PROTO_MSG_CLASS@Result;
+using ::intrinsic::skills::ExecuteContext;
+using ::intrinsic::skills::ExecuteRequest;
+using ::intrinsic::skills::SkillInterface;
+
+namespace {
+
+std::mutex g_zenoh_mutex;
+std::optional<zenoh::Session> g_zenoh_session;
+
+bool IsRunningInCluster() {
+  const char* k8s_host = std::getenv("KUBERNETES_SERVICE_HOST");
+  if (k8s_host != nullptr && k8s_host[0] != '\0') {
+    return true;
+  }
+  struct stat sb;
+  if (stat("/etc/intrinsic/runtime_config.pb", &sb) == 0) {
+    return true;
+  }
+  std::ifstream resolv("/etc/resolv.conf");
+  if (resolv.is_open()) {
+    std::string line;
+    while (std::getline(resolv, line)) {
+      if (line.rfind("search", 0) == 0 &&
+          line.find("cluster.local") != std::string::npos) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
+absl::Status EnsureZenohSession() {
+  std::lock_guard<std::mutex> lock(g_zenoh_mutex);
+  if (g_zenoh_session.has_value()) {
+    return absl::OkStatus();
+  }
+
+  std::string connect_endpoint = "tcp/127.0.0.1:7447";
+  if (IsRunningInCluster()) {
+    connect_endpoint =
+        "tcp/zenoh-router.app-intrinsic-base.svc.cluster.local:7447";
+  }
+
+  zenoh::ZResult result;
+  auto config = zenoh::Config::create_default(&result);
+  if (result == Z_OK) {
+    config.insert_json5("connect/endpoints",
+                        "[\"" + connect_endpoint + "\"]", &result);
+  }
+  if (result == Z_OK) {
+    config.insert_json5("mode", "\"peer\"", &result);
+  }
+  if (result == Z_OK) {
+    config.insert_json5("scouting/multicast/enabled", "false", &result);
+  }
+
+  const char* env_override = std::getenv("ZENOH_CONFIG_OVERRIDE");
+  if (env_override != nullptr && env_override[0] != '\0') {
+    std::stringstream ss(env_override);
+    std::string pair;
+    while (std::getline(ss, pair, ';')) {
+      std::stringstream pair_stream(pair);
+      std::string key;
+      std::string val;
+      if (std::getline(pair_stream, key, '=') &&
+          std::getline(pair_stream, val)) {
+        config.insert_json5(key, val, &result);
+        if (result != Z_OK) {
+          result = Z_OK;
+        }
+      }
+    }
+  }
+
+  if (result != Z_OK) {
+    return absl::InternalError("Failed to configure Zenoh in skill");
+  }
+
+  auto session = zenoh::Session::open(
+      std::move(config), zenoh::Session::SessionOptions::create_default(),
+      &result);
+  if (result != Z_OK) {
+    return absl::InternalError("Failed to open Zenoh session in skill");
+  }
+  g_zenoh_session.emplace(std::move(session));
+  return absl::OkStatus();
+}
+
+}  // namespace
+
+std::unique_ptr<SkillInterface> @PROTO_MSG_CLASS@Skill::CreateSkill() {
+  return std::make_unique<@PROTO_MSG_CLASS@Skill>();
+}
+
+absl::StatusOr<std::unique_ptr<google::protobuf::Message>>
+@PROTO_MSG_CLASS@Skill::Execute(const ExecuteRequest& request,
+                                ExecuteContext& context) {
+  (void)context;
+  LOG(INFO) << "@PROTO_MSG_CLASS@Skill::Execute via Zenoh C++";
+
+  INTR_ASSIGN_OR_RETURN(auto params, request.params<@PROTO_MSG_CLASS@Params>());
+  auto skill_result = std::make_unique<@PROTO_MSG_CLASS@Result>();
+
+  INTR_RETURN_IF_ERROR(EnsureZenohSession());
+
+  std::string req_bytes;
+  if (!params.SerializeToString(&req_bytes)) {
+    return absl::InternalError("Failed to serialize request params");
+  }
+
+  auto reply_promise = std::make_shared<std::promise<std::string>>();
+  auto reply_future = reply_promise->get_future();
+  auto called = std::make_shared<std::atomic<bool>>(false);
+  std::string key = "@EXTERNAL_NAME@";
+
+  auto on_reply = [reply_promise, called](const zenoh::Reply& reply) {
+    if (!called->exchange(true)) {
+      if (reply.is_ok()) {
+        const auto& sample = reply.get_ok();
+        const auto& payload = sample.get_payload();
+        std::string data;
+        data.resize(payload.size());
+        auto reader = payload.reader();
+        reader.read(reinterpret_cast<uint8_t*>(data.data()), data.size());
+        reply_promise->set_value(std::move(data));
+      } else {
+        reply_promise->set_exception(
+            std::make_exception_ptr(std::runtime_error("Zenoh reply error")));
+      }
+    }
+  };
+
+  auto on_drop = [reply_promise, called, key]() {
+    if (!called->exchange(true)) {
+      reply_promise->set_exception(std::make_exception_ptr(std::runtime_error(
+          "Zenoh query dropped without receiving a reply on key: " + key)));
+    }
+  };
+
+  auto opts = zenoh::Session::GetOptions::create_default();
+  opts.payload = zenoh::Bytes(req_bytes);
+
+  LOG(INFO) << "Sending Zenoh query to key: " << key;
+  zenoh::ZResult result;
+  g_zenoh_session->get(zenoh::KeyExpr(key, true, &result), "", on_reply,
+                       on_drop, std::move(opts), &result);
+  if (result != Z_OK) {
+    return absl::InternalError("Failed to send Zenoh query");
+  }
+
+  int timeout_sec = 60;
+  const char* timeout_env = std::getenv("ZENOH_QUERY_TIMEOUT_SECONDS");
+  if (timeout_env != nullptr && timeout_env[0] != '\0') {
+    try {
+      timeout_sec = std::stoi(timeout_env);
+    } catch (...) {
+    }
+  }
+
+  if (reply_future.wait_for(std::chrono::seconds(timeout_sec)) !=
+      std::future_status::ready) {
+    LOG(ERROR) << "Zenoh query timed out after " << timeout_sec
+               << " seconds on key: " << key;
+    return absl::DeadlineExceededError(
+        "Zenoh query timed out after " + std::to_string(timeout_sec) +
+        " seconds");
+  }
+
+  try {
+    std::string resp_bytes = reply_future.get();
+    if (!skill_result->ParseFromString(resp_bytes)) {
+      LOG(ERROR) << "Failed to parse response proto (" << resp_bytes.size()
+                 << " bytes)";
+      return absl::InternalError("Failed to parse response proto");
+    }
+    LOG(INFO) << "Received Zenoh response on key '" << key << "' ("
+              << resp_bytes.size() << " bytes), aquarium_skill_status="
+              << skill_result->aquarium_skill_status();
+    if (skill_result->aquarium_skill_status() != "SUCCEEDED" &&
+        !skill_result->aquarium_skill_status().empty()) {
+      LOG(ERROR) << "@PROTO_MSG_CLASS@Skill failed with aquarium_skill_status: "
+                 << skill_result->aquarium_skill_status();
+      return absl::InternalError(std::string("Skill action failed: ") +
+                                 skill_result->aquarium_skill_status());
+    }
+  } catch (const std::exception& e) {
+    LOG(ERROR) << "Zenoh query failed: " << e.what();
+    return absl::InternalError(std::string("Zenoh call failed: ") + e.what());
+  }
+
+  LOG(INFO) << "@PROTO_MSG_CLASS@Skill completed successfully.";
+  return skill_result;
+}

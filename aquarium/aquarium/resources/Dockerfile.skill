@@ -1,0 +1,182 @@
+# Copyright 2026 Intrinsic Innovation LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+FROM aquarium-sdk-underlay:latest AS build
+WORKDIR /workspace
+
+ARG OUTPUT_DIR=build/aquarium_images
+ARG SKILL_NAME
+
+# Copy the generated skill package into src/<skill_name>
+COPY ${OUTPUT_DIR}/skills/${SKILL_NAME} src/${SKILL_NAME}
+
+# Install dependencies for the skill
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends python3-pip && \
+    (rosdep init || true) && \
+    echo "python3-absl-py:" > /etc/ros/rosdep/custom.yaml && \
+    echo "  ubuntu: [python3-absl]" >> /etc/ros/rosdep/custom.yaml && \
+    echo "python3-retrying:" >> /etc/ros/rosdep/custom.yaml && \
+    echo "  ubuntu: [python3-retrying]" >> /etc/ros/rosdep/custom.yaml && \
+    echo "yaml file:///etc/ros/rosdep/custom.yaml" \
+        > /etc/ros/rosdep/sources.list.d/50-custom.list && \
+    rosdep update && \
+    . /opt/ros/lyrical/setup.bash && \
+    . /workspace/install/setup.bash && \
+    (rosdep install -r -y --rosdistro lyrical --ignore-src \
+    --from-paths src/${SKILL_NAME} || true) \
+    && rm -rf /var/lib/apt/lists/*
+
+# Build the skill
+RUN . /opt/ros/lyrical/setup.bash && \
+    . /workspace/install/setup.bash && \
+    colcon build \
+    --cmake-args -DCMAKE_BUILD_TYPE=Release \
+    -DCMAKE_POLICY_VERSION_MINIMUM=3.5 -DBUILD_TESTING=OFF \
+    --packages-select ${SKILL_NAME}
+
+# Prune non-runtime files using regex patterns targeting largest files first
+COPY ${OUTPUT_DIR}/prune_runtime_artifacts.py /workspace/
+RUN python3 /workspace/prune_runtime_artifacts.py /workspace/install
+
+# Record runtime APT packages for shared libs outside /workspace/install
+RUN . /opt/ros/lyrical/setup.bash && \
+    . /workspace/install/setup.bash && \
+    find /workspace/install /opt/ros/lyrical \
+        \( -type f -o -type l \) -name "*.so*" \
+        | sed 's|/[^/]*$||' | sort -u \
+        > /etc/ld.so.conf.d/skill_build.conf && \
+    ldconfig && \
+    SKILL_BIN="/workspace/install/${SKILL_NAME}/lib/${SKILL_NAME}" && \
+    SKILL_BIN="${SKILL_BIN}/${SKILL_NAME}_main" && \
+    (ldd "$SKILL_BIN"; \
+     find /workspace/install -type f -name "*.so*" -exec ldd {} +) \
+        2>/dev/null \
+        | awk '/=> \// {print $3}' \
+        | grep -v '^/workspace/install/' \
+        | sort -u > /tmp/needed_libs.txt && \
+    > /tmp/runtime_pkgs.txt && \
+    while read -r lib; do \
+        real_lib=$(readlink -f "$lib" 2>/dev/null || echo "$lib"); \
+        for candidate in "$real_lib" "${real_lib#/usr}" "/usr${real_lib}" \
+                         "$lib"; do \
+            pkg=$(dpkg-query -S "$candidate" 2>/dev/null \
+                | grep -v '^diversion ' | head -n 1 | cut -d: -f1); \
+            if [ -n "$pkg" ]; then \
+                echo "$pkg" >> /tmp/runtime_pkgs.txt; \
+                break; \
+            fi; \
+        done; \
+    done < /tmp/needed_libs.txt && \
+    sort -u /tmp/runtime_pkgs.txt > /workspace/runtime_apt_packages.txt && \
+    rm -f /tmp/needed_libs.txt /tmp/runtime_pkgs.txt
+
+# Stage 2: Result (Final minimal image)
+FROM docker.io/library/ros:lyrical-ros-core AS result
+SHELL ["/bin/bash", "-c"]
+ENV RMW_IMPLEMENTATION=rmw_zenoh_cpp
+ENV ROS_HOME=/tmp
+WORKDIR /workspace
+
+ARG OUTPUT_DIR=build/aquarium_images
+ARG SKILL_NAME
+ARG PRUNE_PATTERNS=""
+ENV SKILL_WORKSPACE=/opt/${SKILL_NAME}_workspace
+
+# Copy pruned install space and discovered shared-library APT dependencies
+COPY --from=build /workspace/install $SKILL_WORKSPACE/install
+COPY --from=build /workspace/runtime_apt_packages.txt \
+    /tmp/runtime_apt_packages.txt
+
+# Install run dependencies using discovered shared-lib packages and rosdep
+RUN apt-get update && \
+    if [ -s /tmp/runtime_apt_packages.txt ]; then \
+        apt-get install -y --no-install-recommends \
+            $(cat /tmp/runtime_apt_packages.txt); \
+    fi && \
+    (ln -sf /usr/lib/x86_64-linux-gnu/libxml2.so.16 \
+        /usr/lib/x86_64-linux-gnu/libxml2.so.2 || true) && \
+    apt-get install -y --no-install-recommends \
+        ros-lyrical-rmw-zenoh-cpp \
+        python3-rosdep \
+        python3-pip && \
+    (rosdep init || true) && \
+    echo "python3-absl-py:" > /etc/ros/rosdep/custom.yaml && \
+    echo "  ubuntu: [python3-absl]" >> /etc/ros/rosdep/custom.yaml && \
+    echo "python3-retrying:" >> /etc/ros/rosdep/custom.yaml && \
+    echo "  ubuntu: [python3-retrying]" >> /etc/ros/rosdep/custom.yaml && \
+    echo "yaml file:///etc/ros/rosdep/custom.yaml" \
+        > /etc/ros/rosdep/sources.list.d/50-custom.list && \
+    rosdep update && \
+    rm -f $SKILL_WORKSPACE/install/COLCON_IGNORE && \
+    (rosdep install --dependency-types=exec -r -y \
+        --rosdistro lyrical --ignore-src \
+        --from-paths $SKILL_WORKSPACE/install/${SKILL_NAME} || true) && \
+    pip3 install --break-system-packages \
+        grpcio grpcio-status protobuf retrying && \
+    apt-get purge -y python3-rosdep python3-pip && \
+    if [ -n "${PRUNE_PATTERNS}" ]; then \
+        for p in ${PRUNE_PATTERNS}; do \
+            rm -rf $p 2>/dev/null || true; \
+        done; \
+    fi && \
+    rm -rf /var/lib/apt/lists/* /etc/ros/rosdep /root/.ros /root/.cache \
+           /tmp/runtime_apt_packages.txt \
+           /usr/bin/ctest /usr/bin/cpack /usr/bin/cmake && \
+    find $SKILL_WORKSPACE/install /opt/ros/lyrical \
+        \( -type f -o -type l \) -name "*.so*" \
+        | sed 's|/[^/]*$||' | sort -u \
+        > /etc/ld.so.conf.d/skill_install.conf && \
+    ldconfig
+
+# Set up env and links as required by Flowstate
+ENV SKILL_INSTALL_DIR=$SKILL_WORKSPACE/install/${SKILL_NAME}
+ENV SKILL_EXECUTABLE_ABS=\
+$SKILL_INSTALL_DIR/lib/${SKILL_NAME}/${SKILL_NAME}_main
+ENV SKILL_CONFIG_ABS=\
+$SKILL_INSTALL_DIR/share/${SKILL_NAME}/${SKILL_NAME}_config.pbbin
+
+RUN mkdir -p /skills && \
+    ln -sf $SKILL_EXECUTABLE_ABS /skills/skill_service && \
+    ln -sf $SKILL_CONFIG_ABS /skills/skill_service_config.proto.bin && \
+    chmod +x "$SKILL_EXECUTABLE_ABS" && \
+    sed --in-place \
+        --expression "\$isource \"$SKILL_WORKSPACE/install/setup.bash\"" \
+        /ros_entrypoint.sh && \
+    if ldd /skills/skill_service | grep -q "not found"; then \
+        echo "ERROR: Missing shared libs for /skills/skill_service:" >&2; \
+        ldd /skills/skill_service | grep "not found" >&2; \
+        exit 1; \
+    fi && \
+    test -s /skills/skill_service_config.proto.bin && \
+    help_out=$(/ros_entrypoint.sh /skills/skill_service --helpfull 2>&1 \
+        || true) && \
+    if echo "$help_out" | grep -q "skill_service_config_filename"; then \
+        echo "SKILL BUILD: Verified /skills/skill_service startup."; \
+    else \
+        echo "ERROR: /skills/skill_service failed startup check:" >&2; \
+        echo "$help_out" >&2; \
+        exit 1; \
+    fi
+
+COPY ${OUTPUT_DIR}/skill_entrypoint.py /workspace/skill_entrypoint.py
+RUN chmod -R a+rX /workspace $SKILL_WORKSPACE && \
+    chmod 755 /workspace/skill_entrypoint.py
+
+LABEL "ai.intrinsic.asset-id"="ai.intrinsic.${SKILL_NAME}"
+LABEL "ai.intrinsic.skill-image-name"="${SKILL_NAME}"
+
+ENTRYPOINT ["/usr/bin/python3", "/workspace/skill_entrypoint.py"]
+CMD ["/skills/skill_service", \
+     "--skill_service_config_filename=/skills/skill_service_config.proto.bin"]

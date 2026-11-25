@@ -1,0 +1,2 @@
+string trigger_mode
+float64 exposure_time

@@ -1,0 +1,6 @@
+TestCameraConfig camera_config
+int64[] sensor_ids
+TestStorageLocation[<=1] capture_result_location
+---
+TestCaptureResult capture_result
+TestStorageLocation capture_result_location

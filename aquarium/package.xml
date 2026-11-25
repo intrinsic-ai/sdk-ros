@@ -1,0 +1,56 @@
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="3">
+  <name>aquarium</name>
+  <version>0.1.0</version>
+  <description>
+    Dynamic ROS 2 to Intrinsic Protobuf gateway, setup assistant TUI, and CLI orchestrator.
+  </description>
+  <maintainer email="morganquigley@intrinsic.ai">Morgan Quigley</maintainer>
+  <license>Apache-2.0</license>
+
+  <buildtool_depend>ament_cmake</buildtool_depend>
+  <buildtool_depend>ament_cmake_python</buildtool_depend>
+
+  <depend>abseil_cpp_vendor</depend>
+  <depend>ament_index_cpp</depend>
+  <depend>backward_ros</depend>
+  <depend>grpc_vendor</depend>
+  <depend>intrinsic_sdk_cmake</depend>
+  <depend>rcl_action</depend>
+  <depend>rclcpp</depend>
+  <depend>rclcpp_action</depend>
+  <depend>type_description_interfaces</depend>
+  <depend>yaml_cpp_vendor</depend>
+  <depend>zenoh_cpp_vendor</depend>
+
+  <exec_depend>python3-grpcio</exec_depend>
+  <exec_depend>python3-yaml</exec_depend>
+  <exec_depend>rclpy</exec_depend>
+
+  <test_depend>ament_cmake_gtest</test_depend>
+  <test_depend>ament_cmake_pytest</test_depend>
+  <test_depend>ament_index_python</test_depend>
+  <test_depend>builtin_interfaces</test_depend>
+  <test_depend>control_msgs</test_depend>
+  <test_depend>demo_nodes_cpp</test_depend>
+  <test_depend>example_interfaces</test_depend>
+  <test_depend>geometry_msgs</test_depend>
+  <test_depend>intrinsic_sdk_bundle_library_py</test_depend>
+  <test_depend>launch_testing</test_depend>
+  <test_depend>launch_testing_ament_cmake</test_depend>
+  <test_depend>lifecycle</test_depend>
+  <test_depend>nav_msgs</test_depend>
+  <test_depend>python3-pytest</test_depend>
+  <test_depend>rmw</test_depend>
+  <test_depend>rmw_zenoh_cpp</test_depend>
+  <test_depend>rosidl_default_generators</test_depend>
+  <test_depend>rosidl_default_runtime</test_depend>
+  <test_depend>sensor_msgs</test_depend>
+  <test_depend>std_msgs</test_depend>
+  <test_depend>tf2_msgs</test_depend>
+
+  <export>
+    <build_type>ament_cmake</build_type>
+  </export>
+</package>

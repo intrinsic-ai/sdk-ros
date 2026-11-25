@@ -1,0 +1,230 @@
+// Copyright 2026 Intrinsic Innovation LLC
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+syntax = "proto3";
+
+package test_perception_messages;
+
+message Duration {
+  int32 sec = 1;
+  int32 nanosec = 2;
+}
+
+message Time {
+  int32 sec = 1;
+  int32 nanosec = 2;
+}
+
+message Vector3 {
+  double x = 1;
+  double y = 2;
+  double z = 3;
+}
+
+message Quaternion {
+  double x = 1;
+  double y = 2;
+  double z = 3;
+  double w = 4;
+}
+
+message Pose {
+  Vector3 position = 1;
+  Quaternion orientation = 2;
+}
+
+message CameraDriversGenICam {
+  string device_id = 1;
+}
+
+message CameraDriversRos {
+  string device_id = 1;
+  optional string driver_type = 2;
+}
+
+message CameraIdentifier {
+  CameraDriversGenICam genicam = 1;
+  CameraDriversRos ros = 2;
+}
+
+message CameraSetting {
+  string name = 1;
+  int64 integer_value = 2;
+  double float_value = 3;
+  bool bool_value = 4;
+  string string_value = 5;
+  string enumeration_value = 6;
+  message Empty {}
+  Empty command_value = 7;
+}
+
+message Dimensions {
+  int32 cols = 1;
+  int32 rows = 2;
+}
+
+message IntrinsicParams {
+  double focal_length_x = 1;
+  double focal_length_y = 2;
+  double principal_point_x = 3;
+  double principal_point_y = 4;
+  Dimensions dimensions = 5;
+}
+
+message DistortionParams {
+  double k1 = 1;
+  double k2 = 2;
+  double p1 = 3;
+  double p2 = 4;
+  optional double k3 = 5;
+  optional double k4 = 6;
+  optional double k5 = 7;
+  optional double k6 = 8;
+  optional double s1 = 9;
+  optional double s2 = 10;
+  optional double s3 = 11;
+  optional double s4 = 12;
+  optional double tx = 13;
+  optional double ty = 14;
+}
+
+message CameraParams {
+  IntrinsicParams intrinsic_params = 1;
+  optional DistortionParams distortion_params = 2;
+}
+
+message SensorConfig {
+  int64 id = 1;
+  optional Pose camera_t_sensor = 2;
+  optional CameraParams camera_params = 3;
+}
+
+message CameraConfig {
+  CameraIdentifier identifier = 1;
+  repeated CameraSetting camera_settings = 2;
+  repeated SensorConfig sensor_configs = 3;
+}
+
+message CropOptions {
+  int32 origin_x = 1;
+  int32 origin_y = 2;
+  Dimensions dimensions = 3;
+}
+
+enum PixelType {
+  PIXEL_UNSPECIFIED = 0;
+  PIXEL_INTENSITY = 1;
+  PIXEL_DEPTH = 2;
+  PIXEL_POINT = 3;
+  PIXEL_NORMAL = 4;
+}
+
+enum Encoding {
+  ENCODING_UNSPECIFIED = 0;
+  ENCODING_JPEG = 1;
+  ENCODING_PNG = 2;
+  ENCODING_WEBP = 3;
+  ENCODING_YUV420P = 4;
+}
+
+enum DataType {
+  TYPE_UNSPECIFIED = 0;
+  TYPE_UINT8 = 1;
+  TYPE_UINT16 = 2;
+  TYPE_UINT32 = 3;
+  TYPE_INT8 = 4;
+  TYPE_INT16 = 5;
+  TYPE_INT32 = 6;
+  TYPE_FLOAT32 = 7;
+  TYPE_FLOAT64 = 8;
+}
+
+enum PackingType {
+  PACKING_TYPE_UNSPECIFIED = 0;
+  PACKING_TYPE_INTERLEAVED = 1;
+  PACKING_TYPE_PLANAR = 2;
+}
+
+message SensorImagePostProcessing {
+  Encoding image_encoding = 1;
+  bool skip_undistortion = 2;
+  optional CropOptions crop = 3;
+  oneof resizing {
+    Dimensions resize = 4;
+    int32 resize_width = 5;
+    int32 resize_height = 6;
+  }
+}
+
+message StorageLocation {
+  string store = 1;
+  string key = 2;
+}
+
+message Context {
+  optional string scene_id = 1;
+  uint64 executive_session_id = 2;
+  uint64 executive_plan_id = 3;
+  uint64 executive_plan_action_id = 4;
+  uint64 skill_id = 5;
+  uint64 parent_skill_id = 6;
+  optional uint64 icon_session_id = 7;
+  optional uint64 icon_action_id = 8;
+  optional uint64 visualization_context_id = 9;
+  map<string, string> labels = 10;
+}
+
+message ImageBuffer {
+  Encoding encoding = 1;
+  PixelType pixel_type = 2;
+  int32 num_channels = 3;
+  DataType type = 4;
+  optional Dimensions dimensions = 5;
+  bytes data = 6;
+  optional PackingType packing_type = 7;
+}
+
+message SensorImage {
+  SensorConfig sensor_config = 1;
+  Time acquisition_time = 2;
+  ImageBuffer buffer = 3;
+}
+
+message CaptureResult {
+  Time capture_at = 1;
+  repeated SensorImage sensor_images = 2;
+  optional Duration capture_duration = 3;
+}
+
+message Status {
+  int32 code = 1;
+  string message = 2;
+}
+
+message CaptureRequest {
+  CameraConfig camera_config = 1;
+  Duration timeout = 2;
+  repeated int64 sensor_ids = 3;
+  map<int64, SensorImagePostProcessing> post_processing_by_sensor_id = 4;
+  optional StorageLocation capture_result_location = 5;
+  optional Context context = 6;
+}
+
+message CaptureResponse {
+  oneof response {
+    CaptureResult capture_result = 1;
+    StorageLocation capture_result_location = 2;
+  }
+  Status status = 3;
+}

@@ -47,7 +47,7 @@ RUN set -x \
 
 # Install exec-like dependencies for the packages in intrinsic_sdk_cmake and
 # save them for re-install in a later stage.
-# Exclude intrinsic_sdk_ros and intrinsic_sdk for now.
+# Exclude aquarium, intrinsic_sdk_ros, and intrinsic_sdk for now.
 # TODO(wjwwood): it would be nice to get the list of packages from rosdep
 #   without installing them, but I couldn't figure out how to do that easily.
 RUN \
@@ -60,6 +60,7 @@ RUN \
     && apt-get update \
     && rosdep update --rosdistro ${ROS_DISTRO} \
     && cd /opt/intrinsic/intrinsic_sdk_cmake \
+    && touch src/intrinsic_sdk_ros/aquarium/COLCON_IGNORE \
     && touch src/intrinsic_sdk_ros/intrinsic_sdk/COLCON_IGNORE \
     && touch src/intrinsic_sdk_ros/intrinsic_sdk_ros/COLCON_IGNORE \
     && rosdep install \
@@ -109,7 +110,7 @@ RUN set -x \
     && colcon metadata update
 
 # Install the rest of the standard dependencies for the packages in intrinsic_sdk_ros.
-# Exclude intrinsic_sdk_ros and intrinsic_sdk for now.
+# Exclude aquarium, intrinsic_sdk_ros, and intrinsic_sdk for now.
 RUN \
     --mount=type=cache,target=/var/cache/apt,sharing=locked \
     --mount=type=cache,target=/var/lib/apt,sharing=locked \
@@ -120,6 +121,7 @@ RUN \
     && apt-get update \
     && rosdep update --rosdistro ${ROS_DISTRO} \
     && cd /opt/intrinsic/intrinsic_sdk_cmake \
+    && touch src/intrinsic_sdk_ros/aquarium/COLCON_IGNORE \
     && touch src/intrinsic_sdk_ros/intrinsic_sdk/COLCON_IGNORE \
     && touch src/intrinsic_sdk_ros/intrinsic_sdk_ros/COLCON_IGNORE \
     && rosdep install \
@@ -136,6 +138,7 @@ RUN \
     && export PATH="/usr/lib/ccache:$PATH" \
     && ccache -z \
     && cd /opt/intrinsic/intrinsic_sdk_cmake \
+    && touch src/intrinsic_sdk_ros/aquarium/COLCON_IGNORE \
     && touch src/intrinsic_sdk_ros/intrinsic_sdk/COLCON_IGNORE \
     && touch src/intrinsic_sdk_ros/intrinsic_sdk_ros/COLCON_IGNORE \
     && colcon build \

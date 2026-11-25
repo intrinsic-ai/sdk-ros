@@ -1,0 +1,13 @@
+interfaces:
+  - internal_interface: "ros_topic_subscription"
+    internal_name: "/chatter"
+    internal_type: "example_interfaces/msg/String"
+    type_hash: "RIHS01_0000000000000000000000000000000000000000000000000000000000000000"
+    external_interface: "zenoh_queryable_proto"
+    external_name: "chatter"
+    response_fields:
+      - "string data"
+target:
+  type: "node"
+  package: "demo_nodes_cpp"
+  name: "talker"
